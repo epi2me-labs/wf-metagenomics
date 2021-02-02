@@ -16,6 +16,7 @@ params.help = ""
 params.fastq = ""
 params.out_dir = ""
 params.db_path = ""
+params.db_prefix = ""
 
 if(params.help) {
     log.info ''
@@ -47,12 +48,14 @@ process centrifuge {
     which centrifuge
     echo "reads: $reads"
     echo "db_path: $db_path"
+    echo "db_prefix": ${params.db_prefix}
     centrifuge -h
     mkdir analysis
+    ls -lha $db_path*
     centrifuge --met 5 --time \
         --ignore-quals -S analysis/read_classifications.tsv \
         --report-file analysis/centrifuge_report.tsv \
-        -x $db_path -U $reads
+        -x $db_path/${params.db_prefix} -U $reads
     """
 }
 
