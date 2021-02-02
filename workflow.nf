@@ -80,15 +80,16 @@ workflow pipeline {
         reads
         db_path
     main:
-        test = centrifuge(reads, db_path)
+        results = centrifuge(reads, db_path)
     emit:
-        test
+        results[0]
+        results[1]
 }
 
 // entrypoint workflow
 workflow {
     reads = channel.fromPath(params.reads, checkIfExists:true)
     db_path = channel.fromPath(params.db_path, checkIfExists:true)
-    test = pipeline(reads, db_path)
-    output(test)
+    results = pipeline(reads, db_path)
+    output(results[0].concat(results[1]))
 }
