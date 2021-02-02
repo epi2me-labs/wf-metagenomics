@@ -1,4 +1,3 @@
-
 stages:
     - build_and_run
     - release
@@ -35,7 +34,7 @@ conda-run:
               -w ${OUTPUT}/workspace
               -profile conda
               --reads test_data/reads.fq.gz 
-              --dp_path test_data/hvc
+              --db_path test_data/hvc
               --out_dir ${OUTPUT}
 
 
@@ -56,7 +55,7 @@ build-image:
               -w ${OUTPUT}/workspace
               -profile standard
               --reads test_data/reads.fq.gz 
-              --dp_path test_data/hvc
+              --db_path test_data/hvc
               --out_dir ${OUTPUT}
         # push
         - if [[ ${CI_COMMIT_BRANCH} == 'dev' ]]; then
