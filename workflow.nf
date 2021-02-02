@@ -13,9 +13,9 @@
 nextflow.enable.dsl = 2
 
 params.help = ""
-params.fastq = "./reads.fq.gz"
-params.out_dir = "./output"
-params.db_path = "./test_data/db_store/hvc/hvc"
+params.fastq = ""
+params.out_dir = ""
+params.db_path = ""
 
 if(params.help) {
     log.info ''
@@ -26,6 +26,7 @@ if(params.help) {
     log.info ''
     log.info 'Script Options: '
     log.info '    --fastq        FILE    Path to FASTQ file'
+    log.info '    --db_path      DIR     Path centrifuge database directory'
     log.info '    --out_dir      DIR     Path for output'
     log.info ''
 
@@ -33,37 +34,22 @@ if(params.help) {
 }
 
 
-process readSeqs {
-    // Just write a file with sequence lengths
-    label "containerCPU"
-    input:
-        file reads
-    output:
-        file "seqs.txt"
-
-    """
-    #!/usr/bin/env python
-    import pysam
-    with open("seqs.txt", 'w') as fh:
-        for rec in pysam.FastxFile("$reads"):
-            fh.write("{}\\t{}\\n".format(rec.name, len(rec.sequence)))
-    """
-}
-
 process centrifuge {
-    // Just running centrifuge -h and make sure the profile works
     label "containerCPU"
     input:
-//        .fromPath from params.db_path
-        file reads
+        each file(reads)
         file db_path
     output:
-        file "centrifuge.txt"
+        file "analysis/read_classifications.tsv"
+        file "analysis/centrifuge_report.tsv"
 
     """
-    /home/epi2melabs/conda_centrifuge/bin/centrifuge -h > centrifuge.txt
+    which centrifuge
+    echo "reads: $reads"
+    echo "db_path: $db_path"
+    centrifuge -h
     mkdir analysis
-    /home/epi2melabs/conda_centrifuge/bin/centrifuge --met 5 --time \
+    centrifuge --met 5 --time \
         --ignore-quals -S analysis/read_classifications.tsv \
         --report-file analysis/centrifuge_report.tsv \
         -x $db_path -U $reads
@@ -94,18 +80,15 @@ workflow pipeline {
         reads
         db_path
     main:
-        seqs = readSeqs(reads)
         test = centrifuge(reads, db_path)
     emit:
-        // seqs
         test
 }
 
 // entrypoint workflow
 workflow {
     reads = channel.fromPath(params.reads, checkIfExists:true)
-    db_path = channel.fromPath(params.db_path)
+    db_path = channel.fromPath(params.db_path, checkIfExists:true)
     test = pipeline(reads, db_path)
-    // output(seqs)
     output(test)
 }

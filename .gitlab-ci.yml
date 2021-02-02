@@ -15,7 +15,11 @@ variables:
     bash Miniconda3-latest-Linux-x86_64.sh -b -p ./miniconda
     source ./miniconda/bin/activate
     conda init
-    
+
+.fetch-db: &fetch-db |
+    wget -O test_data/hvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hvc.tar.gz
+    cd test_data && mkdir hvc && cd hvc && tar -xzvf ../hvc.tar.gz
+
 
 conda-run:
     image: ubuntu:20.04
@@ -25,10 +29,12 @@ conda-run:
         - *install-nextflow
         - *install-conda
     script:
+        - *fetch-db
         - ./nextflow run workflow.nf
               -w ${OUTPUT}/workspace
               -profile conda
               --reads test_data/reads.fq.gz 
+              --dp_path test_data/hvc
               --out_dir ${OUTPUT}
 
 
@@ -42,12 +48,14 @@ build-image:
         - TAG="${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
         - docker build --no-cache -t "${TAG}" -f Dockerfile . --build-arg BASEIMAGE=${BASEIMAGE}
         # run letting nextflow orchestrate the containers
+        - *fetch-db
         - docker tag "${TAG}" "${CI_PROJECT_NAME}:latest"
         - OUTPUT="template-workflow"
         - ./nextflow run workflow.nf
               -w ${OUTPUT}/workspace
               -profile standard
               --reads test_data/reads.fq.gz 
+              --dp_path test_data/hvc
               --out_dir ${OUTPUT}
         # push
         - if [[ ${CI_COMMIT_BRANCH} == 'dev' ]]; then
