@@ -6,7 +6,7 @@ COPY environment.yaml $HOME/environment.yaml
 RUN \
     . $CONDA_DIR/etc/profile.d/mamba.sh \
     && micromamba activate \
-    && micromamba env update -y $HOME/environment.yaml
+    && micromamba install --file $HOME/environment.yaml \
     && fix-permissions $CONDA_DIR \
     && fix-permissions $HOME
 
