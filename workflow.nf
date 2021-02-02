@@ -1,4 +1,4 @@
-#!/usr/bin/env extflow
+#!/usr/bin/env nextflow
 
 // Developer notes
 // 
@@ -13,6 +13,9 @@
 nextflow.enable.dsl = 2
 
 params.help = ""
+params.fastq = "./reads.fq.gz"
+params.out_dir = "./output"
+params.db_path = "./test_data/db_store/hvc/hvc"
 
 if(params.help) {
     log.info ''
@@ -47,6 +50,25 @@ process readSeqs {
     """
 }
 
+process centrifuge {
+    // Just running centrifuge -h and make sure the profile works
+    label "containerCPU"
+    input:
+//        .fromPath from params.db_path
+        file reads
+        file db_path
+    output:
+        file "centrifuge.txt"
+
+    """
+    /home/epi2melabs/conda_centrifuge/bin/centrifuge -h > centrifuge.txt
+    mkdir analysis
+    /home/epi2melabs/conda_centrifuge/bin/centrifuge --met 5 --time \
+        --ignore-quals -S analysis/read_classifications.tsv \
+        --report-file analysis/centrifuge_report.tsv \
+        -x $db_path -U $reads
+    """
+}
 
 
 // See https://github.com/nextflow-io/nextflow/issues/1636
@@ -70,15 +92,20 @@ process output {
 workflow pipeline {
     take:
         reads
+        db_path
     main:
         seqs = readSeqs(reads)
+        test = centrifuge(reads, db_path)
     emit:
-        seqs
+        // seqs
+        test
 }
 
 // entrypoint workflow
 workflow {
     reads = channel.fromPath(params.reads, checkIfExists:true)
-    results = pipeline(reads)
-    output(results)
+    db_path = channel.fromPath(params.db_path)
+    test = pipeline(reads, db_path)
+    // output(seqs)
+    output(test)
 }
