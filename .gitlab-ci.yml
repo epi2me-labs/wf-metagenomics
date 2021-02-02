@@ -20,6 +20,9 @@ variables:
     cd test_data && mkdir hvc && cd hvc && tar -xzvf ../hvc.tar.gz
     cd ../..
 
+.fetch-fq: &fetch-fq |
+  wget -O test_data/sample.fastq.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3-eu-west-1.amazonaws.com/metagenomic_tutorial/sample.fastq.gz
+
 
 conda-run:
     image: ubuntu:20.04
@@ -29,12 +32,14 @@ conda-run:
         - *install-nextflow
         - *install-conda
         - *fetch-db
+        - *fetch-fq
     script:
         - ./nextflow run workflow.nf
               -w ${OUTPUT}/workspace
               -profile conda
               --reads test_data/reads.fq.gz 
               --db_path test_data/hvc
+              --db_prefix hvc
               --out_dir ${OUTPUT}
 
 
@@ -44,6 +49,7 @@ build-image:
         - apk add wget openjdk11 bash
         - *install-nextflow
         - *fetch-db
+        - *fetch-fq
     script:
         - echo ${CI_BUILD_TOKEN} | docker login --username gitlab-ci-token --password-stdin ${CI_REGISTRY}
         - TAG="${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
@@ -56,6 +62,7 @@ build-image:
               -profile standard
               --reads test_data/reads.fq.gz 
               --db_path test_data/hvc
+              --db_prefix hvc
               --out_dir ${OUTPUT}
         # push
         - if [[ ${CI_COMMIT_BRANCH} == 'dev' ]]; then
