@@ -1,7 +1,14 @@
-name: epi2melabs-nf-centrifuge-workflow
+name: epi2melabs-nf-metagenomics
 channels:
     - bioconda
     - conda-forge
     - defaults
 dependencies:
-    - centrifuge=1.0.4_beta
+    - git
+    - python=3.8
+    - pysam
+    - samtools
+    - pandas
+    - ete3
+    - minimap2
+    - aplanat
