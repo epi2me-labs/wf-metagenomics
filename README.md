@@ -109,7 +109,7 @@ To demonstrate the capibilities of the workflow, sample data can be obtained as 
    ```
    # Download human+viral+prokaryote database
    mkdir -p test_data
-   wget -O test_data/hvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hpvc.tar.gz
+   wget -O test_data/hpvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hpvc.tar.gz
    # Create a directory and unarchive the files
    cd test_data && mkdir hpvc && cd hpvc && tar -xzvf ../hpvc.tar.gz
    ```
