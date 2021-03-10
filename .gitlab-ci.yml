@@ -36,7 +36,7 @@ conda-run:
         - *fetch-fq
     script:
         - OUTPUT=${CI_PROJECT_NAME}
-        - ./nextflow run workflow.nf
+        - ./nextflow run main.nf
               -w ${OUTPUT}/workspace
               -profile conda
               --reads test_data/sample.fastq.gz
@@ -59,7 +59,7 @@ build-image:
         # run letting nextflow orchestrate the containers
         - docker tag "${TAG}" "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest"
         - OUTPUT=${CI_PROJECT_NAME}
-        - ./nextflow run workflow.nf
+        - ./nextflow run main.nf
               -w ${OUTPUT}/workspace
               -profile standard
               --reads test_data/sample.fastq.gz
