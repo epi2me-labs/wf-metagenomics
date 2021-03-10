@@ -1,15 +1,3 @@
-#!/usr/bin/env nextflow
-
-// Developer notes
-// 
-// This template workflow provides a basic structure to copy in order
-// to create a new workflow. Current recommended pratices are:
-//     i) create a simple command-line interface.
-//    ii) include an abstract workflow scope named "pipeline" to be used
-//        in a module fashion.
-//   iii) a second concreate, but anonymous, workflow scope to be used
-//        as an entry point when using this workflow in isolation.
-
 nextflow.enable.dsl = 2
 
 params.help = ""
@@ -28,29 +16,26 @@ if(params.help) {
     log.info 'Script Options: '
     log.info '    --fastq        FILE    Path to FASTQ file'
     log.info '    --db_path      DIR     Path centrifuge database directory'
-    log.info '    --out_dir      DIR     Path for output'
+    log.info '    --db_prefix      DIR     Path centrifuge database directory'
     log.info ''
 
     return
 }
 
-
 process centrifuge {
-    label "containerCPU"
+    label "containerCentrifuge"
     input:
         each file(reads)
         file db_path
     output:
         file "analysis/read_classifications.tsv"
         file "analysis/centrifuge_report.tsv"
-
     """
-    which centrifuge
     echo "reads: $reads"
     echo "db_path: $db_path"
     echo "db_prefix": ${params.db_prefix}
-    centrifuge -h
     mkdir analysis
+    mkdir analysis/fastq_bundles
     ls -lha $db_path*
     centrifuge --met 5 --time \
         --ignore-quals -S analysis/read_classifications.tsv \
@@ -59,13 +44,41 @@ process centrifuge {
     """
 }
 
+process generateMaster {
+    label "containerPython"
+    input:
+        each file(reads)
+        file "analysis/read_classifications.tsv"
+    output:
+        file "read_classification_master.tsv"
+        file "report.html"
+    """
+    generate_master_table.py analysis/read_classifications.tsv analysis --taxid 9606
+    generate_fq_stats.py -f analysis/read_classification_master.tsv  $reads
+    generate_report.py read_classification_master.tsv
+    date
+    """
+}
+
+process splitByMaster {
+    label "containerPython"
+    input:
+        file reads
+        file "analysis/read_classification_master.tsv"
+    output:
+        path "analysis/fastq_bundles/*.fastq"
+    """
+    split_fastq_by_master.py $reads analysis/read_classification_master.tsv analysis/fastq_bundles
+    date
+    """
+}
 
 // See https://github.com/nextflow-io/nextflow/issues/1636
 // This is the only way to publish files from a workflow whilst
 // decoupling the publish from the process steps.
 process output {
     // publish inputs to output directory
-
+    label "containerPython"
     publishDir "${params.out_dir}", mode: 'copy', pattern: "*"
     input:
         file fname
@@ -76,7 +89,6 @@ process output {
     """
 }
 
-
 // workflow module
 workflow pipeline {
     take:
@@ -84,9 +96,14 @@ workflow pipeline {
         db_path
     main:
         results = centrifuge(reads, db_path)
+        master = generateMaster(reads, results[0])
+        fastq = splitByMaster(reads, master[0])
     emit:
         results[0]
         results[1]
+        master[0]
+        master[1]
+        fastq
 }
 
 // entrypoint workflow
@@ -94,5 +111,5 @@ workflow {
     reads = channel.fromPath(params.reads, checkIfExists:true)
     db_path = channel.fromPath(params.db_path, checkIfExists:true)
     results = pipeline(reads, db_path)
-    output(results[0].concat(results[1]))
+    output(results[0].concat(results[1]).concat(results[2]).concat(results[3]).concat(results[4]))
 }
