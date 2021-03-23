@@ -1,128 +1,19 @@
-stages:
-    - centrifuge
-    - build_and_run
-    - release
+include:
+    - project: "epi2melabs/ci-templates"
+      file: "wf-containers.yaml"
 
-image: ${IMAGE}
+
 variables:
-    BASEIMAGE: ${CI_REGISTRY}/${CURRENT_TEMPLATE_IMAGE}
+    NF_BEFORE_SCRIPT: |
+        wget -O test_data/sample.fastq.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3-eu-west-1.amazonaws.com/metagenomic_tutorial/sample.fastq.gz;
+        wget -O test_data/hvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hvc.tar.gz;
+        cd test_data && mkdir hvc && cd hvc && tar -xzvf ../hvc.tar.gz && cd ../..;
+    NF_WORKFLOW_OPTS: "--reads test_data/sample.fastq.gz --db_path test_data/hvc --db_prefix hvc"
 
-.install-nextflow: &install-nextflow |
-    wget -qO- https://get.nextflow.io | bash
-
-.install-conda: &install-conda |
-    wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash Miniconda3-latest-Linux-x86_64.sh -b -p ./miniconda
-    source ./miniconda/bin/activate
-    conda init
-
-.fetch-db: &fetch-db |
-    wget -O test_data/hvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hvc.tar.gz
-    cd test_data && mkdir hvc && cd hvc && tar -xzvf ../hvc.tar.gz
-    cd ../..
-
-.fetch-fq: &fetch-fq |
-  wget -O test_data/sample.fastq.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3-eu-west-1.amazonaws.com/metagenomic_tutorial/sample.fastq.gz
-
-
-conda-run:
-    image: ubuntu:20.04
-    stage: build_and_run
-    before_script:
-        - apt update && apt install -y wget default-jre
-        - *install-nextflow
-        - *install-conda
-        - *fetch-db
-        - *fetch-fq
-    script:
-        - OUTPUT=${CI_PROJECT_NAME}
-        - ./nextflow run main.nf
-              -w ${OUTPUT}/workspace
-              -profile conda
-              --reads test_data/sample.fastq.gz
-              --db_path test_data/hvc
-              --db_prefix hvc
-              --out_dir ${OUTPUT}
-              --wfversion latest
-
-build-image:
-    stage: build_and_run
-    before_script:
-        - apk add wget openjdk11 bash
-        - *install-nextflow
-        - *fetch-db
-        - *fetch-fq
-    script:
-        - echo ${CI_BUILD_TOKEN} | docker login --username gitlab-ci-token --password-stdin ${CI_REGISTRY}
-        - TAG="${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
-        - docker build --no-cache -t "${TAG}" -f Dockerfile . --build-arg BASEIMAGE=${BASEIMAGE}
-        # run letting nextflow orchestrate the containers
-        - docker tag "${TAG}" "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest"
-        - OUTPUT=${CI_PROJECT_NAME}
-        - ./nextflow run main.nf
-              -w ${OUTPUT}/workspace
-              -profile standard
-              --reads test_data/sample.fastq.gz
-              --db_path test_data/hvc
-              --db_prefix hvc
-              --out_dir ${OUTPUT}
-              --wfversion latest
-        # push
-        - if [[ ${CI_COMMIT_BRANCH} == 'dev' ]]; then
-              SHATAG=${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA};
-              echo "Pushing ${SHATAG}";
-              docker tag ${TAG} ${SHATAG};
-              docker push ${SHATAG};
-          fi;
-    only:
-        - branches
-    artifacts:
-        paths:
-            # Add the output directory for the test
-            - "${CI_PROJECT_NAME}"
-        expire_in: 1 day
-
-
-###
-# Retag the image for git tags (releases)
-
-.pull_tag: &pull_tag
-    before_script:
-        - echo ${CI_BUILD_TOKEN} | docker login --username gitlab-ci-token --password-stdin ${CI_REGISTRY}
-        - SHATAG=${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
-        - echo "Pulling ${SHATAG}"
-        - docker pull ${SHATAG}
-    only:
-        - tags
-
-# To ONT registry
-release-int:
-    stage: release
-    <<: *pull_tag
-    script:
-        - echo ${CI_BUILD_TOKEN} | docker login --username gitlab-ci-token --password-stdin ${CI_REGISTRY}
-        - RELTAG=${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}
-        - echo "Pushing ${TAG}"
-        - docker tag ${SHATAG} ${RELTAG}
-        - docker push ${RELTAG}
-
-# To dockerhub
-release-hub:
-    stage: release
-    <<: *pull_tag
-    script:
-        - echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin
-        - RELTAG="${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"
-        - LATEST="${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest"
-        - echo "Pushing ${RELTAG}"
-        - docker tag ${SHATAG} ${RELTAG}
-        - docker push ${RELTAG}
-        - docker tag ${SHATAG} ${LATEST}
-        - docker push ${LATEST}
 
 # centrifuge to dockerhub, we don't expect to change this often so a simple manual build
 release-centrifuge:
-    stage: centrifuge
+    stage: custom-builds
     when: manual
     script:
         - echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin
@@ -131,36 +22,3 @@ release-centrifuge:
         - docker push ${LATEST}
 
 
-# Send all tags matching vX.Y.Z to github (code and release)
-push-github:
-    stage: release
-    image: $GH_PUSH_IMAGE
-    before_script:
-        - apt-get update -qq && apt-get install -y -qq
-          git python3-all-dev git-lfs python3-venv
-        - mkdir ~/.ssh/
-        - cp $LABS_BOT_GH_KEY ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
-        - echo -e "Host github.com\n\tStrictHostKeyChecking no\n\tHostname ssh.github.com\n\tPort 443\n\n" > ~/.ssh/config
-        - git config --global user.email "epi2melabs@nanoporetech.com"
-        - git config --global user.name "epi2melabs-bot"
-    script:
-        # Push master and tag to github
-        - git remote add ont ${CI_REPOSITORY_URL} || true
-        - git remote add github git@github.com:epi2me-labs/${CI_PROJECT_NAME}.git || true
-        - git fetch ont dev --tags
-        - git fetch ont master
-        - git fetch github master || echo "No 'master' branch present on github"
-        - git checkout --track github/master || git checkout master
-        - git merge ${CI_COMMIT_TAG}
-        - git push github master
-        - git push github ${CI_COMMIT_TAG}
-        # Make a github release page
-        - python3 -m venv release_env --prompt "(release) "
-        - source release_env/bin/activate
-        - pip install pip --upgrade
-        - pip install git+https://github.com/epi2me-labs/github_release.git
-        - github_release ${CI_PROJECT_NAME} ${CI_COMMIT_TAG} CHANGELOG.md ${LABS_BOT_GH_TOKEN}
-    only:
-        - /^v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$/
-    except:
-        - branches

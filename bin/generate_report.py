@@ -1,28 +1,40 @@
 #!/usr/bin/env python3
+"""
+Convert taxids to names.
+
+positional arguments:
+  master_table  Master table from generate_master_table.py
+
+optional arguments:
+  -h, --help    show this help message and exit
+"""
 import argparse
 import pathlib
 
+from aplanat import annot, hist
 import aplanat.graphics
 import aplanat.report
-from aplanat import hist, annot
 import ete3
 import pandas as pd
 
 
-parser = argparse.ArgumentParser(description="Convert taxids to names")
-parser.add_argument("master_table", help="Master table from generate_master_table.py")
+parser = argparse.ArgumentParser(description="Convert taxids to names.")
+parser.add_argument(
+    "master_table", help="Master table from generate_master_table.py"
+)
 
 report = aplanat.report.HTMLReport(
     "Metagenomics report",
-    "This report gives a basic overview of the classifications found by centrifuge "
-    "including basic summary statistics about the fastq sample.",
+    "This report gives a basic overview of the classifications found by"
+    " centrifuge including basic summary statistics about the fastq sample.",
 )
 exec_summary = aplanat.graphics.InfoGraphItems()
 
 NCBI = ete3.NCBITaxa()
 
 
-def find_name(taxid):
+def _find_name(taxid):
+    """Find scientific name from taxid using ete3."""
     if taxid == -1:
         return "Unclassified"
     try:
@@ -32,6 +44,7 @@ def find_name(taxid):
 
 
 def get_read_stats(master_table):
+    """Generate read stats from master table."""
     read_stats = {
         "total_bases": 0,
         "mean_quality": 0,
@@ -61,6 +74,7 @@ def get_read_stats(master_table):
 
 
 def main(argv=None):
+    """Process table and generate report.html."""
     args = parser.parse_args(argv)
     master_table = pathlib.Path(args.master_table)
     master_table = pd.read_csv(master_table)
@@ -72,16 +86,20 @@ def main(argv=None):
     classified_reads = master_table[master_table["label"] != "unclassified"]
     print("\nClassification stats:")
     print(f"* Number of unclassified reads: {len(unclassified_reads)}")
-    exec_summary.append("Unclassified reads", len(unclassified_reads), "calculator")
+    exec_summary.append(
+        "Unclassified reads", len(unclassified_reads), "calculator"
+    )
     print(f"* Number of classified reads: {len(classified_reads)}")
-    exec_summary.append("Classified reads", len(classified_reads), "calculator")
+    exec_summary.append(
+        "Classified reads", len(classified_reads), "calculator"
+    )
     print(f"* Total number of reads: {len(master_table)}")
     exec_summary.append("Total reads", len(master_table), "calculator")
 
     # Find genera counts
     df = pd.value_counts(master_table["genus"]).to_frame().reset_index()
     df.columns = ["taxid", "count"]
-    df["scientific_name"] = df.apply(lambda row: find_name(row.taxid), axis=1)
+    df["scientific_name"] = df.apply(lambda row: _find_name(row.taxid), axis=1)
     is_classified = df["taxid"] != -1
     report.markdown("### Genera overview", key="genera-head")
     report.markdown(
@@ -92,69 +110,100 @@ def main(argv=None):
     )
 
     print(f"* Number of genera found: {len(df[is_classified])}")
-    exec_summary.append("Genera found", str(int(len(df[is_classified]))), "calculator")
-    print(f"Top 10 genera found: ")
+    exec_summary.append(
+        "Genera found", str(int(len(df[is_classified]))), "calculator"
+    )
+    print("Top 10 genera found: ")
     # print(df[is_classified])  # genera counts (excluding unclassified)
-    top_gen = df[is_classified].sort_values(by="count", ascending=False).head(10)
+    top_gen = (
+        df[is_classified].sort_values(by="count", ascending=False).head(10)
+    )
     print(top_gen)
     report.table(top_gen, key="Top 10 Genera detected by read count")
 
-    ## Fastq numbers
+    # Fastq numbers
     report.markdown("### Sequence overview", key="fq-head")
     report.markdown(
-        "Read length and quality impact the success of classification so below is a summary of the data.",
+        "Read length and quality impact the success of classification so below"
+        " is a summary of the data.",
         key="fq-desc",
     )
     print("\nRead stats:")
     read_stats = get_read_stats(master_table)
     print(f"* Total bases: {read_stats['total_bases']}")
-    exec_summary.append("Total bases", read_stats['total_bases'], "calculator")
+    exec_summary.append("Total bases", read_stats["total_bases"], "calculator")
     print(f"* Mean quality: {read_stats['mean_quality']}")
-    exec_summary.append("Mean read qscore", read_stats['mean_quality'], "calculator")
+    exec_summary.append(
+        "Mean read qscore", read_stats["mean_quality"], "calculator"
+    )
     print(f"* Read N50: {read_stats['n50_length']}")
-    exec_summary.append("Read length N50", read_stats['n50_length'], "calculator")
+    exec_summary.append(
+        "Read length N50", read_stats["n50_length"], "calculator"
+    )
     print(f"* Mean length: {read_stats['mean_length']}")
-    exec_summary.append("Mean length", read_stats['mean_length'], "calculator")
-    fq_summary = pd.DataFrame.from_dict(read_stats, orient="index", columns=["Value"])
+    exec_summary.append("Mean length", read_stats["mean_length"], "calculator")
+    fq_summary = pd.DataFrame.from_dict(
+        read_stats, orient="index", columns=["Value"]
+    )
     report.table(fq_summary, key="Fastq summary stats")
 
     # fastq graphs
     datas = [master_table.len]
     plot = hist.histogram(datas, bins=400, title="Read length distribution")
     # add vertical lines for mean and N50 read length
-    annot.marker_vline(plot, read_stats['mean_length'], "Mean: {:.0f}".format(read_stats['mean_length']))
     annot.marker_vline(
-        plot, read_stats['n50_length'], "N50: {}".format(read_stats['n50_length']), text_baseline="top"
+        plot,
+        read_stats["mean_length"],
+        "Mean: {:.0f}".format(read_stats["mean_length"]),
+    )
+    annot.marker_vline(
+        plot,
+        read_stats["n50_length"],
+        "N50: {}".format(read_stats["n50_length"]),
+        text_baseline="top",
     )
     # add axis labels
     plot.xaxis.axis_label = "Read Length / bases"
     plot.yaxis.axis_label = "Number of reads"
     report.plot(plot, key="length-plain")
 
-    report.markdown("### Classified vs unclassified reads", key="classification-debug-head")
     report.markdown(
-        "When considering the validity of classifications the quality of the "
-        "data and composition of the original database are crucial.  Some "
-        "unclassified reads in a classification experiment are expected, the proportion "
-        "of unclassified reads will depend on the experiment.  One way to determine if "
-        "there are organisms present that are not classified due to lack of representation in the "
-        "original database is to compare the distribution of length and quality of reads that are "
-        "unclassified vs classified.  If there are many unclassified reads but there is not a significant "
-        "difference between the statistics of the population of classified and unclassified "
-        "reads this indicates that the organism may not be adequately represented in the original database.  "
-        "Consequently, as poorer quality data is less likely to classify as anything specific, adjusting "
-        "prep to improve sequencing would be a good avenue to pursue.",
+        "### Classified vs unclassified reads", key="classification-debug-head"
+    )
+    report.markdown(
+        "When considering the validity of classifications the quality of the"
+        " data and composition of the original database are crucial.  Some"
+        " unclassified reads in a classification experiment are expected, the"
+        " proportion of unclassified reads will depend on the experiment.  One"
+        " way to determine if there are organisms present that are not"
+        " classified due to lack of representation in the original database is"
+        " to compare the distribution of length and quality of reads that are"
+        " unclassified vs classified.  If there are many unclassified reads"
+        " but there is not a significant difference between the statistics of"
+        " the population of classified and unclassified reads this indicates"
+        " that the organism may not be adequately represented in the original"
+        " database.  Consequently, as poorer quality data is less likely to"
+        " classify as anything specific, adjusting prep to improve sequencing"
+        " would be a good avenue to pursue.",
         key="classification-debug-desc",
     )
 
     # Read stats classified vs unclassified
     read_stats_classified = get_read_stats(classified_reads)
     read_stats_unclassified = get_read_stats(unclassified_reads)
-    df_class = pd.DataFrame.from_dict(read_stats_classified, orient="index", columns=["Value"])
-    df_unclass = pd.DataFrame.from_dict(read_stats_unclassified, orient="index", columns=["Value"])
-    df_cvu_stats = df_class.join(df_unclass, lsuffix="_classified", rsuffix="_unclassified")
-    report.table(df_cvu_stats, key="Key read stats for classified and unclassified reads")
-
+    df_class = pd.DataFrame.from_dict(
+        read_stats_classified, orient="index", columns=["Value"]
+    )
+    df_unclass = pd.DataFrame.from_dict(
+        read_stats_unclassified, orient="index", columns=["Value"]
+    )
+    df_cvu_stats = df_class.join(
+        df_unclass, lsuffix="_classified", rsuffix="_unclassified"
+    )
+    report.table(
+        df_cvu_stats,
+        key="Key read stats for classified and unclassified reads",
+    )
 
     # Classification read length plot
     classified_datas = classified_reads["len"].values
