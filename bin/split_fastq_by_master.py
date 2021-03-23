@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+Split fastq based on label column.
+
+positional arguments:
+  fastq         Path to fastq/fastq.tar.gz
+  master_table  Path to master centrifuge table with label
+  out_dir       Path to output dir for resulting fq
+
+optional arguments:
+  -h, --help    show this help message and exit
+"""
 import argparse
 from contextlib import ExitStack
 from pathlib import Path
@@ -7,10 +18,14 @@ import sys
 import pandas as pd
 from pysam import FastxFile
 
-parser = argparse.ArgumentParser(description="Split fastq based on label column")
+parser = argparse.ArgumentParser(
+    description="Split fastq based on label column."
+)
 parser.add_argument("fastq", type=Path, help="Path to fastq/fastq.tar.gz")
 parser.add_argument(
-    "master_table", type=Path, help="Path to master centrifuge table with label"
+    "master_table",
+    type=Path,
+    help="Path to master centrifuge table with label",
 )
 parser.add_argument(
     "out_dir", type=Path, help="Path to output dir for resulting fq"
@@ -18,6 +33,7 @@ parser.add_argument(
 
 
 def main(argv=None):
+    """Split fastq based on label."""
     args = parser.parse_args(argv)
     fq_path = args.fastq
     table = args.master_table
@@ -39,7 +55,10 @@ def main(argv=None):
         }
         for i, entry in enumerate(stack.enter_context(FastxFile(fq_path))):
             if not i % 500 and i:
-                print(f"Processed: {i} records... (~ { i / len(df) * 100 :3.2f}% )")
+                print(
+                    f"Processed: {i} records... (~"
+                    f" { i / len(df) * 100 :3.2f}% )"
+                )
             try:
                 label = df.loc[[entry.name], "label"][0]
             except KeyError:
