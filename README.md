@@ -90,7 +90,7 @@ sequence files to be analysed.
 - `--reads` specifies path to a FASTQ file (can be tar.gz) (required)
 - `--db_path` specifies the directory your centrifuge database directory is in (required)
 - `--db_prefix` specifies the name of your centrifuge database (your database files must be in a directory named after your db - see example data) (required)
-- `--output-dir` specifies the directory to place your output files in (required)
+- `--out_dir` specifies the directory to place your output files in (required)
 - `--wfversion` specifies the version of the docker containers to fun when running the workflow in `standard` mode. default: `latest`
 
 To demonstrate the capibilities of the workflow, sample data can be obtained as follows:
@@ -135,7 +135,7 @@ example. This directory contains the nextflow working directories alongside
 the primary outputs of the workflow:
 
 #### HTML Report
-You can find an example of the report that you will generate here: [link]{} it
+You can find an example of the report that you will generate [here](example_report.html) it
 gives an overview of the quality of the data along with information about the
 classifciations.
 

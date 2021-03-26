@@ -1,5 +1,6 @@
 name: epi2melabs-nf-metagenomics
 channels:
+    - epi2melabs
     - bioconda
     - conda-forge
     - defaults
@@ -12,3 +13,4 @@ dependencies:
     - ete3
     - minimap2
     - aplanat
+    - fastcat

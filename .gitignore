@@ -5,3 +5,6 @@ template-workflow
 .*.swp
 .*.swo
 .idea/*
+venv
+test_data/*
+output
