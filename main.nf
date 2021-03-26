@@ -14,9 +14,10 @@ if(params.help) {
     log.info '    nextflow run workflow.nf [options]'
     log.info ''
     log.info 'Script Options: '
-    log.info '    --fastq        FILE    Path to FASTQ file'
+    log.info '    --reads        FILE    Path to FASTQ file'
     log.info '    --db_path      DIR     Path centrifuge database directory'
-    log.info '    --db_prefix      DIR     Path centrifuge database directory'
+    log.info '    --db_prefix      DIR     Name of the centrifuge database'
+    log.info '    --out_dir        DIR      Name of output directory'
     log.info ''
 
     return
@@ -55,7 +56,8 @@ process generateMaster {
     """
     generate_master_table.py analysis/read_classifications.tsv analysis --taxid 9606
     generate_fq_stats.py -f analysis/read_classification_master.tsv  $reads
-    generate_report.py read_classification_master.tsv
+    fastcat -r seqs.txt $reads > /dev/null
+    generate_report.py read_classification_master.tsv seqs.txt
     date
     """
 }
@@ -111,5 +113,5 @@ workflow {
     reads = channel.fromPath(params.reads, checkIfExists:true)
     db_path = channel.fromPath(params.db_path, checkIfExists:true)
     results = pipeline(reads, db_path)
-    output(results[0].concat(results[1]).concat(results[2]).concat(results[3]).concat(results[4]))
+    output(results[0].concat(results[1], results[2], results[3], results[4]))
 }

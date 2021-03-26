@@ -12,6 +12,7 @@ import argparse
 import pathlib
 
 from aplanat import annot, hist
+from aplanat.components import fastcat
 import aplanat.graphics
 import aplanat.report
 import ete3
@@ -22,11 +23,14 @@ parser = argparse.ArgumentParser(description="Convert taxids to names.")
 parser.add_argument(
     "master_table", help="Master table from generate_master_table.py"
 )
+parser.add_argument(
+    "fastcat_summary", help="fastcat sequencing summary stats"
+)
 
 report = aplanat.report.HTMLReport(
     "Metagenomics report",
-    "This report gives a basic overview of the classifications found by"
-    " centrifuge including basic summary statistics about the fastq sample.",
+    "Results generated through the wf-metagenomics nextflow workflow provided "
+    "by Oxford Nanopore Technologies.",
 )
 exec_summary = aplanat.graphics.InfoGraphItems()
 
@@ -78,22 +82,17 @@ def main(argv=None):
     args = parser.parse_args(argv)
     master_table = pathlib.Path(args.master_table)
     master_table = pd.read_csv(master_table)
+    fastcat_stats = args.fastcat_summary
 
     pd.options.display.float_format = "{:.1f}".format
 
     # Classification numbers
     unclassified_reads = master_table[master_table["label"] == "unclassified"]
     classified_reads = master_table[master_table["label"] != "unclassified"]
-    print("\nClassification stats:")
-    print(f"* Number of unclassified reads: {len(unclassified_reads)}")
     exec_summary.append(
-        "Unclassified reads", len(unclassified_reads), "calculator"
+        "Unclassified reads", len(unclassified_reads), "chart-pie"
     )
-    print(f"* Number of classified reads: {len(classified_reads)}")
-    exec_summary.append(
-        "Classified reads", len(classified_reads), "calculator"
-    )
-    print(f"* Total number of reads: {len(master_table)}")
+    exec_summary.append("Classified reads", len(classified_reads), "chart-pie")
     exec_summary.append("Total reads", len(master_table), "calculator")
 
     # Find genera counts
@@ -109,63 +108,68 @@ def main(argv=None):
         key="genera-desc",
     )
 
-    print(f"* Number of genera found: {len(df[is_classified])}")
     exec_summary.append(
-        "Genera found", str(int(len(df[is_classified]))), "calculator"
+        "Genera found", str(int(len(df[is_classified]))), "project-diagram"
     )
-    print("Top 10 genera found: ")
     # print(df[is_classified])  # genera counts (excluding unclassified)
     top_gen = (
         df[is_classified].sort_values(by="count", ascending=False).head(10)
     )
-    print(top_gen)
-    report.table(top_gen, key="Top 10 Genera detected by read count")
+    top_gen = top_gen.reset_index()
+    top_gen.drop(top_gen.columns[0], axis=1, inplace=True)
+    report.table(
+        top_gen, key="Top 10 Genera detected by read count", index=False
+    )
 
     # Fastq numbers
     report.markdown("### Sequence overview", key="fq-head")
     report.markdown(
-        "Read length and quality impact the success of classification so below"
-        " is a summary of the data.",
+        "Read length and quality impact the success of classification.  "
+        "Below is a summary of the data.",
         key="fq-desc",
     )
-    print("\nRead stats:")
     read_stats = get_read_stats(master_table)
-    print(f"* Total bases: {read_stats['total_bases']}")
-    exec_summary.append("Total bases", read_stats["total_bases"], "calculator")
-    print(f"* Mean quality: {read_stats['mean_quality']}")
+    exec_summary.append("Total bases", read_stats["total_bases"], "dna")
+    exec_summary.append("Mean read qscore", read_stats["mean_quality"], "gem")
     exec_summary.append(
-        "Mean read qscore", read_stats["mean_quality"], "calculator"
+        "Read length N50", read_stats["n50_length"], "ruler-horizontal"
     )
-    print(f"* Read N50: {read_stats['n50_length']}")
     exec_summary.append(
-        "Read length N50", read_stats["n50_length"], "calculator"
+        "Mean length", read_stats["mean_length"], "ruler-horizontal"
     )
-    print(f"* Mean length: {read_stats['mean_length']}")
-    exec_summary.append("Mean length", read_stats["mean_length"], "calculator")
     fq_summary = pd.DataFrame.from_dict(
         read_stats, orient="index", columns=["Value"]
     )
     report.table(fq_summary, key="Fastq summary stats")
 
-    # fastq graphs
-    datas = [master_table.len]
-    plot = hist.histogram(datas, bins=400, title="Read length distribution")
-    # add vertical lines for mean and N50 read length
-    annot.marker_vline(
-        plot,
-        read_stats["mean_length"],
-        "Mean: {:.0f}".format(read_stats["mean_length"]),
-    )
-    annot.marker_vline(
-        plot,
-        read_stats["n50_length"],
-        "N50: {}".format(read_stats["n50_length"]),
-        text_baseline="top",
-    )
-    # add axis labels
-    plot.xaxis.axis_label = "Read Length / bases"
-    plot.yaxis.axis_label = "Number of reads"
-    report.plot(plot, key="length-plain")
+
+    #------
+    report.add_section(section=fastcat.full_report(fastcat_stats))
+    #------
+
+
+    # # fastq graphs
+    # datas = [master_table.len]
+    # xlim_max = read_stats["mean_length"] + (master_table["len"].std() * 6)
+    # plot = hist.histogram(
+    #     datas, bins=400, title="Read length distribution", xlim=[0, xlim_max]
+    # )
+    # # add vertical lines for mean and N50 read length
+    # annot.marker_vline(
+    #     plot,
+    #     read_stats["mean_length"],
+    #     "Mean: {:.0f}".format(read_stats["mean_length"]),
+    # )
+    # annot.marker_vline(
+    #     plot,
+    #     read_stats["n50_length"],
+    #     "N50: {}".format(read_stats["n50_length"]),
+    #     text_baseline="top",
+    # )
+    # # add axis labels
+    # plot.xaxis.axis_label = "Read Length / bases"
+    # plot.yaxis.axis_label = "Number of reads"
+    # report.plot(plot, key="length-plain")
 
     report.markdown(
         "### Classified vs unclassified reads", key="classification-debug-head"
@@ -188,6 +192,12 @@ def main(argv=None):
         key="classification-debug-desc",
     )
 
+    report.markdown(
+        "The following table shows the key summary statistics of the data "
+        "split by classification status",
+        key="classification-debug-table-desc",
+    )
+
     # Read stats classified vs unclassified
     read_stats_classified = get_read_stats(classified_reads)
     read_stats_unclassified = get_read_stats(unclassified_reads)
@@ -200,33 +210,43 @@ def main(argv=None):
     df_cvu_stats = df_class.join(
         df_unclass, lsuffix="_classified", rsuffix="_unclassified"
     )
+    df_cvu_stats.rename(
+        columns={
+            "Value_classified": "Classified",
+            "Value_unclassified": "Unclassified",
+        },
+        inplace=True,
+    )
     report.table(
         df_cvu_stats,
         key="Key read stats for classified and unclassified reads",
     )
 
-    # Classification read length plot
-    classified_datas = classified_reads["len"].values
-    unclassified_datas = unclassified_reads["len"].values
-    plot = hist.histogram(
-        [unclassified_datas, classified_datas],
-        colors=["maroon", "darkolivegreen"],
-        bins=400,
-        title="Read length distribution of classified vs unclassified reads",
+    # Executive summary
+    report.markdown("## Executive summary", key="exec-head")
+    report.markdown(
+        "The following summarises the key findings of this workflow.",
+        key="exec-desc",
     )
-    # add axis labels
-    plot.xaxis.axis_label = "Read Length / bases"
-    plot.yaxis.axis_label = "Number of reads"
-    report.plot(plot, key="length-classification")
-
-    report.markdown("## Excutive summary", key="exec-head")
     report.plot(None, "exec-plot")
     exec_plot = aplanat.graphics.infographic(exec_summary.values(), ncols=4)
     report.plot(exec_plot, key="exec-plot")
 
+    # About the report
+    report.markdown("### About", key="about")
+    report.markdown(
+        "**Oxford Nanopore Technologies products are not intended for use for "
+        "health assessment or to diagnose, treat, mitigate, cure or prevent "
+        "any disease or condition.** This report was produced using the "
+        "[epi2me-labs/wf-metagenomics](https://github.com/epi2me-labs/"
+        "wf-metagenomics)."
+        "The workflow can be run using `nextflow epi2me-labs/wf-metagenomics "
+        "--help`",
+        key="about-desc",
+    )
+
     fname = "report.html"
     report.write(fname)
-    print("Report written to: {}.".format(fname))
 
 
 if __name__ == "__main__":
