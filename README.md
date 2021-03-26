@@ -134,11 +134,6 @@ The output of the pipeline will be found in `./output` for the above
 example. This directory contains the nextflow working directories alongside
 the primary outputs of the workflow:
 
-#### HTML Report
-You can find an example of the report that you will generate [here](example_report.html) it
-gives an overview of the quality of the data along with information about the
-classifciations.
-
 #### .fastq files
 
 Three fastq files are created: `9606.fastq`, `other.fastq` and
