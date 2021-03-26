@@ -52,7 +52,7 @@ process generateMaster {
         file "analysis/read_classifications.tsv"
     output:
         file "read_classification_master.tsv"
-        file "report.html"
+        file "wf-metagenomics-report.html"
     """
     generate_master_table.py analysis/read_classifications.tsv analysis --taxid 9606
     generate_fq_stats.py -f analysis/read_classification_master.tsv  $reads
