@@ -32,9 +32,9 @@ parser.add_argument(
 )
 
 
-def main(argv=None):
+def main():
     """Split fastq based on label."""
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
     fq_path = args.fastq
     table = args.master_table
     out_dir = args.out_dir
@@ -64,7 +64,7 @@ def main(argv=None):
             except KeyError:
                 print(f"Skipping: {entry.name} as not present in master table")
                 continue
-            fastq_files[label].write(f"{entry}")
+            fastq_files[label].write(f"{entry}\n")
 
     print("Complete!")
 

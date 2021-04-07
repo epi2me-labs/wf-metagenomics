@@ -45,19 +45,30 @@ process centrifuge {
     """
 }
 
+process fastcat {
+    label "containerPython"
+    input:
+        each file(reads)
+    output:
+        file "seqs.txt"
+    """
+    fastcat -r seqs.txt $reads > /dev/null
+    """
+}
+
 process generateMaster {
     label "containerPython"
     input:
         each file(reads)
         file "analysis/read_classifications.tsv"
+        file "seqs.txt"
     output:
-        file "read_classification_master.tsv"
+        file "analysis/read_classification_master.tsv"
         file "wf-metagenomics-report.html"
     """
-    generate_master_table.py analysis/read_classifications.tsv analysis --taxid 9606
-    generate_fq_stats.py -f analysis/read_classification_master.tsv  $reads
     fastcat -r seqs.txt $reads > /dev/null
-    generate_report.py read_classification_master.tsv seqs.txt
+    generate_master_table.py analysis/read_classifications.tsv seqs.txt analysis --taxid 9606
+    generate_report.py analysis/read_classification_master.tsv seqs.txt
     date
     """
 }
@@ -98,11 +109,13 @@ workflow pipeline {
         db_path
     main:
         results = centrifuge(reads, db_path)
-        master = generateMaster(reads, results[0])
+        seqs = fastcat(reads)
+        master = generateMaster(reads, results[0], seqs)
         fastq = splitByMaster(reads, master[0])
     emit:
         results[0]
         results[1]
+        seqs
         master[0]
         master[1]
         fastq
@@ -113,5 +126,5 @@ workflow {
     reads = channel.fromPath(params.reads, checkIfExists:true)
     db_path = channel.fromPath(params.db_path, checkIfExists:true)
     results = pipeline(reads, db_path)
-    output(results[0].concat(results[1], results[2], results[3], results[4]))
+    output(results[0].concat(results[1], results[2], results[3], results[4], results[5]))
 }

@@ -28,16 +28,10 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "read_classification", type=Path, help="File produced by centrifuge"
 )
-parser.add_argument("outdir", type=Path, help="Directory to place results")
 parser.add_argument(
-    "--scilabels",
-    type=int,
-    help=(
-        "If true label will be converted to scientific name rather than taxid"
-    ),
-    choices=[0, 1],
-    default=0,
+    "fastcat_output", type=Path, help="File produced by fastcat"
 )
+parser.add_argument("outdir", type=Path, help="Directory to place results")
 split_type = parser.add_mutually_exclusive_group(required=True)
 split_type.add_argument(
     "--rank",
@@ -92,10 +86,11 @@ def _get_lineage(taxid):
         return {}
 
 
-def main(argv=None):
+def main():
     """Generate master table."""
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
     tsv_path = args.read_classification
+    fastcat_output = args.fastcat_output
     output_dir = args.outdir
     split_by_rank = args.rank
     split_by_taxid = args.taxid
@@ -105,10 +100,16 @@ def main(argv=None):
 
     if not tsv_path.is_file:
         raise FileNotFoundError
-    if split_by_taxid is not None and int(split_by_taxid) <= 0:
+    elif split_by_taxid is not None and int(split_by_taxid) <= 0:
         raise Exception(f"Invalid taxid: {split_by_taxid}")
+    elif not fastcat_output.is_file:
+        raise FileNotFoundError
 
+    read_stats = pd.read_csv(fastcat_output, sep="\t")
+    read_stats.rename(columns={'read_id': 'readID'}, inplace=True)
+    read_stats = read_stats.set_index('readID')
     classifications = pd.read_csv(tsv_path, sep="\t")
+
     tax_groups = classifications["taxID"].unique()
     assignments = None
     if split_by_rank:
@@ -143,7 +144,10 @@ def main(argv=None):
     read_classification_master = classifications.join(
         assignment_df, on="taxID"
     )
-    print(read_classification_master)
+    read_classification_master = read_classification_master.join(
+        read_stats, on="readID"
+    )
+    print(read_classification_master.head(20))
     with open(output_dir / "read_classification_master.tsv", "wb") as f:
         read_classification_master.to_csv(f, na_rep="-1", index=False)
 
