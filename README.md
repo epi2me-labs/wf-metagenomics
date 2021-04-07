@@ -38,8 +38,9 @@ The primary outputs of the workflow include:
 * **other.fastq** - fastq of all reads that were classified as something other than human
 * **unclassified.fastq** - fastq of all reads that were not classified by centrifuge
 * **9606.fastq** - fastq of all reads that classified as human
-* **read_classification_master.tsv** - classification result with additional lineage information and fastq stats per read
+* **seqs.txt** - output of `fastcat` containing per read stats
 * **read_classifications.tsv** - classification result for each read - original output of centrifuge
+* **read_classification_master.tsv** - classification result with additional lineage information and fastq stats per read
 
 
 ### Supported installations and GridION devices
@@ -93,26 +94,20 @@ sequence files to be analysed.
 - `--out_dir` specifies the directory to place your output files in (required)
 - `--wfversion` specifies the version of the docker containers to fun when running the workflow in `standard` mode. default: `latest`
 
-To demonstrate the capibilities of the workflow, sample data can be obtained as follows:
+To demonstrate the capabilities of the workflow sample data has been included.  A selection of sample reads from a mixture 
+of the [Zymo Mock Community](https://www.zymoresearch.com/collections/zymobiomics-microbial-community-standards/products/zymobiomics-microbial-community-dna-standard) 
+and a Human cell-line are included along with a sample database containing **only** 
+Zymo mock community references is included at `/test_data/db_store/zymo.tar.gz`.
 
-1. Sample reads from a mixture of the [Zymo Mock Community]() and a Human cell-line:
-
+Before running the workflow please decompress the Zymo centrifuge database:
    ```
-   # Download the sample sequencing reads
-   mkdir -p test_data
-   wget -O test_data/sample.fastq.gz \
-       https://ont-exd-int-s3-euwst1-epi2me-labs.s3-eu-west-1.amazonaws.com/metagenomic_tutorial/sample.fastq.gz
+   # Decompress the Zymo centrifuge database
+   tar xvzf test_data/db_store/zymo.tar.gz -C test_data/db_store/
    ```
-
-2. Sample database which will be downloaded and decompressed at `test_data/hpvc/hpvc.tar.gz`.
-
-   ```
-   # Download human+viral+prokaryote database
-   mkdir -p test_data
-   wget -O test_data/hpvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hpvc.tar.gz
-   # Create a directory and unarchive the files
-   cd test_data && mkdir hpvc && cd hpvc && tar -xzvf ../hpvc.tar.gz
-   ```
+   
+> Please note that the example database is only to act as a very minimal example database
+> and is not suitable for analysis.  Please follow the instructions at the bottom of this README
+> to download a more comprehensive database containing a wider range of organisms.
 
 To run the workflow using Docker containers supply the `-profile standard`
 argument to `nextflow run`:
@@ -287,6 +282,23 @@ In order to run the workflow with this new image it is required to give
 nextflow run epi2me-labs/wf-metagenomics \
     --wfversion latest
 ```
+
+## Note on databases
+
+Note: This database only contains the Zymo mock community references so is only useful as a lightweight example.
+You can download a more comprehensive database containing refseq human, viral and prokaryotic references (`hvpc`) using 
+the instructions below. Please bear in mind that this reference database is larger (27MB vs 20GB) so may take some time to download 
+and will require a significant amount of memory (36GB RAM) to run successfully.
+
+The `hvpc` sample database which will be downloaded and decompressed at `test_data/hpvc/hpvc.tar.gz`.
+
+   ```
+   # Download human+viral+prokaryote database
+   mkdir -p test_data
+   wget -O test_data/hpvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hpvc.tar.gz
+   # Create a directory and unarchive the files
+   cd test_data && mkdir hpvc && cd hpvc && tar -xzvf ../hpvc.tar.gz
+   ```
 
 ## Useful links
 

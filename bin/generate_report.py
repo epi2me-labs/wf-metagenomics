@@ -42,13 +42,13 @@ def get_read_stats(master_table):
     if master_table.empty:
         return read_stats
 
-    sorted_lengths = master_table.len.sort_values(ascending=False).reset_index(
-        drop=True
-    )
+    sorted_lengths = master_table.read_length.sort_values(
+        ascending=False
+    ).reset_index(drop=True)
     cumulative_length = sorted_lengths.cumsum()
     total_bases = cumulative_length.iloc[-1]
     read_stats["total_bases"] = total_bases
-    mean_quality = round(master_table.meanqscore.mean(), 2)
+    mean_quality = round(master_table.mean_quality.mean(), 2)
     read_stats["mean_quality"] = mean_quality
 
     # read length stats
@@ -72,10 +72,10 @@ def main():
     parser.add_argument(
         "fastcat_summary", help="fastcat sequencing summary stats")
     args = parser.parse_args()
-    report = aplanat.report.HTMLReport(
-        "Metagenomics report",
-        "Results generated through the wf-metagenomics nextflow workflow "
-        "provided by Oxford Nanopore Technologies.",)
+    report = aplanat.report.WFReport(
+        title="Metagenomics report",
+        workflow="wf-metagenomics",
+    )
     exec_summary = aplanat.graphics.InfoGraphItems()
 
     master_table = pathlib.Path(args.master_table)
@@ -103,7 +103,7 @@ def main():
     section.markdown(
         "The following shows the top 10 genera found in the sample sorted by "
         "number of reads classified.  Please note: only organisms present in "
-        "the original database can be discovered in the sample!",
+        "the original database can be discovered in the sample.",
         key="genera-desc")
 
     exec_summary.append(
@@ -117,11 +117,6 @@ def main():
 
     # Fastq numbers
     section = report.add_section(section=fastcat.full_report(fastcat_stats))
-    section.markdown(
-        "Read length and quality impact the success of classification.  "
-        "Below is a summary of the data.",
-        key="fq-desc",
-    )
     read_stats = get_read_stats(master_table)
     exec_summary.append("Total bases", read_stats["total_bases"], "dna")
     exec_summary.append("Mean read qscore", read_stats["mean_quality"], "gem")
@@ -129,52 +124,6 @@ def main():
         "Read length N50", read_stats["n50_length"], "ruler-horizontal")
     exec_summary.append(
         "Mean length", read_stats["mean_length"], "ruler-horizontal")
-    fq_summary = pd.DataFrame.from_dict(
-        read_stats, orient="index", columns=["Value"])
-    section.table(fq_summary, key="Fastq summary stats")
-
-    section = report.add_section()
-    section.markdown("""
-### Classified vs unclassified reads
-
-When considering the validity of classifications the quality of the
-data and composition of the original database are crucial.  Some
-unclassified reads in a classification experiment are expected, the
-proportion of unclassified reads will depend on the experiment.  One
-way to determine if there are organisms present that are not
-classified due to lack of representation in the original database is
-to compare the distribution of length and quality of reads that are
-unclassified vs classified.  If there are many unclassified reads
-but there is not a significant difference between the statistics of
-the population of classified and unclassified reads this indicates
-that the organism may not be adequately represented in the original
-database.  Consequently, as poorer quality data is less likely to
-classify as anything specific, adjusting prep to improve sequencing
-would be a good avenue to pursue.
-""", key="classification-debug-desc")
-
-    section.markdown(
-        "The following table shows the key summary statistics of the data "
-        "split by classification status",
-        key="classification-debug-table-desc")
-
-    # Read stats classified vs unclassified
-    read_stats_classified = get_read_stats(classified_reads)
-    read_stats_unclassified = get_read_stats(unclassified_reads)
-    df_class = pd.DataFrame.from_dict(
-        read_stats_classified, orient="index", columns=["Value"])
-    df_unclass = pd.DataFrame.from_dict(
-        read_stats_unclassified, orient="index", columns=["Value"])
-    df_cvu_stats = df_class.join(
-        df_unclass, lsuffix="_classified", rsuffix="_unclassified")
-    df_cvu_stats.rename(
-        columns={
-            "Value_classified": "Classified",
-            "Value_unclassified": "Unclassified"},
-        inplace=True)
-    section.table(
-        df_cvu_stats,
-        key="Key read stats for classified and unclassified reads")
 
     # Executive summary
     section = report.add_section()

@@ -6,5 +6,4 @@ template-workflow
 .*.swo
 .idea/*
 venv
-test_data/*
 output
