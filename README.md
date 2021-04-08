@@ -287,7 +287,7 @@ nextflow run epi2me-labs/wf-metagenomics \
 
 Note: This database only contains the Zymo mock community references so is only useful as a lightweight example.
 You can download a more comprehensive database containing refseq human, viral and prokaryotic references (`hvpc`) using 
-the instructions below. Please bear in mind that this reference database is larger (27MB vs 20GB) so may take some time to download 
+the instructions below. Please bear in mind that this reference database is larger (27MB vs 20GB compressed) so may take some time to download 
 and will require a significant amount of memory (36GB RAM) to run successfully.
 
 The `hvpc` sample database which will be downloaded and decompressed at `test_data/hpvc/hpvc.tar.gz`.
