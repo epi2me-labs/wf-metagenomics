@@ -137,20 +137,6 @@ def main():
 
     # About the report
     section = report.add_section()
-    report.markdown('''
-### About
-
-**Oxford Nanopore Technologies products are not intended for use for health
-assessment or to diagnose, treat, mitigate, cure or prevent any disease or
-condition.**
-
-This report was produced using the
-[epi2me-labs/wf-metagenomics](https://github.com/epi2me-labs/wf-metagenomics).
-The workflow can be run using `nextflow epi2me-labs/wf-metagenomics --help`
-
----
-''')
-
     report.write(args.output)
 
 
