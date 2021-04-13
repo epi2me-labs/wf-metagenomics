@@ -10,14 +10,9 @@ variables:
     NF_WORKFLOW_OPTS: "--reads test_data/sample.fastq.gz --db_path test_data/db_store/zymo --db_prefix zymo"
 
 
-# centrifuge to dockerhub, we don't expect to change this often so a simple manual build
 release-centrifuge:
-    stage: custom-builds
-    when: manual
-    script:
-        - echo ${DOCKERHUB_TOKEN} | docker login --username epi2melabs --password-stdin
-        - LATEST="${DOCKERHUB_NAMESPACE}/centrifuge:latest"
-        - docker build --no-cache -t "${LATEST}" -f Dockerfile_centrifuge .
-        - docker push ${LATEST}
-
-
+    extends: .aux-container
+    variables:
+        AUX_IMAGE_NAME: "centrifuge"
+        AUX_IMAGE_ENVFILE: "environment_centrifuge.yaml"
+        AUX_IMAGE_DOCKERFILE: "Dockerfile_centrifuge"
