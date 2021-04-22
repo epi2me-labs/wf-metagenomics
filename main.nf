@@ -52,7 +52,7 @@ process fastcat {
     output:
         file "seqs.txt"
     """
-    fastcat -r seqs.txt $reads > /dev/null
+    fastcat -r seqs.txt $reads 1> /dev/null
     """
 }
 
