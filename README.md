@@ -88,7 +88,7 @@ sequence files to be analysed.
 
 **Parameters:**
 
-- `--reads` specifies path to a FASTQ file (can be tar.gz) (required)
+- `--fastq` specifies path to a FASTQ file (can be tar.gz) (required)
 - `--db_path` specifies the directory your centrifuge database directory is in (required)
 - `--db_prefix` specifies the name of your centrifuge database (your database files must be in a directory named after your db - see example data) (required)
 - `--out_dir` specifies the directory to place your output files in (required)
@@ -118,9 +118,9 @@ OUTPUT=output
 nextflow run epi2me-labs/wf-metagenomics \
     -w ${OUTPUT}/workspace \
     -profile standard \
-    --reads test_data/sample.fastq.gz\
-    --db_path test_data/db_store/hpvc \
-    --db_prefix hpvc
+    --fastq test_data/sample.fastq.gz\
+    --db_path test_data/db_store/zymo \
+    --db_prefix zymo
     --out_dir ${OUTPUT}
     --wfversion latest
 ```
