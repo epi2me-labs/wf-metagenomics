@@ -2,37 +2,36 @@ nextflow.enable.dsl = 2
 
 params.help = ""
 params.fastq = ""
-params.out_dir = ""
+params.out_dir = "output"
 params.db_path = ""
 params.db_prefix = ""
 
-if(params.help) {
-    log.info ''
-    log.info 'Workflow template'
-    log.info ''
-    log.info 'Usage: '
-    log.info '    nextflow run workflow.nf [options]'
-    log.info ''
-    log.info 'Script Options: '
-    log.info '    --reads        FILE    Path to FASTQ file'
-    log.info '    --db_path      DIR     Path centrifuge database directory'
-    log.info '    --db_prefix      DIR     Name of the centrifuge database'
-    log.info '    --out_dir        DIR      Name of output directory'
-    log.info ''
+def helpMessage(){
+    log.info """
+        Workflow template
 
-    return
+        Usage:
+        nextflow run workflow.nf [options]
+
+        Script Options:
+            --fastq        FILE    Path to FASTQ file
+            --db_path      DIR     Path centrifuge database directory
+            --db_prefix      DIR     Name of the centrifuge database
+            --out_dir        DIR      Name of output directory default "output"
+
+    """
 }
 
 process centrifuge {
     label "containerCentrifuge"
     input:
-        each file(reads)
+        each file(fastq)
         file db_path
     output:
         file "analysis/read_classifications.tsv"
         file "analysis/centrifuge_report.tsv"
     """
-    echo "reads: $reads"
+    echo "fastq: fastq"
     echo "db_path: $db_path"
     echo "db_prefix": ${params.db_prefix}
     mkdir analysis
@@ -41,32 +40,32 @@ process centrifuge {
     centrifuge --met 5 --time \
         --ignore-quals -S analysis/read_classifications.tsv \
         --report-file analysis/centrifuge_report.tsv \
-        -x $db_path/${params.db_prefix} -U $reads
+        -x $db_path/${params.db_prefix} -U $fastq
     """
 }
 
 process fastcat {
     label "containerPython"
     input:
-        each file(reads)
+        each file(fastq)
     output:
         file "seqs.txt"
     """
-    fastcat -r seqs.txt $reads 1> /dev/null
+    fastcat -r seqs.txt $fastq 1> /dev/null
     """
 }
 
 process generateMaster {
     label "containerPython"
     input:
-        each file(reads)
+        each file(fastq)
         file "analysis/read_classifications.tsv"
         file "seqs.txt"
     output:
         file "analysis/read_classification_master.tsv"
         file "wf-metagenomics-report.html"
     """
-    fastcat -r seqs.txt $reads > /dev/null
+    fastcat -r seqs.txt $fastq > /dev/null
     generate_master_table.py analysis/read_classifications.tsv seqs.txt analysis --taxid 9606
     generate_report.py analysis/read_classification_master.tsv seqs.txt
     date
@@ -76,12 +75,12 @@ process generateMaster {
 process splitByMaster {
     label "containerPython"
     input:
-        file reads
+        file fastq
         file "analysis/read_classification_master.tsv"
     output:
         path "analysis/fastq_bundles/*.fastq"
     """
-    split_fastq_by_master.py $reads analysis/read_classification_master.tsv analysis/fastq_bundles
+    split_fastq_by_master.py $fastq analysis/read_classification_master.tsv analysis/fastq_bundles
     date
     """
 }
@@ -105,13 +104,13 @@ process output {
 // workflow module
 workflow pipeline {
     take:
-        reads
+        fastq
         db_path
     main:
-        results = centrifuge(reads, db_path)
-        seqs = fastcat(reads)
-        master = generateMaster(reads, results[0], seqs)
-        fastq = splitByMaster(reads, master[0])
+        results = centrifuge(fastq, db_path)
+        seqs = fastcat(fastq)
+        master = generateMaster(fastq, results[0], seqs)
+        fastq = splitByMaster(fastq, master[0])
     emit:
         results[0]
         results[1]
@@ -123,8 +122,17 @@ workflow pipeline {
 
 // entrypoint workflow
 workflow {
-    reads = channel.fromPath(params.reads, checkIfExists:true)
+    if (params.help) {
+        helpMessage()
+        exit 1
+    }
+    if (!params.fastq | !params.db_path | !params.db_prefix) {
+        helpMessage()
+        println("")
+        println("`--fastq`, `--db_path`, `--db_prefix` are required")
+    }
+    fastq = channel.fromPath(params.fastq, checkIfExists:true)
     db_path = channel.fromPath(params.db_path, checkIfExists:true)
-    results = pipeline(reads, db_path)
+    results = pipeline(fastq, db_path)
     output(results[0].concat(results[1], results[2], results[3], results[4], results[5]))
 }
