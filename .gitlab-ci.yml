@@ -6,7 +6,6 @@ include:
 
 variables:
     NF_BEFORE_SCRIPT: |
-        wget -O test_data/sample.fastq.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3-eu-west-1.amazonaws.com/metagenomic_tutorial/sample.fastq.gz;
         tar xvzf test_data/db_store/zymo.tar.gz -C test_data/db_store/
     NF_WORKFLOW_OPTS: "--fastq test_data/sample.fastq.gz --db_path test_data/db_store/zymo --db_prefix zymo"
 
