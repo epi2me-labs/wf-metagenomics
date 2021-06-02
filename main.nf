@@ -14,7 +14,7 @@ def helpMessage(){
         nextflow run workflow.nf [options]
 
         Script Options:
-            --fastq        FILE    Path to FASTQ file
+            --fastq        FILE    Path to FASTQ directory or path
             --db_path      DIR     Path centrifuge database directory
             --db_prefix      DIR     Name of the centrifuge database
             --out_dir        DIR      Name of output directory default "output"
@@ -25,7 +25,7 @@ def helpMessage(){
 process centrifuge {
     label "containerCentrifuge"
     input:
-        each file(fastq)
+        file "seqs.fastq"
         file db_path
     output:
         file "analysis/read_classifications.tsv"
@@ -40,7 +40,7 @@ process centrifuge {
     centrifuge --met 5 --time \
         --ignore-quals -S analysis/read_classifications.tsv \
         --report-file analysis/centrifuge_report.tsv \
-        -x $db_path/${params.db_prefix} -U $fastq
+        -x $db_path/${params.db_prefix} -U seqs.fastq
     """
 }
 
@@ -49,23 +49,22 @@ process fastcat {
     input:
         each file(fastq)
     output:
+        file "seqs.fastq"
         file "seqs.txt"
     """
-    fastcat -r seqs.txt $fastq 1> /dev/null
+    fastcat -xr seqs.txt $fastq 1> seqs.fastq
     """
 }
 
 process generateMaster {
     label "containerPython"
     input:
-        each file(fastq)
         file "analysis/read_classifications.tsv"
         file "seqs.txt"
     output:
         file "analysis/read_classification_master.tsv"
         file "wf-metagenomics-report.html"
     """
-    fastcat -r seqs.txt $fastq > /dev/null
     generate_master_table.py analysis/read_classifications.tsv seqs.txt analysis --taxid 9606
     generate_report.py analysis/read_classification_master.tsv seqs.txt
     date
@@ -75,12 +74,12 @@ process generateMaster {
 process splitByMaster {
     label "containerPython"
     input:
-        file fastq
+        file "seqs.fastq"
         file "analysis/read_classification_master.tsv"
     output:
         path "analysis/fastq_bundles/*.fastq"
     """
-    split_fastq_by_master.py $fastq analysis/read_classification_master.tsv analysis/fastq_bundles
+    split_fastq_by_master.py seqs.fastq analysis/read_classification_master.tsv analysis/fastq_bundles
     date
     """
 }
@@ -107,14 +106,15 @@ workflow pipeline {
         fastq
         db_path
     main:
-        results = centrifuge(fastq, db_path)
         seqs = fastcat(fastq)
-        master = generateMaster(fastq, results[0], seqs)
-        fastq = splitByMaster(fastq, master[0])
+        results = centrifuge(seqs[0], db_path)
+        master = generateMaster(results[0], seqs[1])
+        fastq = splitByMaster(seqs[0], master[0])
     emit:
         results[0]
         results[1]
-        seqs
+        seqs[0]
+        seqs[1]
         master[0]
         master[1]
         fastq
@@ -134,5 +134,5 @@ workflow {
     fastq = channel.fromPath(params.fastq, checkIfExists:true)
     db_path = channel.fromPath(params.db_path, checkIfExists:true)
     results = pipeline(fastq, db_path)
-    output(results[0].concat(results[1], results[2], results[3], results[4], results[5]))
+    output(results[0].concat(results[1], results[2], results[3], results[4], results[5], results[6]))
 }
