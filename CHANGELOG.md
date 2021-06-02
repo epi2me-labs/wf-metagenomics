@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 ### Added
 - Help message when required parameters are not given
+- Ability to change number of threads given to centrifuge with --threads
 
 ### Changed
 - README command now refers to the zymo db rather hvpc

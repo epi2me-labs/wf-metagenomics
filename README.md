@@ -93,6 +93,7 @@ sequence files to be analysed.
 - `--db_prefix` specifies the name of your centrifuge database (your database files must be in a directory named after your db - see example data) (required)
 - `--out_dir` specifies the directory to place your output files in (required)
 - `--wfversion` specifies the version of the docker containers to fun when running the workflow in `standard` mode. default: `latest`
+- `--threads` specifies the number of threads available to centrifuge (default: 8)
 
 To demonstrate the capabilities of the workflow sample data has been included.  A selection of sample reads from a mixture 
 of the [Zymo Mock Community](https://www.zymoresearch.com/collections/zymobiomics-microbial-community-standards/products/zymobiomics-microbial-community-dna-standard) 
