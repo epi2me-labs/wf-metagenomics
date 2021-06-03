@@ -5,6 +5,7 @@ params.fastq = ""
 params.out_dir = "output"
 params.db_path = ""
 params.db_prefix = ""
+params.threads = 8
 
 def helpMessage(){
     log.info """
@@ -17,7 +18,8 @@ def helpMessage(){
             --fastq        FILE    Path to FASTQ directory or path
             --db_path      DIR     Path centrifuge database directory
             --db_prefix      DIR     Name of the centrifuge database
-            --out_dir        DIR      Name of output directory default "output"
+            --out_dir        DIR      Name of output directory (default: "output")
+            --threads   INT Number of threads to run centrifuge with (default: 8)
 
     """
 }
@@ -38,6 +40,7 @@ process centrifuge {
     mkdir analysis/fastq_bundles
     ls -lha $db_path*
     centrifuge --met 5 --time \
+        --threads ${params.threads} \
         --ignore-quals -S analysis/read_classifications.tsv \
         --report-file analysis/centrifuge_report.tsv \
         -x $db_path/${params.db_prefix} -U seqs.fastq
