@@ -48,6 +48,7 @@ def main():
     print(f"Table records: {len(df)}")
     labels = df["label"].unique()
     print(f"Labels found: {len(labels)}")
+    label_index = df["label"].to_dict()
     with ExitStack() as stack:
         fastq_files = {
             label: stack.enter_context((out_dir / f"{label}.fastq").open("w"))
@@ -60,7 +61,7 @@ def main():
                     f" { i / len(df) * 100 :3.2f}% )"
                 )
             try:
-                label = df.loc[[entry.name], "label"][0]
+                label = label_index[entry.name]
             except KeyError:
                 print(f"Skipping: {entry.name} as not present in master table")
                 continue

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - README command now refers to the zymo db rather hvpc
 - `--reads` param changed to --fastq
+- Performance improvement to split_by_master.py
 
 ## [v0.0.3]
 
