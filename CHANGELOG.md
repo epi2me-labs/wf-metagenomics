@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 ### Added
 - Help message when required parameters are not given
+- Added nextflow workflow for downloading other databases
 - Ability to change number of threads given to centrifuge with --threads
 
 ### Changed
