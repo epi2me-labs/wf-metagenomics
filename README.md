@@ -88,10 +88,10 @@ sequence files to be analysed.
 
 **Parameters:**
 
-- `--fastq` specifies path to a FASTQ file (can be tar.gz) (required)
-- `--db_path` specifies the directory your centrifuge database directory is in (required)
-- `--db_prefix` specifies the name of your centrifuge database (your database files must be in a directory named after your db - see example data) (required)
-- `--out_dir` specifies the directory to place your output files in (required)
+- `--fastq` specifies path to a FASTQ file (can be tar.gz) (required) e.g. `test_data/sample.fastq.gz` or `test_data`
+- `--db_path` specifies the directory your centrifuge database files (*.cf) are in (required) e.g. `test_data/db_store/zymo/`
+- `--db_prefix` specifies the name of your centrifuge database (required) `zymo` for `zymo.*.cf` database
+- `--out_dir` specifies the directory to place your output files in (required). default: `output`
 - `--wfversion` specifies the version of the docker containers to fun when running the workflow in `standard` mode. default: `latest`
 - `--threads` specifies the number of threads available to centrifuge (default: 8)
 
@@ -291,14 +291,13 @@ You can download a more comprehensive database containing refseq human, viral an
 the instructions below. Please bear in mind that this reference database is larger (27MB vs 20GB compressed) so may take some time to download 
 and will require a significant amount of memory (36GB RAM) to run successfully.
 
-The `hvpc` sample database which will be downloaded and decompressed at `test_data/hpvc/hpvc.tar.gz`.
+The `hvpc` sample database which will be downloaded and decompressed at `test_data/hpvc.*.cf`.
 
    ```
-   # Download human+viral+prokaryote database
-   mkdir -p test_data
-   wget -O test_data/hpvc.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/metagenomic_tutorial/hpvc.tar.gz
-   # Create a directory and unarchive the files
-   cd test_data && mkdir hpvc && cd hpvc && tar -xzvf ../hpvc.tar.gz
+   # Download human+viral+prokaryote+covid database
+   nextflow run download.nf -w output/workspace -profile standard --db_path test_data/db_store --db_prefix hpvc --wfversion latest
+   # Run the sample dataset through the expanded database
+   nextflow run main.nf -w output/workspace -profile standard --fastq test_data/sample.fastq.gz --db_path test_data/db_store --db_prefix hvpc --out_dir output --wfversion latest
    ```
 
 ## Useful links

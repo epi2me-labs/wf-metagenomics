@@ -127,15 +127,36 @@ workflow pipeline {
 workflow {
     if (params.help) {
         helpMessage()
-        exit 1
+        exit 0
     }
-    if (!params.fastq | !params.db_path | !params.db_prefix) {
+    if (!params.fastq) {
         helpMessage()
         println("")
-        println("`--fastq`, `--db_path`, `--db_prefix` are required")
+        println("`--fastq` is required")
+        exit 1
+    }
+    if (!params.db_path) {
+        helpMessage()
+        println("")
+        println("`--db_path` is required")
+        exit 1
+    }
+    if (!params.db_prefix) {
+        helpMessage()
+        println("")
+        println("`--db_prefix` is required")
+        exit 1
+    }
+    db_file = new File(params.db_path, params.db_prefix + ".1.cf")
+    if (!db_file.exists()){
+        helpMessage()
+        println("")
+        println("Database files not present e.g. ($db_file)")
+        exit 1
     }
     fastq = channel.fromPath(params.fastq, checkIfExists:true)
     db_path = channel.fromPath(params.db_path, checkIfExists:true)
     results = pipeline(fastq, db_path)
     output(results[0].concat(results[1], results[2], results[3], results[4], results[5], results[6]))
 }
+
