@@ -291,13 +291,13 @@ You can download a more comprehensive database containing refseq human, viral an
 the instructions below. Please bear in mind that this reference database is larger (27MB vs 20GB compressed) so may take some time to download 
 and will require a significant amount of memory (36GB RAM) to run successfully.
 
-The `hvpc` sample database which will be downloaded and decompressed at `test_data/hpvc.*.cf`.
+The `hpvc` sample database which will be downloaded and decompressed at `test_data/hpvc.*.cf`.
 
    ```
    # Download human+viral+prokaryote+covid database
-   nextflow run download.nf -w output/workspace -profile standard --db_path test_data/db_store --db_prefix hpvc --wfversion latest
+   nextflow run main.nf -w output/workspace -profile standard --db_path test_data/db_store --db_prefix hpvc --wfversion latest --download
    # Run the sample dataset through the expanded database
-   nextflow run main.nf -w output/workspace -profile standard --fastq test_data/sample.fastq.gz --db_path test_data/db_store --db_prefix hvpc --out_dir output --wfversion latest
+   nextflow run main.nf -w output/workspace -profile standard --fastq test_data/sample.fastq.gz --db_path test_data/db_store --db_prefix hpvc --out_dir output --wfversion latest
    ```
 
 ## Useful links

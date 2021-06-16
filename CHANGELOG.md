@@ -7,13 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 ### Added
 - Help message when required parameters are not given
-- Added nextflow workflow for downloading other databases
-- Ability to change number of threads given to centrifuge with --threads
+- `--download` command to download other sample metagenomic databases
+- `--threads` to change number of threads given to centrifuge
 
 ### Changed
-- README command now refers to the zymo db rather hvpc
-- `--reads` param changed to --fastq
-- Performance improvement to split_by_master.py
+- README example command now refers to the zymo db rather hvpc
+- `--reads` param changed to `--fastq`
+- Performance improvement to `split_by_master.py`
 
 ## [v0.0.3]
 
