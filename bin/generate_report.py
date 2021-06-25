@@ -14,11 +14,11 @@ import pathlib
 from aplanat.components import fastcat
 import aplanat.graphics
 import aplanat.report
-import ete3
+import ncbitaxonomy
 import pandas as pd
 
 
-NCBI = ete3.NCBITaxa()
+NCBI = ncbitaxonomy.NCBITaxa()
 
 
 def _find_name(taxid):
@@ -65,12 +65,16 @@ def main():
     """Process table and generate report.html."""
     parser = argparse.ArgumentParser(description="Convert taxids to names.")
     parser.add_argument(
-        "--output", default="wf-metagenomics-report.html",
-        help="Report output filename.")
+        "--output",
+        default="wf-metagenomics-report.html",
+        help="Report output filename.",
+    )
     parser.add_argument(
-        "master_table", help="Master table from generate_master_table.py")
+        "master_table", help="Master table from generate_master_table.py"
+    )
     parser.add_argument(
-        "fastcat_summary", help="fastcat sequencing summary stats")
+        "fastcat_summary", help="fastcat sequencing summary stats"
+    )
     args = parser.parse_args()
     report = aplanat.report.WFReport(
         title="Metagenomics report",
@@ -90,7 +94,8 @@ def main():
     unclassified_reads = master_table[master_table["label"] == "unclassified"]
     classified_reads = master_table[master_table["label"] != "unclassified"]
     exec_summary.append(
-        "Unclassified reads", len(unclassified_reads), "chart-pie")
+        "Unclassified reads", len(unclassified_reads), "chart-pie"
+    )
     exec_summary.append("Classified reads", len(classified_reads), "chart-pie")
     exec_summary.append("Total reads", len(master_table), "calculator")
 
@@ -104,16 +109,20 @@ def main():
         "The following shows the top 10 genera found in the sample sorted by "
         "number of reads classified.  Please note: only organisms present in "
         "the original database can be discovered in the sample.",
-        key="genera-desc")
+        key="genera-desc",
+    )
 
     exec_summary.append(
-        "Genera found", str(int(len(df[is_classified]))), "project-diagram")
+        "Genera found", str(int(len(df[is_classified]))), "project-diagram"
+    )
     top_gen = (
-        df[is_classified].sort_values(by="count", ascending=False).head(10))
+        df[is_classified].sort_values(by="count", ascending=False).head(10)
+    )
     top_gen = top_gen.reset_index()
     top_gen.drop(top_gen.columns[0], axis=1, inplace=True)
     section.table(
-        top_gen, key="Top 10 Genera detected by read count", index=False)
+        top_gen, key="Top 10 Genera detected by read count", index=False
+    )
 
     # Fastq numbers
     section = report.add_section(section=fastcat.full_report(fastcat_stats))
@@ -121,16 +130,19 @@ def main():
     exec_summary.append("Total bases", read_stats["total_bases"], "dna")
     exec_summary.append("Mean read qscore", read_stats["mean_quality"], "gem")
     exec_summary.append(
-        "Read length N50", read_stats["n50_length"], "ruler-horizontal")
+        "Read length N50", read_stats["n50_length"], "ruler-horizontal"
+    )
     exec_summary.append(
-        "Mean length", read_stats["mean_length"], "ruler-horizontal")
+        "Mean length", read_stats["mean_length"], "ruler-horizontal"
+    )
 
     # Executive summary
     section = report.add_section()
     section.markdown("## Executive summary", key="exec-head")
     section.markdown(
         "The following summarises the key findings of this workflow.",
-        key="exec-desc")
+        key="exec-desc",
+    )
     section.plot(None, "exec-plot")
     exec_plot = aplanat.graphics.infographic(exec_summary.values(), ncols=4)
     section.plot(exec_plot, key="exec-plot")

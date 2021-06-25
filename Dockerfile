@@ -7,7 +7,7 @@ RUN \
     . $CONDA_DIR/etc/profile.d/mamba.sh \
     && micromamba activate \
     && micromamba install --file $HOME/environment.yaml \
-    && python3.8 -c 'from  ete3 import NCBITaxa; ncbi = NCBITaxa()' \
+    && python3.8 -c 'from  ncbitaxonomy import NCBITaxa; ncbi = NCBITaxa()' \
     && fix-permissions $CONDA_DIR \
     && fix-permissions $HOME
 

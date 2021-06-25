@@ -108,7 +108,7 @@ process generateMaster {
         file "analysis/read_classification_master.tsv"
         file "wf-metagenomics-report.html"
     """
-    generate_master_table.py analysis/read_classifications.tsv seqs.txt analysis --taxid 9606
+    generate_master_table.py analysis/read_classifications.tsv seqs.txt analysis --split "fungi:phylum:4751 bacteria:phylum:2 viruses:phylum:10239 else:superkingdom:" --human
     generate_report.py analysis/read_classification_master.tsv seqs.txt
     date
     """
@@ -120,7 +120,7 @@ process splitByMaster {
         file "seqs.fastq"
         file "analysis/read_classification_master.tsv"
     output:
-        path "analysis/fastq_bundles/*.fastq"
+        path "analysis/fastq_bundles"
     """
     split_fastq_by_master.py seqs.fastq analysis/read_classification_master.tsv analysis/fastq_bundles
     """

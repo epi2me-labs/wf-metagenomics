@@ -30,15 +30,23 @@ parser.add_argument(
 parser.add_argument(
     "out_dir", type=Path, help="Path to output dir for resulting fq"
 )
+parser.add_argument(
+    "--infer_path",
+    type=str,
+    help="Create directories based on delimiter",
+    default="|",
+)
 
 
 def main():
     """Split fastq based on label."""
     args = parser.parse_args()
-    fq_path = args.fastq
-    table = args.master_table
-    out_dir = args.out_dir
-    out_dir.mkdir(exist_ok=True)
+    fq_path = args.fastq.resolve()
+    table = args.master_table.resolve()
+    out_dir = args.out_dir.resolve()
+    delimiter = args.infer_path
+
+    # out_dir.mkdir(exist_ok=True)
     if not fq_path.is_file:
         raise FileNotFoundError(f"Fastq not found: {fq_path}")
     if not table.is_file:
@@ -46,13 +54,36 @@ def main():
 
     df = pd.read_csv(table, sep=",", index_col=0)
     print(f"Table records: {len(df)}")
+
+    # generate unique labels in dataset
     labels = df["label"].unique()
     print(f"Labels found: {len(labels)}")
     label_index = df["label"].to_dict()
+
+    def _strip_segments(label):
+        """Strip any aberrant path separators in a platform specific way."""
+        return "".join(Path(label).parts)
+
+    def _create_label_pair(label):
+        """Create tuple containing the label and generated path."""
+        split_label = (
+            [_strip_segments(s) for s in label.split(delimiter)]
+            if delimiter
+            else [_strip_segments(label)]
+        )
+        return label, out_dir.joinpath(*split_label).with_suffix(".fastq")
+
+    output_fq_paths = [_create_label_pair(label) for label in labels]
+
+    # ensure each directory mentioned in output_fq_paths exists.
+    parents = {p.parent for _, p in output_fq_paths}
+    for parent in parents:
+        parent.mkdir(parents=True, exist_ok=True)
+
     with ExitStack() as stack:
         fastq_files = {
-            label: stack.enter_context((out_dir / f"{label}.fastq").open("w"))
-            for label in labels
+            label: stack.enter_context(p.open("w"))
+            for label, p in output_fq_paths
         }
         for i, entry in enumerate(stack.enter_context(FastxFile(fq_path))):
             if not i % 500 and i:
@@ -66,7 +97,7 @@ def main():
                 print(f"Skipping: {entry.name} as not present in master table")
                 continue
             fastq_files[label].write(f"{entry}\n")
-
+    print(f"Processed {i} records... (~ 100% )")
     print("Complete!")
 
 
