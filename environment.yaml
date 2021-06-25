@@ -5,12 +5,11 @@ channels:
     - conda-forge
     - defaults
 dependencies:
-    - git
     - python=3.8
     - pysam
     - samtools
     - pandas
-    - ete3
+    - ncbitaxonomy
     - minimap2
     - aplanat
     - fastcat

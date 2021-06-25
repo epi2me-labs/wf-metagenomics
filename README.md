@@ -35,10 +35,12 @@ to see the options for the workflow.
 The primary outputs of the workflow include:
 
 * **report.html** - HTML report document detailing QC metrics and the primary findings of the workflow
-* **other.fastq** - fastq of all reads that were classified as something other than human
-* **unclassified.fastq** - fastq of all reads that were not classified by centrifuge
-* **9606.fastq** - fastq of all reads that classified as human
+* **fastq_budles** - Directory containing fastqs grouped by `--split` opt. By default this 
+  will be a directories: `fungi`, `bacteria`, `viral` containing fastqs grouped by phylum
+  and further `unclassified` containining reads that were not classified and `else` which
+  contains, split by superkingdom, all other read classifications.
 * **seqs.txt** - output of `fastcat` containing per read stats
+* **seqs.fastq** - concatenated fastq of all reads passed to workflow 
 * **read_classifications.tsv** - classification result for each read - original output of centrifuge
 * **read_classification_master.tsv** - classification result with additional lineage information and fastq stats per read
 
