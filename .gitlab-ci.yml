@@ -1,7 +1,6 @@
 include:
     - project: "epi2melabs/ci-templates"
       file: "wf-containers.yaml"
-      ref: "aws-batch"
 
 
 variables:
