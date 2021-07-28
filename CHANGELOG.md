@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 ### Changed
+- Updated project to use latest practices from wf-template.
+
+### Fixed
 - Bug fix for empty taxids in split by clade rules.
+- Incorrect specification of conda environment file in Nextflow config.
 
 ## [v0.2.0]
 ### Added

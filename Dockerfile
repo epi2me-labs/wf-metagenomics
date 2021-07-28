@@ -1,4 +1,4 @@
-ARG BASEIMAGE=ontresearch/base-workflow-image:v0.1.0
+ARG BASEIMAGE=ontresearch/base-workflow-image:v0.1.1
 FROM $BASEIMAGE
 ARG ENVFILE=environment.yaml
 
@@ -10,7 +10,11 @@ RUN \
     && micromamba clean --all --yes \
     && python3.8 -c 'from  ncbitaxonomy import NCBITaxa; ncbi = NCBITaxa()' \
     && fix-permissions $CONDA_DIR \
-    && fix-permissions $HOME
+    && fix-permissions $HOME \
+    && rm -rf $CONDA_DIR/conda-meta \
+    && rm -rf $CONDA_DIR/include \
+    && rm -rf $CONDA_DIR/lib/python3.*/site-packages/pip \
+    && find $CONDA_DIR -name '__pycache__' -type d -exec rm -rf '{}' '+'
 
 USER $WF_UID
 WORKDIR $HOME

@@ -17,9 +17,8 @@ The workflow can currently be run using either
 the required software. Both methods are automated out-of-the-box provided
 either docker of conda is installed.
 
-> See the sections below for installation of these prerequisites in various scenarios.
-> It is not required to clone or download the git repository in order to run the workflow.
-
+It is not required to clone or download the git repository in order to run the workflow.
+For more information on running EPI2ME Labs workflows [visit out website](https://labs.epi2me.io/wfindex).
 **Workflow options**
 
 To obtain the workflow, having installed `nextflow`, users can run:
@@ -44,49 +43,9 @@ The primary outputs of the workflow include:
 * **read_classifications.tsv** - classification result for each read - original output of centrifuge
 * **read_classification_master.tsv** - classification result with additional lineage information and fastq stats per read
 
-
-### Supported installations and GridION devices
-
-Installation of the software on a GridION can be performed using the command
-
-`sudo apt install ont-nextflow`
-
-This will install a java runtime, Nextflow and docker. If *docker* has not already been
-configured the command below can be used to provide user access to the *docker*
-services. Please logout of your computer after this command has been typed.
-
-`sudo usermod -aG docker $USER`
-
-### Installation on Ubuntu devices
-
-For hardware running Ubuntu the following instructions should suffice to install
-Nextflow and Docker in order to run the workflow.
-
-1. Install a Jva runtime environment (JRE):
-
-   ```sudo apt install default-jre```
-
-2. Download and install Nextflow may be downloaded from https://www.nextflow.io:
-
-   ```curl -s https://get.nextflow.io | bash```
-
-   This will place a `nextflow` binary in the current working directory, you 
-   may wish to move this to a location where it is always accessible, e.g:
-
-   ```sudo mv nextflow /usr/local/bin```
-
-3. Install docker and add the current user to the docker group to enable access:
-
-   ```
-   sudo apt install docker.io
-   sudo usermod -aG docker $USER
-   ```
-
 ## Running the workflow
 
-The `wf-metagenomics` workflow can be controlled by the following parameters. The `fastq` parameter
-is the most important parameter: it is required to identify the location of the
-sequence files to be analysed.
+The `wf-metagenomics` workflow can be controlled by the following parameters.
 
 **Parameters:**
 
@@ -96,6 +55,7 @@ sequence files to be analysed.
 - `--out_dir` specifies the directory to place your output files in (required). default: `output`
 - `--wfversion` specifies the version of the docker containers to fun when running the workflow in `standard` mode. default: `latest`
 - `--threads` specifies the number of threads available to centrifuge (default: 8)
+- `--split` add "rules" (see section below for details) for labelling / splitting results (default: splitting by superkingdom)
 
 To demonstrate the capabilities of the workflow sample data has been included.  A selection of sample reads from a mixture 
 of the [Zymo Mock Community](https://www.zymoresearch.com/collections/zymobiomics-microbial-community-standards/products/zymobiomics-microbial-community-dna-standard) 
@@ -113,7 +73,7 @@ Before running the workflow please decompress the Zymo centrifuge database:
 > to download a more comprehensive database containing a wider range of organisms.
 
 To run the workflow using Docker containers supply the `-profile standard`
-argument to `nextflow run`:
+argument to `nextflow run` to run with conda use `-profile conda`:
 
 ```
 # run the pipeline with the test data
@@ -164,126 +124,111 @@ documentation:
     > queryLength
     > numMatches
 * lineage: superkingdom, kingdom, phylum, class, order, family, genus, species,
-* label: The name of the output fastq this read was output to e.g. "unclassified" means it was output to `unclassified.fastq`
+* label: The name of the file this fastq was output to e.g. "unclassified" means it was output to `unclassified.fastq`
 * len: Length of the read
 * meanqscore: Mean qscore of the basecall of the read.
 
+### Rules
 
-### Running the workflow with Conda
-
-To run the workflow using conda rather than docker, simply replace 
-
-    -profile standard 
-
-with
-
-    -profile conda
-
-in the command above.
-
-### Configuration and tuning
-
-> This section provides some minimal guidance for changing common options, see
-> the [Nextflow documentation](https://www.nextflow.io/docs/latest/config.html) for further details.
-
-The default settings for the workflow are described in the configuration file `nextflow.config`
-found within the git repository. The default configuration defines an *executor* that will 
-use a specified maximum CPU cores (four at the time of writing) and RAM (eight gigabytes).
-
-If the workflow is being run on a device other than a GridION, the available memory and
-number of CPUs may be adjusted to the available number of CPU cores. This can be done by
-creating a file `my_config.cfg` in the working directory with the following contents:
+The `--split` parameter can be used to label and split results into  particular clades.
+The syntax is 1 or more space separated rules.
 
 ```
-executor {
-    $local {
-        cpus = 4
-        memory = "8 GB"
-    }
-}
+    --split "label:action:taxid label:action:taxid"
 ```
 
-and running the workflow providing the `-c` (config) option, e.g.:
+Each rule is applied on the remaining reads that are not already sorted so it's 
+important to use more specific rules before more generalised ones.
 
+Individual rules are colon-separated as label:action:taxid. 
+
+* `label` indicates the folder the file that the individual fastq record will be stored in.
+* `action` indicates the way the fastqs within a particular labelled folder should be grouped. 
+* `taxid` refers to the taxid and those below that should be included within 
+this action.
+
+#### Actions
+`action` can take one of a specific list of actions detailed below:
+
+##### Group by clade:
+
+* `superkingdom` - split by superkingdom of the classification
+* `kingdom` - split by kingdom of the classification
+* `phylum` - split by phylum of the classification 
+* `class` - split by class of the classification 
+* `order` - split by order of the classification 
+* `family` - split by family of the classification 
+* `genus` - split by genus of the classification 
+* `species` - split by species of the classification 
+
+If a read is classified at a level below the grouping `action` selected e.g. it's 
+classified at the species level but the grouping `action` is at the class level:  
+the fastq record will be stored in a file named after the `class` within the 
+classification that read's classified lineage.  However if a classified taxid is 
+above the classification rank e.g. the read is classified as "Bacteria" but the 
+action `class` is used then this read will be placed in `{label}/other.fastq`.
+
+##### Group by taxid:
+
+* `taxid` - split by taxid classification
+
+The read will be grouped together with other reads that are classified as exactly
+the same taxid e.g. *E.coli* reads classified at the species level (taxid=562) will 
+be grouped together in one file (562.fastq) and *E.coli* reads classified at the 
+strain level e.g. *E. coli O17 str. K12a* (taxid=1010810) will be grouped together in another file
+e.g. 1010810.fastq within the same folder.
+
+#### Examples
+
+##### All bacteria in a "Contamination" folder
+
+If you wanted all the reads classified as Bacteria (taxid=2)
+to be included in a folder called "Contamination" and that these 
+fastq should be grouped at the "family" such that you would have a separate file 
+for fastqs classified as "Enterobacteriaceae" (taxid=543) and 
+"Lactobacillaceae" (taxid=33958) you would get the following:
 ```
-# run the pipeline with custom configuration
-nextflow run epi2me-labs/wf-metagenomics \
-    -c my_config.cfg \
-    ...
+# redacted nextflow command with split
+nextflow [...] --split "Contamination:family:2"
 ```
-
-The contents of the `my_config.cfg` file will override the contents of the default
-configuration file. See the [Nextflow documentation](https://www.nextflow.io/docs/latest/config.html)
-for more information concerning customized configuration.
-
-**Using a fixed conda environment**
-
-By default, Nextflow will attempt to create a fresh conda environment for any new
-analysis (for reasons of reproducibility). This may be undesirable if many analyses
-are being run. To avoid the situation a fixed conda environment can be used for all
-analyses by creating a custom config with the following stanza:
-
+Results in the following files:
 ```
-profiles {
-    // profile using conda environments rather than docker
-    // containers
-    fixed_conda {
-        docker {
-            enabled = false
-        }
-        process {
-            withLabel:artic {
-                conda = "/path/to/my/conda/environment"
-            }
-            shell = ['/bin/bash', '-euo', 'pipefail']
-        }
-    }
-}
-```
-
-and running nextflow by setting the profile to `fixed_conda`:
-
-```
-nextflow run epi2me-labs/wf-metagenomics \
-    -c my_config.cfg \
-    -profile fixed_conda \
-    ...
-```
-
-## Updating the workflow
-
-Periodically when running the workflow, users may find that a message is displayed
-indicating that an update to the workflow is available.
-
-To update the workflow simply run:
-
-    nextflow pull epi2me-labs/wf-metagenomics
-
-## Building the docker container from source
-
-The docker image used for running the `wf-metagenomics` workflow is available on
-[dockerhub](https://hub.docker.com/repository/docker/ontresearch/wf-metagenomics).
-The image is built from the Dockerfile present in the git repository. Users
-wishing to modify and build the image can do so with:
-
-```
-CONTAINER_TAG=ontresearch/wf-metagenomics:latest
-
-git clone https://github.com/epi2me-labs/wf-metagenomics
-cd wf-metagenomics
-
-docker build \
-    -t ${CONTAINER_TAG} -f Dockerfile \
-    --build-arg BASEIMAGE=ontresearch/base-workflow-image:v0.1.0 \
-    .
+Contamination/543.fastq # Enterobacteriaceae and below 
+Contamination/33958.fastq # Lactobacillaceae and below
+Contamination/other.fastq # Reads classified as bacteria but above the family level
+other.fastq # Reads classified without Bacteria (taxid=2) within their lineage
+unclassified.fastq # Reads that were not classified
 ```
 
-In order to run the workflow with this new image it is required to give
-`nextflow` the `--wfversion` parameter:
+##### All classifications in one "Classified" folder
+```
+# redacted nextflow command with split
+nextflow [...] --split "Classified:superkingdon:1"
+nextflow [...] --split "Classified:superkingdon:"
+```
+If you want all reads in a folder called "Classified" you can use 1 as the 
+root taxid or leave it blank. This will result in the following folders:
 
 ```
-nextflow run epi2me-labs/wf-metagenomics \
-    --wfversion latest
+Classified/2.fastq # Bacteria
+Classified/2759.fastq # Eukaryota
+unclassified.fastq # unclassified reads
+```
+
+##### All E.coli in one folder and everything else in Classified folder
+```
+# redacted nextflow command with split
+nextflow [...] --split "Escherichia:taxid:561 Classified:superkingdon:1"
+nextflow [...] --split "Escherichia:taxid:561 Classified:superkingdon:"
+```
+Files created:
+```
+Ecoli/562.fastq # Escherichia coli
+Ecoli/1010810.fastq # Escherichia coli O17 str. K12a
+Ecoli/1355083.fastq # Escherichia coli ZH193
+Classified/2.fastq # Bacteria
+Classified/2759.fastq # Eukaryota
+unclassified.fastq
 ```
 
 ## Note on databases
