@@ -166,14 +166,18 @@ def _generate_rules(rule_str):
     """
     Generate a set of Rules from a rule string.
 
-    :param rule_str:
+    :param rule_str: "rule rule rule" each rule must be "label:action:taxid"
     :return: an iterable of Rules
     """
     for individual_rule_str in rule_str.split(" "):
         try:
             dirname, func_lab, value = individual_rule_str.split(":")
         except ValueError:
-            dirname, func_lab = individual_rule_str.split(":")
+            msg = f"Rule string '{individual_rule_str}' should contain " \
+                  f"three components, e.g. 'label:action:taxid'."
+            raise ValueError(msg)
+
+        if not value:
             value = "1"
         if func_lab in RANKS:
             func = partial(by_rank, rank=func_lab)
@@ -183,7 +187,7 @@ def _generate_rules(rule_str):
                 func = partial(by_taxid, selected_taxid=int(value))
                 yield Rule(dirname, func, int(value))
         else:
-            raise Exception("Who knows what happened here...")
+            raise Exception(f"Rule string invalid: {individual_rule_str}")
 
 
 def by_rule(tax_groups, rules, human=True, delimiter="|"):
