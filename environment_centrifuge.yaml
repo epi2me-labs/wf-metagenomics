@@ -4,4 +4,5 @@ channels:
     - conda-forge
     - defaults
 dependencies:
-    - centrifuge
+    # reminder: update AUX_IMAGE_TAG if the package versions are changed
+    - centrifuge==1.0.4_beta

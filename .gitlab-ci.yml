@@ -9,9 +9,11 @@ variables:
     NF_WORKFLOW_OPTS: "--fastq test_data/sample.fastq.gz --db_path test_data/db_store/zymo --db_prefix zymo"
 
 
+# reminder: update AUX_IMAGE_TAG if the aux container package versions are changed
 release-centrifuge:
     extends: .aux-container
     variables:
         AUX_IMAGE_NAME: "centrifuge"
         AUX_IMAGE_ENVFILE: "environment_centrifuge.yaml"
         AUX_IMAGE_DOCKERFILE: "Dockerfile_centrifuge"
+        AUX_IMAGE_TAG: "1.0.4_beta"
