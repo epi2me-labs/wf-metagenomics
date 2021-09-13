@@ -23,6 +23,7 @@ def helpMessage(){
             --out_dir      DIR   Name of output directory default: 'output'
             --threads      INT   Number of threads to run centrifuge with (default: 8)
             --s3_root      STR   S3 url location to search for prefix default: '${params.s3_root}'
+            --report_name  STR     Optional report suffix (default: $params.report_name)
     """
 }
 
@@ -106,10 +107,12 @@ process generateMaster {
         file "seqs.txt"
     output:
         file "analysis/read_classification_master.tsv"
-        file "wf-metagenomics-report.html"
+        file "wf-metagenomics-*.html"
+    script:
+        report_name = "wf-metagenomics-" + params.report_name + '.html'
     """
     generate_master_table.py analysis/read_classifications.tsv seqs.txt analysis --split "fungi:phylum:4751 bacteria:phylum:2 viruses:phylum:10239 else:superkingdom:" --human
-    generate_report.py analysis/read_classification_master.tsv seqs.txt
+    generate_report.py analysis/read_classification_master.tsv seqs.txt --output $report_name
     date
     """
 }
