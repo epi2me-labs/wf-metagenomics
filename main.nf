@@ -68,7 +68,7 @@ Notes:
 
 Notes:
     ref2taxid format is .tsv (refname  taxid), no header row.
-    kraken2filter format is comma separated taxids, e.g. 2,9606
+    kraken2filter and minimap2filter accept comma sep'd taxids, e.g. 2,9606
 """
 }
 
@@ -107,7 +107,7 @@ process combineFilterFastq {
 
 process minimap2 {
     label "wf_ribosomal_survey"
-    cpus params.threads
+    cpus 1
     input:
         file reads
         file reference
@@ -124,7 +124,7 @@ process minimap2 {
         def name = reads.simpleName
         def split = params.split_prefix ? '--split-prefix tmp' : ''
     """
-    minimap2 -t $task.cpus -ax map-ont $split $reference $reads \
+    minimap2 -t $params.threads -ax map-ont $split $reference $reads \
     | mapula count -r $reference -s reference -f json -p -n $name \
     | samtools view -h -F 2304 - \
     | format_minimap2.py - -o ${name}.minimap2.assignments.tsv -r $ref2taxid \
@@ -169,7 +169,7 @@ process extractMinimap2Reads {
 
 process kraken2 {
     label "wf_ribosomal_survey"
-    cpus params.threads
+    cpus 1
     input:
         file reads
         file database
