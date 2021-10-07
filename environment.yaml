@@ -16,4 +16,5 @@ dependencies:
     - krakentools
     - seqkit 
     - taxonkit
+    - mapula
     - bracken
