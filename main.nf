@@ -32,22 +32,22 @@ Script options:
     --report_name       STR     Optional report suffix (default: $params.report_name)
     --source            STR     Overrides the default reference, database and taxonomy used 
                                 (Choices: ['TARGLOCI, SILVA'], Default: 'TARGLOCI')
-    --taxonomy          DIR     Specifically override the taxonomy used (Default: ncbi)
+    --taxonomy          DIR     Specifically override the taxonomy used [.tar.gz or Dir] (Default: ncbi)
     --max_len           INT     Specify read length upper limit (Default: 2000)
     --min_len           INT     Specify read length lower limit (Default: 200)
 
     Minimap2:
     --minimap2          BOOL    Enables classification via alignment (Default: false)
-    --reference         FILE    Specifically override reference (Default: ncbi targloci)
+    --reference         FILE    Specifically override reference [.fna] (Default: ncbi targloci)
     --ref2taxid         FILE    Specifically override ref2taxid mapping (Default: ncbi targloci)
-    --minimap2filter    STR     Filter output of minimap2 by taxids (inc. child nodes), comma separated
+    --minimap2filter    STR     Filter output of minimap2 by taxids inc. child nodes, E.g. "9606,1404"
     --minimap2exclude   BOOL    Invert minimap2filter and exclude the given taxids instead
     --split_prefix      BOOL    Enable if using a very large reference with minimap2 (Default: false)
 
     Kraken2:
     --kraken2           BOOL    Enables classification via kmer-assignment (Default: false)
-    --database          FILE    Specifically override database (Default: ncbi targeted loci)
-    --kraken2filter     STR     Filter output of kraken2 by taxids (inc. child nodes), comma separated
+    --database          FILE    Specifically override database [.tar.gz or Dir] (Default: ncbi targeted loci)
+    --kraken2filter     STR     Filter output of kraken2 by taxids inc. child nodes, E.g. "9606,1404"
     --kraken2exclude    BOOL    Invert kraken2exclude and exclude the given taxids instead
     --kraken2minimap    BOOL    Run minimap2 only on reads classified by Kraken2 (Default: true)
 
@@ -89,15 +89,15 @@ process unpackDatabase {
     input:
         file database
     output:
-        file "database"
+        file "database_dir"
     """
     if [[ $database == *.tar.gz ]]
     then
-        mkdir database
-        tar xf $database -C database
+        mkdir database_dir
+        tar xf $database -C database_dir
     elif [ -d $database ]
     then
-        mv $database database
+        mv $database database_dir
     else
         echo "Error: database is neither .tar.gz nor a dir"
         echo "Exiting".
@@ -113,15 +113,15 @@ process unpackTaxonomy {
     input:
         file taxonomy
     output:
-        file "taxonomy"
+        file "taxonomy_dir"
     """
     if [[ $taxonomy == *.tar.gz ]]
     then
-        mkdir taxonomy
-        tar xf $taxonomy -C taxonomy
+        mkdir taxonomy_dir
+        tar xf $taxonomy -C taxonomy_dir
     elif [ -d $taxonomy ]
     then
-        mv $taxonomy taxonomy
+        mv $taxonomy taxonomy_dir
     else
         echo "Error: taxonomy is neither .tar.gz nor a dir"
         echo "Exiting".
