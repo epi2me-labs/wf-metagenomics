@@ -1,4 +1,3 @@
-
 process checkSampleSheet {
     label "artic"
     cpus 1
