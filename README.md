@@ -3,8 +3,6 @@
 This repository contains a [nextflow](https://www.nextflow.io/) workflow
 template that can be used as the basis for creating new workflows.
 
-> This workflow is not intended to be used by end users.
-
 
 ## Quickstart
 
@@ -35,7 +33,8 @@ to see the options for the workflow.
 
 The primary outputs of the workflow include:
 
-* a simple text file providing a summary of sequencing reads,
+* classified and unclassified reads,
+* text files detailing lineages found,
 * an HTML report document detailing the primary findings of the workflow.
 
 
