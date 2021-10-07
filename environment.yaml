@@ -11,6 +11,7 @@ dependencies:
     - pandas
     - fastcat
     - minimap2
+    - samtool
     - kraken2
     - krakentools
     - seqkit 
