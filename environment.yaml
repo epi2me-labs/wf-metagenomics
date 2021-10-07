@@ -8,4 +8,11 @@ dependencies:
     - python==3.8.*
     - aplanat >=0.3.5
     - pysam
+    - pandas
     - fastcat
+    - minimap2
+    - kraken2
+    - krakentools
+    - seqkit 
+    - taxonkit
+    - bracken
