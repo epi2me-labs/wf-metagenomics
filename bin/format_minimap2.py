@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-"""Script to check that sample sheet is well-formatted."""
-import sys
+"""Parse alignments and write out a taxonomic assignment for each."""
 import argparse
+import sys
+
 import pandas as pd
 from pysam import AlignmentFile
 
@@ -11,12 +12,7 @@ def main(
     output: str,
     reference2taxid: str
 ) -> None:
-    """
-    For each alignment received, writes a formatted
-    row in TSV format to the designated path which 
-    contains the assigned taxid and classification
-    status.
-    """
+    """Write row with taxid and classification status for each alignment."""
     aln_infile = AlignmentFile(sam, "r")
     aln_outfile = AlignmentFile('-', "w", template=aln_infile)
     ref2taxid_df = pd.read_csv(
@@ -43,9 +39,7 @@ def main(
 
 
 def execute(argv) -> None:
-    """
-    Parses command line arguments and runs main.
-    """
+    """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
         description="Outputs assignments in a kraken2-like format",
     )

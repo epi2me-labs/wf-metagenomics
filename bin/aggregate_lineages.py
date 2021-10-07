@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-"""Script to check that sample sheet is well-formatted."""
-import sys
-import json
+"""Script to create an aggregated count from lineage data."""
 import argparse
-from operator import itemgetter
-from typing import TypedDict, Dict, List, Union, Tuple
+import json
+import sys
+from typing import Union
 
 UNCLASSIFIED = 'Unclassified'
 
@@ -21,6 +20,7 @@ RANKS = [
 
 
 def update_or_create_unclassified(entries):
+    """Handle unclassified entries."""
     unclass = entries.get(UNCLASSIFIED)
     if not unclass:
         entries[UNCLASSIFIED] = {
@@ -34,6 +34,7 @@ def update_or_create_unclassified(entries):
 
 
 def update_or_create_count(entry, entries):
+    """Increment lineage counts given entries."""
     try:
         _, lineage, ranks = entry.rstrip().split('\t')
     except ValueError:
@@ -70,6 +71,7 @@ def update_or_create_count(entry, entries):
 
 
 def yield_entries(entries, total, indent=0):
+    """Get entries in printable form."""
     for i, j in entries.items():
         perc = "{:.2%}".format(j['count'] / total)
         yield(indent, i, j['count'], perc, j['rank'])
@@ -77,16 +79,8 @@ def yield_entries(entries, total, indent=0):
             yield k
 
 
-def main(
-    prefix: str,
-    lineages: Union[str, None] = None
-) -> None:
-    """
-    For each alignment received, writes a formatted
-    row in TSV format to the designated path which 
-    contains the assigned taxid and classification
-    status.
-    """
+def main(prefix: str, lineages: Union[str, None] = None):
+    """Run lineage aggregation algorithm."""
     if lineages:
         infile = open(lineages)
     else:
@@ -109,11 +103,9 @@ def main(
 
 
 def execute(argv) -> None:
-    """
-    Parses command line arguments and runs main.
-    """
+    """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
-        description="Outputs aggregated lineage counts in a kraken2-like format",
+        description="Aggregates lineage counts in a kraken2-like format",
     )
 
     parser.add_argument(

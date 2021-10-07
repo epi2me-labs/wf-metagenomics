@@ -1,7 +1,10 @@
-import sys
+#!/usr/bin/env python
+"""Produce the ref2taxid file needed by wf-ribosomal-survey."""
 import argparse
-import pandas as pd
+import sys
 from typing import List
+
+import pandas as pd
 from pysam import FastxFile
 
 
@@ -10,9 +13,7 @@ def main(
     accession2taxid: str,
     output: str
 ):
-    """
-    Write out a tsv file mapping reference names to taxids.
-    """
+    """Write out a tsv file mapping reference names to taxids."""
     output_tsv = open(output, 'w')
     accession2taxid_df = pd.read_csv(
         accession2taxid, sep='\t', header=0, index_col=1)
@@ -23,7 +24,11 @@ def main(
                 try:
                     taxid = accession2taxid_df.at[entry.name, 'taxid']
                 except KeyError:
-                    print("Error: couldn't find a taxid for {}".format(entry.name))
+                    print(
+                        "Error: couldn't find taxid for {}".format(
+                            entry.name
+                        )
+                    )
                     sys.exit(1)
                 output_tsv.write(
                     '{name}\t{taxid}\n'.format(
@@ -33,9 +38,7 @@ def main(
 
 
 def execute(argv) -> None:
-    """
-    Parse command line arguments and runs main.
-    """
+    """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
         description="Build a mapping of targ loci ref to taxid in .tsv format",
     )

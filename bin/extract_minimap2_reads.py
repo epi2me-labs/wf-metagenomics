@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-"""Script to check that sample sheet is well-formatted."""
-import sys
+"""Filter alignments by target reference taxid and write fastq."""
 import argparse
+import sys
+
 import pandas as pd
 from pysam import AlignmentFile
 
 
 def write_fastq_record(outfile, name, seq, qual):
+    """Write record to file in fastq format."""
     outfile.write(''.join([
         '@{}\n{}\n+\n{}\n'.format(
             name,
@@ -24,12 +26,7 @@ def main(
     reference2taxid: str,
     exclude: bool = False,
 ) -> None:
-    """
-    For each alignment received, writes a formatted
-    row in TSV format to the designated path which 
-    contains the assigned taxid and classification
-    status.
-    """
+    """Run alignment taxonomic filtering."""
     alignments = AlignmentFile(sam, "r")
     tax_ids = set(line.strip() for line in open(taxids))
     print(tax_ids)
@@ -62,9 +59,7 @@ def main(
 
 
 def execute(argv) -> None:
-    """
-    Parses command line arguments and runs main.
-    """
+    """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
         description="Outputs assignments in a kraken2-like format",
     )

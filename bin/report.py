@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 """Create workflow report."""
-
-import json
 import argparse
-import holoviews as hv
-from bokeh.layouts import layout
+import json
+
 from aplanat.components import fastcat
 from aplanat.components import simple as scomponents
 from aplanat.report import WFReport
-
+from bokeh.layouts import layout
+import holoviews as hv
 
 hv.extension('bokeh')
 
 
 def yield_sankey_items(entries, current, threshold=10):
+    """Yield lineage entries in sankey format."""
     for i, j in entries.items():
         if j['count'] < threshold or j['rank'] in ['species']:
             continue
