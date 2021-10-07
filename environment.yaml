@@ -9,6 +9,7 @@ dependencies:
     - aplanat >=0.3.5
     - pysam
     - pandas
+    - holoviews
     - fastcat
     - minimap2
     - samtools
