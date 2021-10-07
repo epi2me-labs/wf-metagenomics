@@ -83,6 +83,54 @@ def prettyPrintSources(it) {
 }
 
 
+process unpackDatabase {
+    label "wf_ribosomal_survey"
+    cpus 1
+    input:
+        file database
+    output:
+        file "database"
+    """
+    if [[ $database == *.tar.gz ]]
+    then
+        mkdir database
+        tar xf $database -C database
+    elif [ -d $database ]
+    then
+        mv $database database
+    else
+        echo "Error: database is neither .tar.gz nor a dir"
+        echo "Exiting".
+        exit 1
+    fi
+    """
+}
+
+
+process unpackTaxonomy {
+    label "wf_ribosomal_survey"
+    cpus 1
+    input:
+        file taxonomy
+    output:
+        file "taxonomy"
+    """
+    if [[ $taxonomy == *.tar.gz ]]
+    then
+        mkdir taxonomy
+        tar xf $taxonomy -C taxonomy
+    elif [ -d $taxonomy ]
+    then
+        mv $taxonomy taxonomy
+    else
+        echo "Error: taxonomy is neither .tar.gz nor a dir"
+        echo "Exiting".
+        exit 1
+    fi
+    """
+}
+
+
 process combineFilterFastq {
     label "wf_ribosomal_survey"
     cpus 1
@@ -308,6 +356,12 @@ workflow pipeline {
         database
     main:
         outputs = []
+        taxonomy = unpackTaxonomy(taxonomy)
+        if (params.kraken2) {
+            database = unpackDatabase(database)
+        }
+
+        // Initial reads QC
         reads = combineFilterFastq(samples)
 
         // Run Kraken2
