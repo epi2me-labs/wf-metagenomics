@@ -301,7 +301,6 @@ process getParams {
     """
     # Output nextflow params object to JSON
     echo '$paramsJSON' > params.json
->>>>>>> carryover
     """
 }
 
