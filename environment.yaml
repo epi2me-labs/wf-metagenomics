@@ -1,4 +1,4 @@
-name: epi2melabs-nf-template-workflow
+name: epi2melabs-wf-metagenomics
 channels:
     - epi2melabs
     - bioconda

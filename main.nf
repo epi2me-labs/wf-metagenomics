@@ -29,8 +29,8 @@ Script options:
     --fastq             DIR     Path to directory containing FASTQ files (required)
     --out_dir           DIR     Path for output (default: $params.out_dir)
     --report_name       STR     Optional report suffix (default: $params.report_name)
-    --source            STR     Overrides the default reference, database and taxonomy used 
-                                (Choices: ['TARGLOCI, SILVA'], Default: 'TARGLOCI')
+    --source            STR     Overrides the default reference, databases and taxonomy used
+                                (Choices: ['TARGLOCI'], Default: 'TARGLOCI')
     --taxonomy          DIR     Specifically override the taxonomy used [.tar.gz or Dir] (Default: ncbi)
     --max_len           INT     Specify read length upper limit (Default: 2000)
     --min_len           INT     Specify read length lower limit (Default: 200)
@@ -49,6 +49,10 @@ Script options:
     --kraken2filter     STR     Filter output of kraken2 by taxids inc. child nodes, E.g. "9606,1404"
     --kraken2exclude    BOOL    Invert kraken2exclude and exclude the given taxids instead
     --kraken2minimap    BOOL    Run minimap2 only on reads classified by Kraken2 (Default: true)
+    --kraken2bracken    BOOL    Run bracken on the output of kraken2 (Default: true)
+    --bracken_dist      FILE    Specifically override bracken kmer dist file (Default: ncbi targeted loci)
+    --bracken_length    INT     Set the length value bracken will use (Default: 1000)
+    --bracken_level     STR     Set the level that bracken will output at (Default: species 'S')
 
 Notes:
     Minimap2
@@ -65,7 +69,7 @@ Notes:
     classified by kraken2 (and  optionally filtered by --kraken2filter) 
     are passed to the alignment step.
 
-Notes:
+    Formats
     ref2taxid format is .tsv (refname  taxid), no header row.
     kraken2filter and minimap2filter accept comma sep'd taxids, e.g. 2,9606
 """
@@ -87,6 +91,7 @@ process unpackDatabase {
     cpus 1
     input:
         file database
+        file kmer_distribution
     output:
         file "database_dir"
     """
@@ -102,6 +107,7 @@ process unpackDatabase {
         echo "Exiting".
         exit 1
     fi
+    mv $kmer_distribution database_dir
     """
 }
 
@@ -273,6 +279,27 @@ process extractKraken2Reads {
 }
 
 
+process bracken {
+    label "wf_ribosomal_survey"
+    cpus 1
+    input:
+        file database
+        file kraken2_report
+    output:
+        path "*bracken_report.txt", emit: bracken_report
+    script:
+        def name = kraken2_report.simpleName
+    """
+    bracken \
+        -d $database \
+        -i $kraken2_report \
+        -r $params.bracken_length \
+        -l $params.bracken_level \
+        -o ${name}.bracken_report.txt
+    """
+}
+
+
 process getVersions {
     label "wf_ribosomal_survey"
     cpus 1
@@ -353,11 +380,15 @@ workflow pipeline {
         ref2taxid
         taxonomy
         database
+        kmer_distribution
     main:
         outputs = []
         taxonomy = unpackTaxonomy(taxonomy)
         if (params.kraken2) {
-            database = unpackDatabase(database)
+            database = unpackDatabase(
+                database,
+                kmer_distribution
+            )
         }
 
         // Initial reads QC
@@ -372,16 +403,23 @@ workflow pipeline {
             )
             reads_to_align = kr2.classified
             outputs += [
-                kr2.classified, 
-                kr2.unclassified, 
-                kr2.lineage_txt, 
-                kr2.assignments, 
+                kr2.classified,
+                kr2.unclassified,
+                kr2.lineage_txt,
+                kr2.assignments,
                 kr2.kraken2_report
             ]
+            if (params.kraken2bracken) {
+                br = bracken(
+                    database,
+                    kr2.kraken2_report
+                )
+                outputs += [br.bracken_report]
+            }
             if (params.kraken2filter) {
                 kr2_filt = extractKraken2Reads(
-                    reads_to_align, 
-                    kr2.assignments, 
+                    reads_to_align,
+                    kr2.assignments,
                     kr2.kraken2_report
                 )
                 outputs += [kr2_filt.extracted]
@@ -394,23 +432,23 @@ workflow pipeline {
         // Run Minimap2
         if (params.minimap2) {
             mm2 = minimap2(
-                reads_to_align, 
-                reference, 
-                refindex, 
-                ref2taxid, 
+                reads_to_align,
+                reference,
+                refindex,
+                ref2taxid,
                 taxonomy
             )
             outputs += [
-                mm2.bam, 
-                mm2.bai, 
-                mm2.assignments, 
+                mm2.bam,
+                mm2.bai,
+                mm2.assignments,
                 mm2.lineage_txt
             ]
             if (params.minimap2filter) {
                 mm2_filt = extractMinimap2Reads(
-                    mm2.bam, 
-                    mm2.bai, 
-                    ref2taxid, 
+                    mm2.bam,
+                    mm2.bai,
+                    ref2taxid,
                     taxonomy
                 )
                 outputs += [mm2_filt.extracted]
@@ -515,6 +553,12 @@ workflow {
         database = file(params.database, type: "dir", checkIfExists:true)
     }
 
+    kmer_distribution = file(sources[source]["kmer_dist"], type: "file")
+    if (params.bracken_dist) {
+        println("Checking custom kraken2 database exists")
+        kmer_distribution = file(
+            params.bracken_dist, type: "file", checkIfExists:true)
+    }
 
     // Print all params
     println("=================================")
@@ -530,6 +574,9 @@ workflow {
     samples = fastq_ingress(
         params.fastq, params.out_dir, params.samples, params.sanitize_fastq)
 
-    results = pipeline(samples, reference, refindex, ref2taxid, taxonomy, database)
+    results = pipeline(
+        samples, reference, refindex, ref2taxid, taxonomy,
+        database, kmer_distribution)
+
     output(results)
 }
