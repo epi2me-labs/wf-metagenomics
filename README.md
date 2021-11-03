@@ -1,8 +1,13 @@
-# wf-ribosomal-survey
+# wf-metagenomics
 
-This repository contains a [nextflow](https://www.nextflow.io/) workflow
-template that can be used as the basis for creating new workflows.
+This workflow can be used for both amplicon-targeted and shotgun metagenomics.
 
+wf-metagenomics offers two different approaches to assigning sequence reads to a species:
+
+- Kraken2 offers the fastest functionality and in combination with the accompanying bracken software can be used for a more quantitative assessment of taxonomic representation within a sample.
+- Minimap2 provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time.
+
+The wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis. The workflow is not tied to this database and can also be used with custom databases as required.
 
 ## Quickstart
 
@@ -24,7 +29,7 @@ For more information on running EPI2ME Labs workflows [visit out website](https:
 To obtain the workflow, having installed `nextflow`, users can run:
 
 ```
-nextflow run epi2me-labs/wf-ribosomal-survey --help
+nextflow run epi2me-labs/wf-metagenomics --help
 ```
 
 to see the options for the workflow.
