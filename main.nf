@@ -1,15 +1,5 @@
 #!/usr/bin/env nextflow
 
-// Developer notes
-// 
-// This template workflow provides a basic structure to copy in order
-// to create a new workflow. Current recommended pratices are:
-//     i) create a simple command-line interface.
-//    ii) include an abstract workflow scope named "pipeline" to be used
-//        in a module fashion.
-//   iii) a second concreate, but anonymous, workflow scope to be used
-//        as an entry point when using this workflow in isolation.
-
 import groovy.json.JsonBuilder
 nextflow.enable.dsl = 2
 
@@ -17,10 +7,10 @@ include { fastq_ingress } from './lib/fastqingress'
 
 def helpMessage(){
     log.info """
-wf-ribosomal-survey
+wf-metagenomics
 
 Usage:
-    nextflow run epi2melabs/wf-ribosomal-survey [options]
+    nextflow run epi2melabs/wf-metagenomics [options]
 
 Description:
     This workflow is designed to classify reads against known organisms.
@@ -87,7 +77,7 @@ def prettyPrintSources(it) {
 
 
 process unpackDatabase {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         file database
@@ -113,7 +103,7 @@ process unpackDatabase {
 
 
 process unpackTaxonomy {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         file taxonomy
@@ -137,7 +127,7 @@ process unpackTaxonomy {
 
 
 process combineFilterFastq {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         tuple path(directory), val(sample_name)
@@ -159,7 +149,7 @@ process combineFilterFastq {
 
 
 process minimap2 {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         file reads
@@ -193,7 +183,7 @@ process minimap2 {
 
 
 process extractMinimap2Reads {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         file bam
@@ -221,7 +211,7 @@ process extractMinimap2Reads {
 
 
 process kraken2 {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         file reads
@@ -253,7 +243,7 @@ process kraken2 {
 
 
 process extractKraken2Reads {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         file reads
@@ -280,7 +270,7 @@ process extractKraken2Reads {
 
 
 process bracken {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     input:
         file database
@@ -301,7 +291,7 @@ process bracken {
 
 
 process getVersions {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     output:
         path "versions.txt"
@@ -319,7 +309,7 @@ process getVersions {
 
 
 process getParams {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     cpus 1
     output:
         path "params.json"
@@ -333,16 +323,16 @@ process getParams {
 
 
 process makeReport {
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     input:
         path stats
         path "versions/*"
         path "params.json"
         path lineages
     output:
-        path "wf-template-*.html"
+        path "wf-metagenomics-*.html"
     script:
-        report_name = "wf-template-" + params.report_name + '.html'
+        report_name = "wf-metagenomics-" + params.report_name + '.html'
     """
     report.py \
         $report_name \
@@ -359,7 +349,7 @@ process makeReport {
 // decoupling the publish from the process steps.
 process output {
     // publish inputs to output directory
-    label "wf_ribosomal_survey"
+    label "wfmetagenomics"
     publishDir "${params.out_dir}", mode: 'copy', pattern: "*"
     input:
         path fname
