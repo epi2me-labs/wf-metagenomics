@@ -1,6 +1,6 @@
 
 process checkSampleSheet {
-    label "artic"
+    label "wfmetagenomics"
     cpus 1
     input:
         file "sample_sheet.txt"
