@@ -454,19 +454,17 @@
                 |---------------------------------------------------------------------------- */
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Get names of top level keys.
+                 *
+                 * @param {object} data
                  */
                 const getSampleNames = (data) =>
                     [...Object.keys(data)]
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Calculates total observation counts per taxa for all samples.
+                 *
+                 * @param {object} data
                  */
                 const getSampleCounts = (data) => {
                     const counts = {}
@@ -489,19 +487,17 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Calculates total observation count.
+                 *
+                 * @param {object} sample_data
                  */
                 const getTotalCount = (sample_data) =>
                     Object.values(sample_data).reduce((sum, I) => I.count + sum, 0)
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Creates sankey input links list.
+                 *
+                 * @param {object} sample_data
                  */
                 const getSankeyEdges = (sample_data) => {
                     const _getSankeyEdges = (entries, current) =>
@@ -521,10 +517,9 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Creates sankey input node list.
+                 *
+                 * @param {object} edges.
                  */
                 const getSankeyNodes = (edges) => {
                     const unique = new Set(
@@ -535,25 +530,28 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Creates a sankey graph generator.
+                 *
+                 * @param {number} width
+                 * @param {number} height
                  */
-                const getSankeyGenerator = (_width, _height) =>
+                const getSankeyGenerator = (width, height) =>
                     d3.sankey()
                         .nodeId(d => d.name)
                         // .nodeSort(() => true) # Disabled for now
                         .nodeAlign(d3['sankeyCenter'])
                         .nodeWidth(30)
                         .nodePadding(30)
-                        .extent([[0, 5], [_width, _height - 5]])
+                        .extent([[0, 5], [width, height - 5]])
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Creates a sankey graph.
+                 *
+                 * @param {string} sample_name
+                 * @param {object} sample_data
+                 * @param {object} generator
+                 * @param {number} cutoff
+                 * @param {number} total
                  */
                 const getSankeyGraph = (sample_name, sample_data, generator, cutoff, total) => {
                     const _cutoffVal = total / 100 * cutoff
@@ -569,14 +567,15 @@
                 }
 
                 /* ----------------------------------------------------------------------------
-                | Render controls
+                | Render chart
                 |---------------------------------------------------------------------------- */
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Renders a selection dropdown.
+                 *
+                 * @param {string} select_id
+                 * @param {array} sample_names
+                 * @param {string} symbol
                  */
                 const renderSelect = (select_id, sample_names, symbol = null) => {
                     const dropdown = d3.select(select_id)
@@ -593,10 +592,7 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Renders a sankey node tooltip
                  */
                 const renderToolTop = () =>
                     d3.select("#tooltip")
@@ -605,15 +601,11 @@
                         .style("visibility", "hidden")
                         .style("background", "white");
 
-                /* ----------------------------------------------------------------------------
-                | Render chart
-                |---------------------------------------------------------------------------- */
-
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Sets the text style for a given selection.
+                 *
+                 * @param {object} enter
+                 * @param {string} colour
                  */
                 const setTextStyles = (enter, colour = "#555") => {
                     enter.style("font-family", "monospace")
@@ -623,10 +615,12 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Updates a node tooltip on mouse events
+                 *
+                 * @param {object} enter
+                 * @param {object} colourScale
+                 * @param {number} total
+                 * @param {object} counts
                  */
                 const updateToolTip = (enter, colourScale, total, counts) => {
                     const toolTip = d3.select("#tooltip")
@@ -675,10 +669,14 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Updates the sankey plot.
+                 *
+                 * @param {object} svg
+                 * @param {object} graph
+                 * @param {number} depth
+                 * @param {object} colourScale
+                 * @param {number} total
+                 * @param {object} counts
                  */
                 const updateVisualisation = (svg, graph, depth, colourScale, total, counts) => {
                     const { nodes, links } = graph
@@ -817,10 +815,14 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Renders the initial plot.
+                 *
+                 * @param {object} svg
+                 * @param {object} graph
+                 * @param {number} depth
+                 * @param {object} colourScale
+                 * @param {number} total
+                 * @param {object} counts
                  */
                 const renderVisualisation = (svg, graph, depth, colourScale, total, counts) => {
                     const nodelist = svg.append("g")
@@ -838,10 +840,9 @@
                 |---------------------------------------------------------------------------- */
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Handles updating the plot when a setting is changed
+                 *
+                 * @param {object} counts
                  */
                 const handlePlotSelectChange = (counts) => {
                     const rank = d3.select("#rank-select").property('value');
@@ -856,10 +857,9 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Handles zooming on the sankey plot
+                 *
+                 * @param {object} e
                  */
                 const handleZoom = (e) => {
                     d3.select('svg')
@@ -874,6 +874,12 @@
                 | Render table
                 |---------------------------------------------------------------------------- */
 
+                /**
+                 * Renders the table rank selector
+                 *
+                 * @param {string} _id
+                 * @param {array} ranks
+                 */
                 const renderTableRankSelect = (_id, ranks) => {
                     const rankSelect = d3.select('.dataTable-top')
                         .insert('div', ":first-child")
@@ -889,10 +895,11 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Renders the initial table
+                 *
+                 * @param {object} counts
+                 * @param {array} samples
+                 * @param {string} rank
                  */
                 const renderTable = (counts, samples, rank) => {
                     const table = d3.select('#table')
@@ -923,10 +930,11 @@
                 }
 
                 /**
-                 * Represents a book.
-                 * @constructor
-                 * @param {string} title - The title of the book.
-                 * @param {string} author - The author of the book.
+                 * Updates the counts table on rank select change
+                 *
+                 * @param {object} datatable
+                 * @param {object} counts
+                 * @param {array} samples
                  */
                 const handleTableSelectChange = (datatable, counts, samples) => {
                     const table = d3.select('#table')
