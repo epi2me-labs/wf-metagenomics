@@ -3,23 +3,23 @@
 import argparse
 import json
 
+from aplanat import bars
 from aplanat.components import fastcat
 from aplanat.components import simple as scomponents
 from aplanat.report import WFReport
+from aplanat.util import Colors
 from bokeh.layouts import layout
-import holoviews as hv
+from jinja2 import Template
+import natsort
+import pandas as pd
 
-hv.extension('bokeh')
 
-
-def yield_sankey_items(entries, current, threshold=10):
-    """Yield lineage entries in sankey format."""
-    for i, j in entries.items():
-        if j['count'] < threshold or j['rank'] in ['species']:
-            continue
-        yield(current, i, j['count'])
-        for k in yield_sankey_items(j['children'], i, threshold):
-            yield k
+def read_files(summaries, sep='\t'):
+    """Read a set of files and join to single dataframe."""
+    dfs = list()
+    for fname in sorted(summaries):
+        dfs.append(pd.read_csv(fname, sep=sep))
+    return pd.concat(dfs)
 
 
 def main():
@@ -32,6 +32,8 @@ def main():
     parser.add_argument(
         "--lineages", nargs='+', required=True,
         help="Read lineage file.")
+    parser.add_argument(
+        "--vistempl", required=True)
     parser.add_argument(
         "--versions", required=True,
         help="directory containing CSVs containing name,version.")
@@ -47,50 +49,64 @@ def main():
     args = parser.parse_args()
 
     report = WFReport(
-        "Workflow Ribosomal Survey Report", "wf-ribosomal-survey",
+        "Workflow Metagenomics Report", "wf-metagenomics",
         revision=args.revision, commit=args.commit)
 
-    sample_files = []
+    templ = None
+    with open(args.vistempl, "r") as vistempl:
+        templ = vistempl.read()
+
+    sample_lineages = {}
+    for lineage in natsort.natsorted(args.lineages):
+        lineage_name = lineage.split('.')[0]
+        with open(lineage, 'r') as lf:
+            sample_lineages[lineage_name] = json.load(lf)
+
+    templ = templ.replace(
+        "replace_me",
+        json.dumps(sample_lineages).replace('"', '\\"'))
+    report.template = Template(templ)
+
+    #
+    # Plot read counts per barcode
+    #
+    seq_summary = read_files(args.summaries)
+    bc_counts = (
+        pd.DataFrame(
+            seq_summary['sample_name'].value_counts()
+        ).sort_index().reset_index().rename(
+            columns={'index': 'sample', 'sample_name': 'count'})
+    )
+    bc_counts_plot = bars.simple_bar(
+        bc_counts['sample'].astype(str),
+        bc_counts['count'],
+        colors=[Colors.cerulean]*len(bc_counts),
+        title='Number of reads per sample',
+        plot_width=None)
+    bc_counts_plot.xaxis.major_label_orientation = 3.14/2
+
+    section = report.add_section()
+    section.markdown("### Samples")
+    section.plot(layout([[bc_counts_plot]], sizing_mode="stretch_width"))
+
+    #
+    # Standard read metrics
+    #
     for summ in args.summaries:
-        sample_name = summ.split('.')[0]
-        for lin in args.lineages:
-            if lin.startswith(sample_name):
-                sample_files.append([sample_name, summ, lin])
-                break
+        section = report.add_section(
+            section=fastcat.full_report(
+                [summ],
+                header='#### Read stats: {}'.format(str(summ.split('.')[0]))
+            ))
 
-    for sample in sample_files:
-        section = report.add_section()
-        with open(sample[2]) as lineage_file:
-            data = json.load(lineage_file)
-
-            entries = []
-            for k, v in data.items():
-                for entry in yield_sankey_items(v['children'], k):
-                    entries.append(entry)
-
-            sankey = hv.Sankey(entries)
-            sankey.opts(height=900, width=1000)
-            p = hv.render(sankey, backend='bokeh')
-
-            section.markdown('## Sample: {}'.format(str(sample[0])))
-            section.plot(
-                layout([[p]], sizing_mode='scale_width')
-            )
-
-            section = report.add_section(
-                section=fastcat.full_report(
-                    [sample[1]],
-                    header='### {} read stats'.format(str(sample[0]))
-                ))
-
-            section.markdown('---')
-
+    #
+    # Standard wf reporting
+    #
     report.add_section(
         section=scomponents.version_table(args.versions))
     report.add_section(
         section=scomponents.params_table(args.params))
 
-    # write report
     report.write(args.report)
 
 

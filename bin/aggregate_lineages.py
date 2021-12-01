@@ -6,6 +6,7 @@ import sys
 from typing import Union
 
 UNCLASSIFIED = 'Unclassified'
+UNKNOWN = 'Unknown'
 
 RANKS = [
     "superkingdom",
@@ -24,12 +25,19 @@ def update_or_create_unclassified(entries):
     unclass = entries.get(UNCLASSIFIED)
     if not unclass:
         entries[UNCLASSIFIED] = {
-            'rank': UNCLASSIFIED,
+            'rank': RANKS[0],
             'count': 1,
-            'children': {}
+            'children': {
+                UNKNOWN: {
+                    'rank': "species",
+                    'count': 1,
+                    'children': {}
+                }
+            }
         }
     else:
         unclass['count'] += 1
+        unclass['children'][UNKNOWN]['count'] += 1
     return entries
 
 
