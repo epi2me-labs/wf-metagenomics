@@ -1,5 +1,5 @@
 process pingMessage {
-    label "pysam"
+    label "wfmetagenomics"
     cpus 1
     input:
         val message
