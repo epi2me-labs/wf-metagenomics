@@ -1,0 +1,208 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
+    "title": "epi2me-labs/wf-metagenomics pipeline parameters",
+    "description": "Metagenomics workflow",
+    "type": "object",
+    "definitions": {
+        "core_options": {
+            "title": "Core options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "properties": {
+                "fastq": {
+                    "type": "string",
+                    "description": "Directory containing fastq input files. May contain fastq files directly or directories name barcodeXX relating to independent samples."
+                },
+                "max_len": {
+                    "type": "integer",
+                    "default": 2000,
+                    "description": "Specify read length upper limit"
+                },
+                "min_len": {
+                    "type": "integer",
+                    "default": 200,
+                    "description": "Specify read length lower limit"
+                },
+                "out_dir": {
+                    "type": "string",
+                    "default": "output",
+                    "description": "Directory for output of all user-facing files."
+                },
+                "report_name": {
+                    "type": "string",
+                    "default": "report",
+                    "description": "Optional report suffix"
+                },
+                "sample": {
+                    "type": "string",
+                    "description": "A sample name for non-multiplexed data. Permissible if passing a file or directory of .fastq(.gz)."
+                },
+                "sample_sheet": {
+                    "type": "string",
+                    "description": "CSV file with columns named `barcode`, `sample_name` and `type`. Permissible if passing a directory containing barcodeXX sub-directories."
+                },
+                "sanitize_fastq": {
+                    "type": "string",
+                    "description": "Use additional heuristics to identify barcodes from file paths.",
+                    "help_text": "Enabling this option will group together files into samples by the presence of strings of the form `barcodeXXX` present in filenames, rather than simply files grouped into directories (as output by MinKNOW and the Guppy basecaller)."
+                },
+                "source": {
+                    "type": "string",
+                    "default": "TARGLOCI",
+                    "description": "Overrides the default reference, databases and taxonomy used. Choices: ['TARGLOCI']"
+                },
+                "sources": {
+                    "type": "object",
+                    "default": "[TARGLOCI:[reference:'https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-ribosomal-survey/targeted_loci/ncbi_targeted_loci_16s_18s.fna', refindex:'https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-ribosomal-survey/targeted_loci/ncbi_targeted_loci_16s_18s.fna.fai', database:'https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-ribosomal-survey/targeted_loci/ncbi_targeted_loci_kraken2.tar.gz', kmer_dist:'https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-ribosomal-survey/targeted_loci/database1000mers.kmer_distrib', ref2taxid:'https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-ribosomal-survey/targeted_loci/ref2taxid.targloci.tsv', taxonomy:'https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz']]",
+                    "hidden": true,
+                    "description": "A map containing the available sources and their default resource paths"
+                },
+                "taxonomy": {
+                    "type": "string",
+                    "description": "Specifically override the taxonomy used [.tar.gz or Dir]",
+                    "default": "NCBI"
+                }
+            },
+            "required": [
+                "fastq"
+            ]
+        },
+        "minimap2_options": {
+            "title": "Minimap2 options",
+            "type": "object",
+            "fa_icon": "fas fa-dna",
+            "properties": {
+                "minimap2": {
+                    "type": "boolean",
+                    "description": "Enables classification via alignment",
+                    "default": false
+                },
+                "reference": {
+                    "type": "string",
+                    "description": "Specifically override reference [.fna]"
+                },
+                "ref2taxid": {
+                    "type": "string",
+                    "description": "Specifically override ref2taxid mapping. Format is .tsv (refname  taxid), no header row."
+                },
+                "minimap2filter": {
+                    "type": "string",
+                    "description": "Filter output of minimap2 by taxids inc. child nodes, E.g. \"9606,1404\""
+                },
+                "minimap2exclude": {
+                    "type": "boolean",
+                    "description": "Invert minimap2filter and exclude the given taxids instead"
+                },
+                "split_prefix": {
+                    "type": "boolean",
+                    "description": "Enable if using a very large reference with minimap2"
+                }
+            },
+            "description": "Minimap2 classification options",
+            "help_text": "Minimap2\nThe default strategy is using minimap2 to perform full\nalignments against .fasta formatted references sequences. "
+        },
+        "kraken2_options": {
+            "title": "Kraken2 options",
+            "type": "object",
+            "fa_icon": "fas fa-university",
+            "help_text": "Kraken2\nIt is possible to enable classification by kraken2, \nand disable alignment which is a faster but coarser method of \nclassification reliant on the presence of a kraken2 database.\n\nUsing kraken2 + minimap2\nIf both are enabled and --kraken2minimap is set, only reads \nclassified by kraken2 (and  optionally filtered by --kraken2filter) \nare passed to the alignment step.",
+            "properties": {
+                "kraken2": {
+                    "type": "boolean",
+                    "description": "Enables classification via kmer-assignment"
+                },
+                "database": {
+                    "type": "string",
+                    "description": "Specifically override database [.tar.gz or Dir]"
+                },
+                "kraken2filter": {
+                    "type": "string",
+                    "description": "Filter output of kraken2 by taxids inc. child nodes, E.g. \"9606,1404\""
+                },
+                "kraken2exclude": {
+                    "type": "boolean",
+                    "description": "Invert kraken2exclude and exclude the given taxids instead"
+                },
+                "kraken2minimap": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run minimap2 only on reads classified by Kraken2"
+                },
+                "kraken2bracken": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run bracken on the output of kraken2"
+                },
+                "bracken_dist": {
+                    "type": "string",
+                    "description": "Specifically override bracken kmer dist file"
+                },
+                "bracken_length": {
+                    "type": "integer",
+                    "default": 1000,
+                    "description": "Set the length value bracken will use"
+                },
+                "bracken_level": {
+                    "type": "string",
+                    "default": "S",
+                    "description": "Set the level that bracken will output at"
+                }
+            },
+            "description": "Kraken2 classification options"
+        },
+        "generic_options": {
+            "title": "Generic options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Less common options for the pipeline, typically set in a config file.",
+            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "properties": {
+                "threads": {
+                    "type": "integer",
+                    "default": 8,
+                    "description": "Set max number of threads to use. Note: limited by config executor cpus."
+                },
+                "help": {
+                    "type": "boolean",
+                    "description": "Display help text.",
+                    "fa_icon": "fas fa-question-circle"
+                },
+                "wfversion": {
+                    "type": "string",
+                    "default": "v1.0.0",
+                    "hidden": true
+                },
+                "disable_ping": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable to prevent sending a workflow ping.",
+                    "hidden": true
+                },
+                "aws_image_prefix": {
+                    "type": "string",
+                    "hidden": true
+                },
+                "aws_queue": {
+                    "type": "string",
+                    "hidden": true
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/definitions/core_options"
+        },
+        {
+            "$ref": "#/definitions/minimap2_options"
+        },
+        {
+            "$ref": "#/definitions/kraken2_options"
+        },
+        {
+            "$ref": "#/definitions/generic_options"
+        }
+    ]
+}

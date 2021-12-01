@@ -9,7 +9,6 @@ dependencies:
     - aplanat >=0.3.5
     - pysam
     - pandas
-    - holoviews
     - fastcat
     - minimap2
     - samtools
@@ -19,3 +18,5 @@ dependencies:
     - taxonkit
     - mapula
     - bracken
+    - epi2melabs
+    - natsort

@@ -5,76 +5,6 @@ nextflow.enable.dsl = 2
 
 include { fastq_ingress } from './lib/fastqingress' 
 
-def helpMessage(){
-    log.info """
-wf-metagenomics
-
-Usage:
-    nextflow run epi2melabs/wf-metagenomics [options]
-
-Description:
-    This workflow is designed to classify reads against known organisms.
-
-Script options:
-    --fastq             DIR     Path to directory containing FASTQ files (required)
-    --out_dir           DIR     Path for output (default: $params.out_dir)
-    --report_name       STR     Optional report suffix (default: $params.report_name)
-    --source            STR     Overrides the default reference, databases and taxonomy used
-                                (Choices: ['TARGLOCI'], Default: 'TARGLOCI')
-    --taxonomy          DIR     Specifically override the taxonomy used [.tar.gz or Dir] (Default: ncbi)
-    --max_len           INT     Specify read length upper limit (Default: 2000)
-    --min_len           INT     Specify read length lower limit (Default: 200)
-
-    Minimap2:
-    --minimap2          BOOL    Enables classification via alignment (Default: false)
-    --reference         FILE    Specifically override reference [.fna] (Default: ncbi targloci)
-    --ref2taxid         FILE    Specifically override ref2taxid mapping (Default: ncbi targloci)
-    --minimap2filter    STR     Filter output of minimap2 by taxids inc. child nodes, E.g. "9606,1404"
-    --minimap2exclude   BOOL    Invert minimap2filter and exclude the given taxids instead
-    --split_prefix      BOOL    Enable if using a very large reference with minimap2 (Default: false)
-
-    Kraken2:
-    --kraken2           BOOL    Enables classification via kmer-assignment (Default: false)
-    --database          FILE    Specifically override database [.tar.gz or Dir] (Default: ncbi targeted loci)
-    --kraken2filter     STR     Filter output of kraken2 by taxids inc. child nodes, E.g. "9606,1404"
-    --kraken2exclude    BOOL    Invert kraken2exclude and exclude the given taxids instead
-    --kraken2minimap    BOOL    Run minimap2 only on reads classified by Kraken2 (Default: true)
-    --kraken2bracken    BOOL    Run bracken on the output of kraken2 (Default: true)
-    --bracken_dist      FILE    Specifically override bracken kmer dist file (Default: ncbi targeted loci)
-    --bracken_length    INT     Set the length value bracken will use (Default: 1000)
-    --bracken_level     STR     Set the level that bracken will output at (Default: species 'S')
-
-Notes:
-    Minimap2
-    The default strategy is using minimap2 to perform full
-    alignments against .fasta formatted references sequences. 
-
-    Kraken2
-    It is possible to enable classification by kraken2, 
-    and disable alignment which is a faster but coarser method of 
-    classification reliant on the presence of a kraken2 database.
-
-    Using both
-    If both are enabled and --kraken2minimap is set, only reads 
-    classified by kraken2 (and  optionally filtered by --kraken2filter) 
-    are passed to the alignment step.
-
-    Formats
-    ref2taxid format is .tsv (refname  taxid), no header row.
-    kraken2filter and minimap2filter accept comma sep'd taxids, e.g. 2,9606
-"""
-}
-
-def prettyPrintSources(it) {
-    println("> $it.key:")
-    it.value.each { it2 -> {
-        println(">  $it2.key:")
-        it2.value.each { it3 -> {
-            println(">   $it3.key: $it3.value")
-        }}
-    }}
-}
-
 
 process unpackDatabase {
     label "wfmetagenomics"
@@ -130,20 +60,25 @@ process combineFilterFastq {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple path(directory), val(sample_name)
+        tuple file(directory), val(sample_id), val(type)
     output:
-        path "${sample_name}.fastq", emit: filtered
-        path "${sample_name}.stats", emit: stats
+        tuple(
+            val(sample_id),
+            path("${sample_id}.fastq"),
+            emit: filtered)
+        tuple(
+            val(sample_id),
+            path("${sample_id}.stats"),
+            emit: stats)
     shell:
     """
     fastcat \
         -a $params.min_len \
         -b $params.max_len \
         -q 10 \
-        -s ${sample_name} \
-        -r ${sample_name}.stats \
-        -x ${directory} > ${sample_name}.fastq
-    
+        -s ${sample_id} \
+        -r ${sample_id}.stats \
+        -x ${directory} > ${sample_id}.fastq
     """
 }
 
@@ -152,32 +87,43 @@ process minimap2 {
     label "wfmetagenomics"
     cpus 1
     input:
-        file reads
+        tuple val(sample_id), file(reads)
         file reference
         file refindex
         file ref2taxid
         file taxonomy
     output:
-        path "*.bam", emit: bam
-        path "*.bam.bai", emit: bai
-        path "*assignments.tsv", emit: assignments
-        path "*lineages.txt", emit: lineage_txt
-        path "*lineages.json", emit: lineage_json
+        tuple(
+            val(sample_id),
+            path("*.bam"),
+            path("*.bam.bai"),
+            emit: bam)
+        tuple(
+            val(sample_id),
+            path("*assignments.tsv"),
+            emit: assignments)
+        tuple(
+            val(sample_id),
+            path("*lineages.txt"),
+            emit: lineage_txt)
+        tuple(
+            val(sample_id),
+            path("*lineages.json"),
+            emit: lineage_json)
     script:
-        def name = reads.simpleName
         def split = params.split_prefix ? '--split-prefix tmp' : ''
     """
     minimap2 -t $params.threads -ax map-ont $split $reference $reads \
-    | mapula count -r $reference -s reference -f json -p -n $name \
+    | mapula count -r $reference -s reference -f json -p -n $sample_id \
     | samtools view -h -F 2304 - \
-    | format_minimap2.py - -o ${name}.minimap2.assignments.tsv -r $ref2taxid \
-    | samtools sort -o ${name}.bam -
-    samtools index ${name}.bam
-    awk -F '\\t' '{print \$3}' ${name}.minimap2.assignments.tsv > taxids.tmp
+    | format_minimap2.py - -o ${sample_id}.minimap2.assignments.tsv -r $ref2taxid \
+    | samtools sort -o ${sample_id}.bam -
+    samtools index ${sample_id}.bam
+    awk -F '\\t' '{print \$3}' ${sample_id}.minimap2.assignments.tsv > taxids.tmp
     taxonkit \
         --data-dir $taxonomy \
         lineage -R taxids.tmp \
-        | aggregate_lineages.py -p ${name}.minimap2
+        | aggregate_lineages.py -p ${sample_id}.minimap2
     """
 }
 
@@ -186,14 +132,15 @@ process extractMinimap2Reads {
     label "wfmetagenomics"
     cpus 1
     input:
-        file bam
-        file bai
+        tuple val(sample_id), file(bam), file(bai)
         file ref2taxid
         file taxonomy
     output:
-        path "*extracted.fastq", emit: extracted
+        tuple(
+            val(sample_id),
+            path("*extracted.fastq"), 
+            emit: extracted)
     script:
-        def name = bam.simpleName
         def policy = params.minimap2exclude ? '--exclude' : ''
     """
     taxonkit \
@@ -203,7 +150,7 @@ process extractMinimap2Reads {
     extract_minimap2_reads.py \
         $bam \
         -r $ref2taxid \
-        -o ${name}.minimap2.extracted.fastq \
+        -o ${sample_id}.minimap2.extracted.fastq \
         -t taxids.tmp \
         $policy
     """
@@ -214,30 +161,46 @@ process kraken2 {
     label "wfmetagenomics"
     cpus 1
     input:
-        file reads
+        tuple val(sample_id), file(reads)
         file database
         file taxonomy
     output:
-        path "*.classified.fastq", emit: classified
-        path "*.unclassified.fastq", emit: unclassified
-        path "*lineages.txt", emit: lineage_txt
-        path "*lineages.json", emit: lineage_json
-        path "*assignments.tsv", emit: assignments
-        path "*kraken2_report.txt", emit: kraken2_report
-    script:
-        def name = reads.simpleName
+        tuple(
+            val(sample_id),
+            path("*.classified.fastq"),
+            emit: classified)
+        tuple(
+            val(sample_id),
+            path("*.unclassified.fastq"),
+            emit: unclassified)
+        tuple(
+            val(sample_id),
+            path("*assignments.tsv"),
+            emit: assignments)
+        tuple(
+            val(sample_id),
+            path("*lineages.txt"),
+            emit: lineage_txt)
+        tuple(
+            val(sample_id),
+            path("*lineages.json"),
+            emit: lineage_json)
+        tuple(
+            val(sample_id),
+            path("*kraken2_report.txt"),
+            emit: kraken2_report)
     """
     kraken2 \
         --db $database \
-        --report ${name}.kraken2_report.txt \
-        --classified-out ${name}.kraken2.classified.fastq \
-        --unclassified-out ${name}.kraken2.unclassified.fastq \
-        $reads > ${name}.kraken2.assignments.tsv
-    awk -F '\\t' '{print \$3}' ${name}.kraken2.assignments.tsv > taxids.tmp
+        --report ${sample_id}.kraken2_report.txt \
+        --classified-out ${sample_id}.kraken2.classified.fastq \
+        --unclassified-out ${sample_id}.kraken2.unclassified.fastq \
+        $reads > ${sample_id}.kraken2.assignments.tsv
+    awk -F '\\t' '{print \$3}' ${sample_id}.kraken2.assignments.tsv > taxids.tmp
     taxonkit \
         --data-dir $taxonomy \
         lineage -R taxids.tmp \
-        | aggregate_lineages.py -p ${name}.kraken2
+        | aggregate_lineages.py -p ${sample_id}.kraken2
     """
 }
 
@@ -246,21 +209,21 @@ process extractKraken2Reads {
     label "wfmetagenomics"
     cpus 1
     input:
-        file reads
-        file kraken_assignments
-        file kraken_report
+        tuple val(sample_id), file(reads), file(kraken_assignments), file(kraken_report)
     output:
-        path "*extracted.fastq", emit: extracted
+        tuple(
+            val(sample_id),
+            path("*extracted.fastq"), 
+            emit: extracted)
     script:
         def taxids = (params.kraken2filter as String).replaceAll(',',' ')
-        def name = reads.simpleName
         def policy = params.kraken2exclude ? '--exclude' : ''
     """
     extract_kraken_reads.py \
         -k $kraken_assignments \
         -r $kraken_report \
         -s1 $reads \
-        -o ${name}.kraken2.extracted.fastq \
+        -o ${sample_id}.kraken2.extracted.fastq \
         -t $taxids \
         --fastq-output \
         --include-children
@@ -273,19 +236,20 @@ process bracken {
     label "wfmetagenomics"
     cpus 1
     input:
+        tuple val(sample_id), file(kraken2_report)
         file database
-        file kraken2_report
     output:
-        path "*bracken_report.txt", emit: bracken_report
-    script:
-        def name = kraken2_report.simpleName
+        tuple(
+            val(sample_id),
+            path("*bracken_report.txt"), 
+            emit: bracken_report)
     """
-    bracken \
-        -d $database \
-        -i $kraken2_report \
-        -r $params.bracken_length \
-        -l $params.bracken_level \
-        -o ${name}.bracken_report.txt
+    run_bracken.py \
+        $database \
+        $kraken2_report \
+        $params.bracken_length \
+        $params.bracken_level \
+        ${sample_id}.bracken_report.txt
     """
 }
 
@@ -325,10 +289,10 @@ process getParams {
 process makeReport {
     label "wfmetagenomics"
     input:
-        path stats
+        tuple val(sample_ids), path(stats), path(lineages)
         path "versions/*"
         path "params.json"
-        path lineages
+        path template
     output:
         path "wf-metagenomics-*.html"
     script:
@@ -339,7 +303,8 @@ process makeReport {
         --versions versions \
         --params params.json \
         --summaries $stats \
-        --lineages $lineages
+        --lineages $lineages \
+        --vistempl $template
     """
 }
 
@@ -371,6 +336,7 @@ workflow pipeline {
         taxonomy
         database
         kmer_distribution
+        template
     main:
         outputs = []
         taxonomy = unpackTaxonomy(taxonomy)
@@ -401,8 +367,8 @@ workflow pipeline {
             ]
             if (params.kraken2bracken) {
                 br = bracken(
-                    database,
-                    kr2.kraken2_report
+                    kr2.kraken2_report,
+                    database
                 )
                 outputs += [br.bracken_report]
             }
@@ -430,14 +396,12 @@ workflow pipeline {
             )
             outputs += [
                 mm2.bam,
-                mm2.bai,
                 mm2.assignments,
                 mm2.lineage_txt
             ]
             if (params.minimap2filter) {
                 mm2_filt = extractMinimap2Reads(
                     mm2.bam,
-                    mm2.bai,
                     ref2taxid,
                     taxonomy
                 )
@@ -446,49 +410,45 @@ workflow pipeline {
         }
 
         if (params.kraken2) {
-            lineages = kr2.lineage_json.collect()
+            lineages = kr2.lineage_json
         }
         if (params.minimap2) {
-            lineages = mm2.lineage_json.collect()
+            lineages = mm2.lineage_json
         }
 
         // Reporting
         software_versions = getVersions()
         workflow_params = getParams()
         report = makeReport(
-            reads.stats.collect(),
+            reads.stats.join(lineages).toList().transpose().toList(),
             software_versions.collect(), 
             workflow_params,
-            lineages
+            template
         )
-        outputs += [software_versions, workflow_params]
     emit:
-        report.concat(*outputs)
+        report.concat(
+            *outputs.collect { chan ->
+                chan.flatMap { it -> [ it[1] ] }},
+            software_versions,
+            workflow_params
+        )
 }
 
 
 // entrypoint workflow
+WorkflowMain.initialise(workflow, params, log)
+
 workflow {
     dataDir = projectDir + '/data'
 
     // Ready the optional file
     OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
 
-    if (params.help) {
-        helpMessage()
-        exit 1
-    }
+    // Acquire report template
+    template = file("$projectDir/bin/report-visualisation.html")
 
     // Checking user parameters
-    println("=================================")
-    println("Checking inputs")
-
-    if (!params.fastq) {
-        helpMessage()
-        println("")
-        println("`--fastq` is required")
-        exit 1
-    }
+    println("Checking inputs.")
 
     if (!(params.minimap2 || params.kraken2)) {
         println("")
@@ -550,23 +510,12 @@ workflow {
             params.bracken_dist, type: "file", checkIfExists:true)
     }
 
-    // Print all params
-    println("=================================")
-    println("Summarising parameters")
-    params.each { it -> {
-        if ("$it.key" == "sources") {
-            prettyPrintSources(it)
-        } else {
-            println("> $it.key: $it.value") 
-        }
-    }}
-
     samples = fastq_ingress(
-        params.fastq, params.out_dir, params.samples, params.sanitize_fastq)
+        params.fastq, params.out_dir, params.sample, params.sample_sheet, params.sanitize_fastq)
 
     results = pipeline(
         samples, reference, refindex, ref2taxid, taxonomy,
-        database, kmer_distribution)
+        database, kmer_distribution, template)
 
     output(results)
 }

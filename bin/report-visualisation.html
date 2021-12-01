@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>wf-metagenomics sankey visualisation</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-dispatch@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-ease@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-selection@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-timer@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-transition@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-drag@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-zoom@3"></script>
+    <script src="https://unpkg.com/d3-array@1"></script>
+    <script src="https://unpkg.com/d3-collection@1"></script>
+    <script src="https://unpkg.com/d3-path@1"></script>
+    <script src="https://unpkg.com/d3-shape@1"></script>
+    <script src="https://unpkg.com/d3-sankey@0"></script>
+
+    <!-- Data table -->
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest"></script>
+
+    <!-- Additional -->
+    {{ resources }}
+    {{ script }}
+
+</head>
+
+<body>
+    <div class="container">
+        <style>
+            #visualisation {
+                position: relative;
+            }
+
+            .wf-metagenomics-sankey h3 {
+                font-size: 24px;
+                margin: 0;
+                padding: 15px 0 15px 0;
+                font-family: inherit;
+                font-weight: 500;
+                line-height: 1.1;
+            }
+
+            .wf-metagenomics-sankey body {
+                height: 100%;
+                padding: 0;
+                margin: 0;
+                box-sizing: border-box;
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            }
+
+            .wf-metagenomics-sankey ul {
+                padding: 0;
+                margin: 0;
+                list-style: none;
+            }
+
+            .wf-metagenomics-sankey input,
+            .wf-metagenomics-sankey select,
+            .wf-metagenomics-sankey select.dataTable-selector {
+                min-width: 200px;
+                cursor: pointer;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                position: relative;
+                margin-top: 5px;
+                outline: none;
+                background-color: #0084A9;
+                padding: 15px 25px;
+                border: 2px solid #0084A9;
+                color: white;
+                text-transform: uppercase;
+                font-size: 11px;
+                border-radius: 4px;
+                /* font-weight: bold; */
+                letter-spacing: 0.05em;
+                transition: 0.2s ease-in-out all;
+                font-weight: bold;
+                /* for Firefox */
+                appearance: none;
+                -moz-appearance: none;
+                /* for Chrome */
+                -webkit-appearance: none;
+            }
+
+            .wf-metagenomics-sankey input {
+                border: 2px solid #0084A9;
+                background-color: white;
+                color: #0084A9;
+            }
+
+            .wf-metagenomics-sankey input::placeholder {
+                color: #0084A9;
+            }
+
+            .wf-metagenomics-sankey select:hover {
+                background-color: #0084A9;
+                color: white
+            }
+
+            .wf-metagenomics-sankey option {
+                color: black
+            }
+
+            .wf-metagenomics-sankey button {
+                white-space: nowrap;
+                cursor: pointer;
+                border: 0;
+                padding: 0;
+                margin: 0;
+                position: relative;
+                outline: none;
+                background-color: transparent;
+                padding: 15px 15px;
+                border: 2px solid #0084A9;
+                color: #0084A9;
+                text-transform: uppercase;
+                font-size: 11px;
+                border-radius: 4px;
+                /* font-weight: bold; */
+                letter-spacing: 0.05em;
+                transition: 0.2s ease-in-out all;
+                font-weight: bold;
+                /* for Firefox */
+                appearance: none;
+                -moz-appearance: none;
+                /* for Chrome */
+                -webkit-appearance: none;
+            }
+
+            .wf-metagenomics-sankey button:hover {
+                background-color: #0084A9;
+                color: white
+            }
+
+            .wf-metagenomics-sankey label {
+                color: black;
+                text-transform: uppercase;
+                font-size: 11px;
+                font-weight: normal;
+                letter-spacing: 0.05em;
+                /* font-weight: bold; */
+                font-family: 'Courier New', Courier, monospace;
+            }
+
+            .wf-metagenomics-sankey main {
+                max-width: 1200px;
+                /* padding: 50px; */
+                margin: 0 auto;
+            }
+
+            .wf-metagenomics-sankey #controls {
+                max-width: 1200px;
+            }
+
+            .wf-metagenomics-sankey #controls ul {
+                display: flex;
+            }
+
+            .wf-metagenomics-sankey #controls ul li {
+                display: flex;
+                flex-direction: column;
+                margin: 0 15px 0 0;
+                justify-content: end;
+            }
+
+            .dataTable-top,
+            .dataTable-bottom {
+                display: flex;
+                align-items: end;
+                padding: 0 0 15px 0;
+            }
+
+            .dataTable-bottom {
+                padding: 15px 0 15px 0;
+                align-items: start;
+                justify-content: space-between;
+            }
+
+            .dataTable-selector {
+                padding: 6px;
+            }
+
+            .dataTable-info {
+                margin: 7px 0;
+            }
+
+            /* TABLE RANK */
+            .dataTable-rank label {
+                display: flex;
+                flex-direction: column;
+                margin: 0;
+            }
+
+            /* DROPDOWN */
+            .dataTable-dropdown label {
+                display: flex;
+                flex-direction: column-reverse;
+                margin: 0;
+            }
+
+            .dataTable-dropdown,
+            .dataTable-search {
+                padding-left: 15px;
+            }
+
+            /* PAGER */
+            .dataTable-pagination ul {
+                margin: 0;
+                padding-left: 0;
+            }
+
+            .dataTable-pagination li {
+                list-style: none;
+                float: left;
+            }
+
+            .dataTable-pagination li.pager {
+                margin: 0;
+            }
+
+            .dataTable-pagination a {
+                border: 1px solid transparent;
+                float: left;
+                margin-left: 2px;
+                padding: 6px 12px;
+                position: relative;
+                text-decoration: none;
+                color: #333;
+            }
+
+            .dataTable-pagination a:hover {
+                background-color: #d9d9d9;
+            }
+
+            .dataTable-pagination .active a,
+            .dataTable-pagination .active a:focus,
+            .dataTable-pagination .active a:hover {
+                background-color: #d9d9d9;
+                cursor: default;
+            }
+
+            .dataTable-pagination .ellipsis a,
+            .dataTable-pagination .disabled a,
+            .dataTable-pagination .disabled a:focus,
+            .dataTable-pagination .disabled a:hover {
+                cursor: not-allowed;
+            }
+
+            .dataTable-pagination .disabled a,
+            .dataTable-pagination .disabled a:focus,
+            .dataTable-pagination .disabled a:hover {
+                cursor: not-allowed;
+                opacity: 0.4;
+            }
+
+            .dataTable-pagination .pager a {
+                font-weight: bold;
+            }
+
+            /* TABLE */
+            .dataTable-table {
+                max-width: 100%;
+                width: 100%;
+                border-spacing: 0;
+                border-collapse: separate;
+            }
+
+            .dataTable-table>tbody>tr>td,
+            .dataTable-table>tbody>tr>th,
+            .dataTable-table>tfoot>tr>td,
+            .dataTable-table>tfoot>tr>th,
+            .dataTable-table>thead>tr>td,
+            .dataTable-table>thead>tr>th {
+                vertical-align: top;
+                padding: 8px 10px;
+            }
+
+            .dataTable-table>thead>tr>th {
+                vertical-align: bottom;
+                text-align: left;
+                border-bottom: 1px solid #d9d9d9;
+            }
+
+            .dataTable-table>tfoot>tr>th {
+                vertical-align: bottom;
+                text-align: left;
+                border-top: 1px solid #d9d9d9;
+            }
+
+            .dataTable-table th {
+                vertical-align: bottom;
+                text-align: left;
+            }
+
+            .dataTable-table th a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .dataTable-sorter {
+                display: inline-block;
+                height: 100%;
+                position: relative;
+                width: 100%;
+            }
+
+            .dataTable-sorter::before,
+            .dataTable-sorter::after {
+                content: "";
+                height: 0;
+                width: 0;
+                position: absolute;
+                right: 4px;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                opacity: 0.2;
+            }
+
+            .dataTable-sorter::before {
+                border-top: 4px solid #000;
+                bottom: 0px;
+            }
+
+            .dataTable-sorter::after {
+                border-bottom: 4px solid #000;
+                border-top: 4px solid transparent;
+                top: 0px;
+            }
+
+            .asc .dataTable-sorter::after,
+            .desc .dataTable-sorter::before {
+                opacity: 0.6;
+            }
+
+            .dataTables-empty {
+                text-align: center;
+            }
+
+            .wf-metagenomics-sankey #table {
+                font-family: Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+                width: 100%;
+            }
+
+            .wf-metagenomics-sankey #table td,
+            .wf-metagenomics-sankey #table th {
+                border: 1px solid #ddd;
+                padding: 4px;
+            }
+
+            .wf-metagenomics-sankey #table tr:nth-child(even) {
+                background-color: #f2f2f2;
+            }
+
+            .wf-metagenomics-sankey #table tr:hover {
+                background-color: #90C5E7;
+            }
+
+            .wf-metagenomics-sankey #table th {
+                padding-top: 4px;
+                padding-bottom: 4px;
+                text-align: left;
+                background-color: #0084A9;
+                color: white;
+            }
+        </style>
+
+        <h1>{{ title }}</h1>
+        <p class="lead">{{ lead }}</p>
+
+        <main class="wf-metagenomics-sankey">
+
+            <h3>Lineage plot</h3>
+            <div id="controls">
+                <ul>
+                    <li>
+                        <label for="sample-select">Select sample</label>
+                        <select id="sample-select"></select>
+                    </li>
+                    <li>
+                        <label for="rank-select">Select rank</label>
+                        <select id="rank-select"></select>
+                    </li>
+                    <li>
+                        <label for="cutoff-select">Select cutoff</label>
+                        <select id="cutoff-select"></select>
+                    </li>
+                    <li>
+                        <button onclick="zoomIn()">[+] Zoom in</button>
+                    </li>
+                    <li>
+                        <button onclick="zoomOut()">[-] Zoom out</button>
+                    </li>
+                    <li>
+                        <button onclick="resetZoom()">[ ] Reset zoom</button>
+                    </li>
+                </ul>
+            </div>
+
+            <div id="visualisation">
+                <div id="sankey-plot"></div>
+                <div id="tooltip"></div>
+            </div>
+
+            <h3>Abundance stats</h3>
+            <table id="table">
+                <thead>
+                    <tr></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <script>
+                /* ----------------------------------------------------------------------------
+                | Chart settings
+                |---------------------------------------------------------------------------- */
+                const width = 1200
+                const height = 900
+                const color = '#333333'
+                const cutoffs = [0.5, 1, 3, 5]
+                const ranks = ["superkingdom", "kingdom", "phylum", "class", "order", "family", "genus", "species"]
+                const colours = ["#6e40aa", "#6d41ab", "#6d41ad", "#6d42ae", "#6c43af", "#6c43b0", "#6b44b2", "#6b45b3", "#6a46b4", "#6a46b5", "#6a47b7", "#6948b8", "#6849b9", "#684aba", "#674abb", "#674bbd", "#664cbe", "#664dbf", "#654ec0", "#654fc1", "#6450c2", "#6350c3", "#6351c4", "#6252c5", "#6153c6", "#6154c7", "#6055c8", "#5f56c9", "#5f57ca", "#5e58cb", "#5d59cc", "#5c5acd", "#5c5bce", "#5b5ccf", "#5a5dd0", "#595ed1", "#595fd1", "#5860d2", "#5761d3", "#5662d4", "#5663d5", "#5564d5", "#5465d6", "#5366d7", "#5267d7", "#5168d8", "#5169d9", "#506ad9", "#4f6bda", "#4e6cda", "#4d6ddb", "#4c6edb", "#4b70dc", "#4b71dc", "#4a72dd", "#4973dd", "#4874de", "#4775de", "#4676df", "#4577df", "#4479df", "#447adf", "#437be0", "#427ce0", "#417de0", "#407ee0", "#3f80e1", "#3e81e1", "#3d82e1", "#3d83e1", "#3c84e1", "#3b86e1", "#3a87e1", "#3988e1", "#3889e1", "#378ae1", "#378ce1", "#368de1", "#358ee1", "#348fe1", "#3390e1", "#3292e1", "#3293e1", "#3194e0", "#3095e0", "#2f96e0", "#2e98e0", "#2e99df", "#2d9adf", "#2c9bdf", "#2b9cde", "#2b9ede", "#2a9fdd", "#29a0dd", "#29a1dd", "#28a2dc", "#27a4dc", "#26a5db", "#26a6db", "#25a7da", "#25a8d9", "#24aad9", "#23abd8", "#23acd8", "#22add7", "#22aed6", "#21afd5", "#21b1d5", "#20b2d4", "#20b3d3", "#1fb4d2", "#1fb5d2", "#1eb6d1", "#1eb8d0", "#1db9cf", "#1dbace", "#1dbbcd", "#1cbccc", "#1cbdcc", "#1cbecb", "#1bbfca", "#1bc0c9", "#1bc2c8", "#1ac3c7", "#1ac4c6", "#1ac5c5", "#1ac6c4", "#1ac7c2", "#1ac8c1", "#19c9c0", "#19cabf", "#19cbbe", "#19ccbd", "#19cdbc", "#19cebb", "#19cfb9", "#19d0b8", "#19d1b7", "#19d2b6", "#19d3b5", "#1ad4b4", "#1ad5b2", "#1ad5b1", "#1ad6b0", "#1ad7af", "#1bd8ad", "#1bd9ac", "#1bdaab", "#1bdbaa", "#1cdba8", "#1cdca7", "#1cdda6", "#1ddea4", "#1ddfa3", "#1edfa2", "#1ee0a0", "#1fe19f", "#1fe29e", "#20e29d", "#20e39b", "#21e49a", "#22e599", "#22e597", "#23e696", "#24e795", "#24e793", "#25e892", "#26e891", "#27e98f", "#27ea8e", "#28ea8d", "#29eb8c", "#2aeb8a", "#2bec89", "#2cec88", "#2ded87", "#2eed85", "#2fee84", "#30ee83", "#31ef82", "#32ef80", "#33f07f", "#34f07e", "#35f07d", "#37f17c", "#38f17a", "#39f279", "#3af278", "#3bf277", "#3df376", "#3ef375", "#3ff374", "#41f373", "#42f471", "#43f470", "#45f46f", "#46f46e", "#48f56d", "#49f56c", "#4bf56b", "#4cf56a", "#4ef56a", "#4ff669", "#51f668", "#52f667", "#54f666", "#55f665", "#57f664", "#59f664", "#5af663", "#5cf662", "#5ef661", "#5ff761", "#61f760", "#63f75f", "#64f75f", "#66f75e", "#68f75d", "#6af75d", "#6bf65c", "#6df65c", "#6ff65b", "#71f65b", "#73f65a", "#74f65a", "#76f659", "#78f659", "#7af659", "#7cf658", "#7ef658", "#80f558", "#81f558", "#83f557", "#85f557", "#87f557", "#89f557", "#8bf457", "#8df457", "#8ff457", "#91f457", "#93f457", "#94f357", "#96f357", "#98f357", "#9af357", "#9cf257", "#9ef258", "#a0f258", "#a2f258", "#a4f158", "#a6f159", "#a8f159", "#aaf159", "#abf05a", "#adf05a", "#aff05b"]
+
+                /* ----------------------------------------------------------------------------
+                | Ingest data
+                |---------------------------------------------------------------------------- */
+                const getData = () => "replace_me"
+
+
+                /* ----------------------------------------------------------------------------
+                | Helper methods
+                |---------------------------------------------------------------------------- */
+                const parseData = (_data) =>
+                    JSON.parse(_data);
+
+                const normaliseName = (name) =>
+                    name.split(' ').join('-')
+
+                /* ----------------------------------------------------------------------------
+                | Graph methods
+                |---------------------------------------------------------------------------- */
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const getSampleNames = (data) =>
+                    [...Object.keys(data)]
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const getSampleCounts = (data) => {
+                    const counts = {}
+                    const names = getSampleNames(data)
+
+                    const _getSampleCounts = (sample_name, agg, fragment) => {
+                        Object.entries(fragment).forEach(([key, val]) => {
+                            agg[key] = {
+                                [sample_name]: val.count,
+                                rank: val.rank,
+                                name: key,
+                                ...agg[key]
+                            }
+                            _getSampleCounts(sample_name, agg, val.children)
+                        })
+                    }
+
+                    names.map(Sample => _getSampleCounts(Sample, counts, data[Sample]))
+                    return counts
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const getTotalCount = (sample_data) =>
+                    Object.values(sample_data).reduce((sum, I) => I.count + sum, 0)
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const getSankeyEdges = (sample_data) => {
+                    const _getSankeyEdges = (entries, current) =>
+                        Object.entries(entries).reduce((arr, [key, val]) => [
+                            ...arr,
+                            {
+                                source: current,
+                                target: current === key ? `${key}_${val.rank}` : key,
+                                value: val.count,
+                                targetRank: val.rank,
+                                targetRankIdx: ranks.indexOf(val.rank)
+                            },
+                            ..._getSankeyEdges(val.children, key)
+                        ], [])
+                    return Object.entries(sample_data).map(([k, v]) =>
+                        _getSankeyEdges(v.children, k)).flat()
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const getSankeyNodes = (edges) => {
+                    const unique = new Set(
+                        edges.reduce((arr, Link) =>
+                            [Link.source, Link.target, ...arr], [])
+                    )
+                    return [...unique].map(Item => ({ name: Item }))
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const getSankeyGenerator = (_width, _height) =>
+                    d3.sankey()
+                        .nodeId(d => d.name)
+                        // .nodeSort(() => true) # Disabled for now
+                        .nodeAlign(d3['sankeyCenter'])
+                        .nodeWidth(30)
+                        .nodePadding(30)
+                        .extent([[0, 5], [_width, _height - 5]])
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const getSankeyGraph = (sample_name, sample_data, generator, cutoff, total) => {
+                    const _cutoffVal = total / 100 * cutoff
+
+                    const _edges = getSankeyEdges(sample_data)
+                    const _filteredEdges = _edges.filter(Link => Link.value >= _cutoffVal)
+                    const _nodes = getSankeyNodes(_filteredEdges)
+
+                    return generator({
+                        nodes: _nodes.map(d => Object.assign({}, d)),
+                        links: _filteredEdges.map(d => Object.assign({}, d))
+                    });
+                }
+
+                /* ----------------------------------------------------------------------------
+                | Render controls
+                |---------------------------------------------------------------------------- */
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const renderSelect = (select_id, sample_names, symbol = null) => {
+                    const dropdown = d3.select(select_id)
+                    dropdown
+                        .selectAll('option')
+                        .data(sample_names)
+                        .enter()
+                        .append("option")
+                        .attr("value", (d) => d)
+                        .text((d) => {
+                            return symbol ? d + symbol : d;
+                        })
+                    return dropdown
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const renderToolTop = () =>
+                    d3.select("#tooltip")
+                        .style("position", "absolute")
+                        .style("z-index", "10")
+                        .style("visibility", "hidden")
+                        .style("background", "white");
+
+                /* ----------------------------------------------------------------------------
+                | Render chart
+                |---------------------------------------------------------------------------- */
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const setTextStyles = (enter, colour = "#555") => {
+                    enter.style("font-family", "monospace")
+                        .style("text-transform", "lowercase")
+                        .style("letter-spacing", "0.06em")
+                        .attr("fill", "#555")
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const updateToolTip = (enter, colourScale, total, counts) => {
+                    const toolTip = d3.select("#tooltip")
+                    enter.on("mouseover", (event, d) => {
+                        const toolTipData = [
+                            `Name: ${d.name}`,
+                            `Rank: ${counts[d.name].rank}`,
+                            `Count: ${d.value}`,
+                            `Percentage: ${(100 / total * d.value).toFixed(2)}%`
+                        ]
+                        toolTip
+                            .select("text")
+                            .remove()
+                        const toolTipText = toolTip
+                            .style("top", d.y + "px")
+                            .style("left", d.x + "px")
+                            .style("padding", "5px")
+                            .style("border-radius", "4px")
+                            .style("visibility", "visible")
+                            .style("background-color", "#fafafa")
+                            .style("border", `2px solid ${colourScale(d.value)}`)
+                            .style("box-shadow", "5px 12px 20px rgb(36 37 38 / 13%)")
+                            .append('text')
+                            .attr("x", 0)
+                            .attr("y", 0)
+                            .call(enter => setTextStyles(enter))
+                        toolTipText
+                            .selectAll("tspan")
+                            .data(toolTipData)
+                            .join("tspan")
+                            .attr("x", 0)
+                            .attr("y", 0)
+                            .attr("dy", (d, i) => `${1.2 * i}em`)
+                            .style("display", "block")
+                            .attr("fill-opacity", 0.7)
+                            .text(d => d)
+                    })
+                        .on("mousemove", (event, d) => {
+                            toolTip
+                                .style("top", event.layerY + 10 + "px")
+                                .style("left", event.layerX + 10 + "px")
+                        })
+                        .on("mouseout", (d) => {
+                            return toolTip.style("visibility", "hidden")
+                        });
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const updateVisualisation = (svg, graph, depth, colourScale, total, counts) => {
+                    const { nodes, links } = graph
+
+                    const _filteredNodes = nodes.filter(Node =>
+                        ranks.indexOf(counts[Node.name]?.rank || 0) <= depth
+                        && Node.name !== 'Unknown')
+
+                    // Temporary extra jank: Remove the node and link for unknown species
+                    const _filteredLinks = links.filter(Link =>
+                        Link.targetRankIdx <= depth && Link.target.name !== 'Unknown')
+
+                    const t = svg.transition().duration(750);
+
+                    const nodelist = svg.select("#nodes")
+                        .selectChildren("g")
+                        .data(_filteredNodes, (d) => d.name)
+                        .join(
+                            enter => {
+                                const container = enter.append("g")
+
+                                // Add node rect
+                                container
+                                    .append("rect")
+                                    .attr("x", d => d.x0 + 1)
+                                    .attr("y", d => d.y0)
+                                    .attr("height", 0)
+                                    .attr("width", d => d.x1 - d.x0 - 2)
+                                    .attr("fill", d => colourScale(d.value))
+                                    .style("cursor", "pointer")
+                                    .attr("pointer-events", "all")
+                                    .call(enter => enter.transition(t)
+                                        .attr("height", d => d.y1 - d.y0))
+                                    .call(enter => updateToolTip(enter, colourScale, total, counts))
+
+                                // Add node accessibility title
+                                container
+                                    .append("title")
+                                    .text(d => `${d.name}\n${d.value.toLocaleString()}`)
+
+                                // Add node label
+                                container
+                                    .append("text")
+                                    .attr("x", d => d.x1 + 6)
+                                    .attr("y", d => (d.y1 + d.y0) / 2)
+                                    .attr("height", d => d.y1 - d.y0)
+                                    .attr("width", d => d.x1 - d.x0 - 2)
+                                    .attr("dy", "0.35em")
+                                    .attr("text-anchor", "start")
+                                    .text(d => d.name)
+                                    .call(enter => setTextStyles(enter))
+                                    .append("tspan")
+                                    .attr("dy", "1.2em")
+                                    .attr("x", d => d.x1 + 6)
+                                    .attr("fill-opacity", 0.7)
+                                    .text(d => `${d.value.toLocaleString()}`);
+                            },
+                            update => {
+                                update.select("rect")
+                                    .attr("fill", d => colourScale(d.value))
+                                    .call(enter => enter.transition(t)
+                                        .attr("x", d => d.x0 + 1)
+                                        .attr("y", d => d.y0)
+                                        .attr("height", d => d.y1 - d.y0)
+                                        .attr("width", d => d.x1 - d.x0 - 2))
+
+                                // Add node accessibility title
+                                update.select("title")
+                                    .text(d => `${d.name}\n${d.value.toLocaleString()}`)
+
+                                update.select("text")
+                                    .attr("x", d => d.x1 + 6)
+                                    .attr("y", d => (d.y1 + d.y0) / 2)
+                                    .attr("height", d => d.y1 - d.y0)
+                                    .attr("width", d => d.x1 - d.x0 - 2)
+                                    .attr("dy", "0.35em")
+                                    .attr("text-anchor", "start")
+                                    .text(d => d.name)
+                                    .append("tspan")
+                                    .attr("dy", "1.2em")
+                                    .attr("x", d => d.x1 + 6)
+                                    .attr("fill-opacity", 0.7)
+                                    .text(d => `${d.value.toLocaleString()}`);
+                            },
+                            exit => {
+                                exit.remove()
+                            }
+                        )
+
+                    const linkList = svg.select("#links")
+                        .selectChildren("g")
+                        .data(_filteredLinks, (d) => `${d.source.name}-${d.target.name}`)
+                        .join(
+                            enter => {
+                                const container = enter.append("g")
+                                    .style("mix-blend-mode", "multiply")
+
+                                container
+                                    .append("linearGradient")
+                                    .attr("id", d => `${d.source.name}-${normaliseName(d.target.name)}-grad`)
+                                    .attr("gradientUnits", "userSpaceOnUse")
+                                    .attr("x1", d => d.source.x1)
+                                    .attr("x2", d => d.target.x0)
+                                    .call(gradient => gradient.append("stop")
+                                        .attr("offset", "0%")
+                                        .attr("stop-color", (d) => colourScale(d.source.value)))
+                                    .call(gradient => gradient.append("stop")
+                                        .attr("offset", "100%")
+                                        .attr("stop-color", (d) => colourScale(d.target.value)));
+
+                                container
+                                    .append("path")
+                                    .attr("d", d3.sankeyLinkHorizontal())
+                                    .attr("stroke", (d) => `url(#${d.source.name}-${normaliseName(d.target.name)}-grad`)
+                                    .attr("stroke-opacity", 0.1)
+                                    .call(enter => enter.transition(t)
+                                        .attr("stroke-width", d => Math.max(1, d.width)))
+                            },
+                            update => {
+                                update
+                                    .attr("stroke", d => colourScale(d.target.value))
+                                    .style("mix-blend-mode", "multiply")
+
+                                update
+                                    .select("path")
+                                    .attr("d", d3.sankeyLinkHorizontal())
+                                    .call(enter => enter.transition(t)
+                                        .attr("stroke-width", d => Math.max(1, d.width)))
+                            },
+                            exit => {
+                                exit.remove()
+                            }
+                        )
+
+                    return svg
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const renderVisualisation = (svg, graph, depth, colourScale, total, counts) => {
+                    const nodelist = svg.append("g")
+                        .attr("id", "nodes")
+                    const linklist = svg.append("g")
+                        .attr("id", "links")
+                        .attr("fill", "none")
+
+                    updateVisualisation(svg, graph, depth, colourScale, total, counts)
+                    return svg
+                }
+
+                /* ----------------------------------------------------------------------------
+                | Chart reactivity
+                |---------------------------------------------------------------------------- */
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const handlePlotSelectChange = (counts) => {
+                    const rank = d3.select("#rank-select").property('value');
+                    const cutoff = d3.select("#cutoff-select").property('value');
+                    const sample = d3.select("#sample-select").property('value');
+                    const sample_data = parsed[sample]
+                    const _total = getTotalCount(sample_data)
+                    const _graph = getSankeyGraph(sample, parsed[sample], generator, cutoff, _total)
+                    const colourScale = d3.scaleQuantize().domain([0, _total]).range(colours);
+                    setStateGraph(_graph)
+                    updateVisualisation(svg, _graph, ranks.indexOf(rank), colourScale, _total, counts);
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const handleZoom = (e) => {
+                    d3.select('svg')
+                        .selectChildren('g')
+                        .attr('transform', e.transform)
+                    const fontSize = Math.min(16 / e.transform.k, 12)
+                    d3.selectAll('#nodes text')
+                        .style("font-size", `${fontSize}px`)
+                }
+
+                /* ----------------------------------------------------------------------------
+                | Render table
+                |---------------------------------------------------------------------------- */
+
+                const renderTableRankSelect = (_id, ranks) => {
+                    const rankSelect = d3.select('.dataTable-top')
+                        .insert('div', ":first-child")
+                        .classed("dataTable-rank", true)
+                        .append('label')
+                        .text('Select rank')
+
+                    rankSelect
+                        .insert('select')
+                        .attr('id', _id)
+
+                    return renderSelect(`#${_id}`, ranks)
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const renderTable = (counts, samples, rank) => {
+                    const table = d3.select('#table')
+
+                    const headerRows = ['Taxon', 'Rank', 'Total', ...samples]
+                    const thead = table
+                        .select("thead tr")
+                        .selectAll("th")
+                        .data(headerRows)
+                        .join('th')
+                        .text(d => d)
+
+                    const bodyRows = Object.values(counts).filter(Count => Count.rank === rank)
+
+                    const trows = table
+                        .select("tbody")
+                        .selectAll("tr")
+                        .data(bodyRows)
+                        .join('tr')
+                        .selectAll('td')
+                        .data((d) => {
+                            const sampleCounts = samples.map(Sample => d[Sample] || 0)
+                            const total = sampleCounts.reduce((sum, I) => I + sum, 0)
+                            return [d.name, d.rank, total, ...sampleCounts]
+                        })
+                        .join('td')
+                        .text((d) => d)
+                }
+
+                /**
+                 * Represents a book.
+                 * @constructor
+                 * @param {string} title - The title of the book.
+                 * @param {string} author - The author of the book.
+                 */
+                const handleTableSelectChange = (datatable, counts, samples) => {
+                    const table = d3.select('#table')
+                    const rank = d3.select("#table-rank-select").property('value');
+
+                    datatable.rows().remove(
+                        [...datatable.data.map(R => R.dataIndex)]
+                    )
+
+                    const bodyRows = Object.values(counts)
+                        .filter(Count => Count.rank === rank)
+                        .map(Row => {
+                            const sampleCounts = samples.map(Sample => (Row[Sample] || 0))
+                            const total = sampleCounts.reduce((sum, I) => I + sum, 0).toString()
+                            return [
+                                Row.name,
+                                Row.rank,
+                                total,
+                                ...sampleCounts.map(Count => Count.toString())
+                            ]
+                        })
+
+                    datatable.rows().add(bodyRows)
+                    datatable.refresh();
+                }
+
+                /* ----------------------------------------------------------------------------
+                | Initialisation
+                |---------------------------------------------------------------------------- */
+
+                const svg = d3.select('#sankey-plot')
+                    .insert('svg')
+                    .attr("width", width)
+                    .attr("height", height)
+                    .style("background", "#fff")
+
+                // FYI CONSIDER THIS GLOBAL
+                const state = {}
+                const setStateGraph = (graph) => {
+                    state.graph = graph
+                }
+
+                // Prepare data
+                const parsed = parseData(getData())
+                const generator = getSankeyGenerator(width, height)
+
+                // Initialise samples
+                const names = getSampleNames(parsed)
+                const default_sample = names[0]
+                const sample_data = parsed[default_sample]
+                const sample_counts = getSampleCounts(parsed)
+                const sampleSelect = renderSelect('#sample-select', names, 0)
+                sampleSelect.property('value', default_sample);
+
+                // Initialise ranks
+                const default_rank = "order"
+                const rankSelect = renderSelect('#rank-select', ranks)
+                rankSelect.property('value', default_rank);
+
+                // Initialise cutoff
+                const default_cutoff = 1
+                const cutoffSelect = renderSelect('#cutoff-select', cutoffs, '%')
+                cutoffSelect.property('value', `${default_cutoff}`);
+
+                // Render default sample
+                const total = getTotalCount(sample_data)
+                const graph = getSankeyGraph(
+                    default_sample, sample_data, generator, default_cutoff, total)
+                const colourScale = d3.scaleQuantize().domain([0, total]).range(colours);
+                renderVisualisation(svg, graph, ranks.indexOf(default_rank), colourScale, total, sample_counts)
+                setStateGraph(graph)
+
+                // Initialise select reactivity
+                d3.select("#sample-select").on("change", () => handlePlotSelectChange(sample_counts));
+                d3.select("#rank-select").on("change", () => handlePlotSelectChange(sample_counts));
+                d3.select("#cutoff-select").on("change", () => handlePlotSelectChange(sample_counts));
+
+                // Initialise zoom reactivity
+                const zoom = d3.zoom().on('zoom', handleZoom);
+                svg.call(zoom);
+
+                // Initialise tooltip interactivity
+                const toolTip = renderToolTop()
+
+                // Initialise manual zoom interactivity
+                function zoomIn() {
+                    d3.select('svg')
+                        .transition()
+                        .call(zoom.scaleBy, 2);
+                }
+
+                function zoomOut() {
+                    d3.select('svg')
+                        .transition()
+                        .call(zoom.scaleBy, 0.5);
+                }
+
+                function resetZoom() {
+                    d3.select('svg')
+                        .transition()
+                        .call(zoom.scaleTo, 1);
+                }
+
+                // Render table
+                renderTable(sample_counts, names, default_rank)
+                const dataTable = new simpleDatatables.DataTable("#table", {
+                    searchable: true,
+                    fixedHeight: true,
+                    columns: [
+                        { select: 2, sort: "desc" },
+                    ]
+                })
+
+                // Initialise chart interactivity
+                const tableRankSelect = renderTableRankSelect('table-rank-select', ranks)
+                tableRankSelect.property('value', default_rank);
+                d3.select("#table-rank-select").on("change", () => handleTableSelectChange(
+                    dataTable, sample_counts, names));
+
+            </script>
+        </main>
+
+        {{ div }}
+    </div>
+</body>
+
+</html>
