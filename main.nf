@@ -494,7 +494,7 @@ workflow {
     taxonomy = file(sources[source]["taxonomy"], type: "file")
     if (params.taxonomy) {
         println("Checking custom taxonomy mapping exists")
-        ref2taxid = file(params.taxonomy, type: "dir", checkIfExists:true)
+        taxonomy = file(params.taxonomy, type: "dir", checkIfExists:true)
     }
 
     database = file(sources[source]["database"], type: "file")
