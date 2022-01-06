@@ -192,6 +192,7 @@ process kraken2 {
     """
     kraken2 \
         --db $database \
+        --threads $params.threads \
         --report ${sample_id}.kraken2_report.txt \
         --classified-out ${sample_id}.kraken2.classified.fastq \
         --unclassified-out ${sample_id}.kraken2.unclassified.fastq \
