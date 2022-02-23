@@ -1,8 +1,9 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
-    "title": "epi2me-labs/wf-metagenomics pipeline parameters",
-    "description": "Metagenomics workflow",
+    "title": "epi2me-labs/wf-metagenomics",
+    "description": "General purpose metagenomics workflow using kraken2 and/or minimap2",
+    "url": "https://github.com/epi2me-labs/wf-clone-validation",
     "type": "object",
     "definitions": {
         "core_options": {
@@ -13,7 +14,9 @@
             "properties": {
                 "fastq": {
                     "type": "string",
-                    "description": "Directory containing fastq input files. May contain fastq files directly or directories name barcodeXX relating to independent samples."
+                    "format": "path",
+                    "description": "A fastq file or directory containing fastq input files or directories of input files.",
+                    "help_text": "If directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file."
                 },
                 "max_len": {
                     "type": "integer",
@@ -41,17 +44,21 @@
                 },
                 "sample_sheet": {
                     "type": "string",
+                    "format": "file-path",
                     "description": "CSV file with columns named `barcode`, `sample_name` and `type`. Permissible if passing a directory containing barcodeXX sub-directories."
                 },
                 "sanitize_fastq": {
-                    "type": "string",
+                    "type": "boolean",
                     "description": "Use additional heuristics to identify barcodes from file paths.",
                     "help_text": "Enabling this option will group together files into samples by the presence of strings of the form `barcodeXXX` present in filenames, rather than simply files grouped into directories (as output by MinKNOW and the Guppy basecaller)."
                 },
                 "source": {
                     "type": "string",
                     "default": "TARGLOCI",
-                    "description": "Overrides the default reference, databases and taxonomy used. Choices: ['TARGLOCI']"
+                    "description": "Sets the default reference, databases and taxonomy used. Choices: ['TARGLOCI']",
+                    "enum": [
+                        "TARGLOCI"
+                    ]
                 },
                 "sources": {
                     "type": "object",
@@ -60,8 +67,8 @@
                 },
                 "taxonomy": {
                     "type": "string",
-                    "description": "Specifically override the taxonomy used [.tar.gz or Dir]",
-                    "default": "NCBI"
+                    "format": "path",
+                    "description": "Optionally override the taxonomy used [.tar.gz or Dir]"
                 }
             },
             "required": [
@@ -80,10 +87,12 @@
                 },
                 "reference": {
                     "type": "string",
+                    "format": "file-path",
                     "description": "Specifically override reference [.fna]"
                 },
                 "ref2taxid": {
                     "type": "string",
+                    "format": "file-path",
                     "description": "Specifically override ref2taxid mapping. Format is .tsv (refname  taxid), no header row."
                 },
                 "minimap2filter": {
@@ -114,6 +123,7 @@
                 },
                 "database": {
                     "type": "string",
+                    "format": "path",
                     "description": "Specifically override database [.tar.gz or Dir]"
                 },
                 "kraken2filter": {
@@ -136,6 +146,7 @@
                 },
                 "bracken_dist": {
                     "type": "string",
+                    "format": "file-path",
                     "description": "Specifically override bracken kmer dist file"
                 },
                 "bracken_length": {
@@ -170,7 +181,7 @@
                 },
                 "wfversion": {
                     "type": "string",
-                    "default": "v1.1.1",
+                    "default": "v1.1.2",
                     "hidden": true
                 },
                 "disable_ping": {
