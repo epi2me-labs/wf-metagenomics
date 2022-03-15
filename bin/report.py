@@ -9,6 +9,7 @@ from aplanat.components import simple as scomponents
 from aplanat.report import WFReport
 from aplanat.util import Colors
 from bokeh.layouts import layout
+from bokeh.resources import INLINE
 from jinja2 import Template
 import natsort
 import pandas as pd
@@ -66,6 +67,8 @@ def main():
         "replace_me",
         json.dumps(sample_lineages).replace('"', '\\"'))
     report.template = Template(templ)
+    bokeh_resources = INLINE.render()
+    report.template.render(bokeh_resources=bokeh_resources)
 
     #
     # Plot read counts per barcode
