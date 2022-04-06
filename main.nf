@@ -4,7 +4,7 @@ import groovy.json.JsonBuilder
 nextflow.enable.dsl = 2
 
 include { fastq_ingress } from './lib/fastqingress' 
-
+ 
  
 process unpackDatabase {
     label "wfmetagenomics"
