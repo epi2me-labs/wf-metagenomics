@@ -181,7 +181,7 @@
                 },
                 "wfversion": {
                     "type": "string",
-                    "default": "v1.1.2",
+                    "default": "v1.1.3",
                     "hidden": true
                 },
                 "disable_ping": {
@@ -214,5 +214,9 @@
         {
             "$ref": "#/definitions/generic_options"
         }
-    ]
+    ],
+    "docs": {
+        "intro": "## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n- Kraken2 offers the fastest functionality and in combination with the accompanying bracken software can be used for a more quantitative assessment of taxonomic representation within a sample.\n- Minimap2 provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis. The workflow is not tied to this database and can also be used with custom databases as required.\n\n\n",
+        "links": "## Useful links\n\n* [nextflow](https://www.nextflow.io/)\n* [docker](https://www.docker.com/products/docker-desktop)\n* [conda](https://docs.conda.io/en/latest/miniconda.html)"
+    }
 }
