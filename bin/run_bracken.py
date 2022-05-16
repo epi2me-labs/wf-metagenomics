@@ -23,22 +23,35 @@ def main():
 
     if len(df_kraken2_report.index) == 1:
         if df_kraken2_report.at[0, "Name"] == "unclassified":
-            print("kraken2 report is all unclassified, writing empty output.")
-            with open(args.output, 'w'):
-                pass
+            message = (
+                "kraken2 report is all unclassified, "
+                "writing empty output.")
+            sys.stdout.write(message)
+            with open(args.output, 'w') as out:
+                out.write(message)
             sys.exit(0)
 
-    ret = subprocess.Popen(
-        f'bracken '
+    ret = subprocess.run(
+        'bracken '
         f'-d {args.database} '
         f'-i {args.kraken2_report} '
         f'-r {args.bracken_length} '
         f'-l {args.bracken_level} '
         f'-o {args.output}',
-        shell=True
-    ).wait()
+        capture_output=True,
+        shell=True)
 
-    sys.exit(ret)
+    stdout = str(ret.stdout)
+    stderr = str(ret.stderr)
+    sys.stdout.write(stdout)
+    sys.stderr.write(stderr)
+
+    if ret.returncode and 'no reads found' in stderr:
+        with open(args.output, 'w') as out:
+            out.write(stderr)
+        sys.exit(0)
+
+    sys.exit(ret.returncode)
 
 
 if __name__ == '__main__':

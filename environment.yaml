@@ -16,7 +16,6 @@ dependencies:
     - krakentools
     - seqkit 
     - taxonkit
-    - mapula
     - bracken
     - epi2melabs
     - natsort

@@ -114,7 +114,6 @@ process minimap2 {
         def split = params.split_prefix ? '--split-prefix tmp' : ''
     """
     minimap2 -t $params.threads -ax map-ont $split $reference $reads \
-    | mapula count -r $reference -s reference -f json -p -n $sample_id \
     | samtools view -h -F 2304 - \
     | format_minimap2.py - -o ${sample_id}.minimap2.assignments.tsv -r $ref2taxid \
     | samtools sort -o ${sample_id}.bam -
@@ -290,7 +289,8 @@ process getParams {
 process makeReport {
     label "wfmetagenomics"
     input:
-        tuple val(sample_ids), path(stats), path(lineages)
+        path stats
+        path lineages
         path "versions/*"
         path "params.json"
         path template
@@ -340,6 +340,7 @@ workflow pipeline {
         template
     main:
         outputs = []
+        lineages = Channel.empty()
         taxonomy = unpackTaxonomy(taxonomy)
         if (params.kraken2) {
             database = unpackDatabase(
@@ -359,6 +360,7 @@ workflow pipeline {
                 taxonomy
             )
             reads_to_align = kr2.classified
+            lineages = lineages.mix(kr2.lineage_json)
             outputs += [
                 kr2.classified,
                 kr2.unclassified,
@@ -366,7 +368,8 @@ workflow pipeline {
                 kr2.assignments,
                 kr2.kraken2_report
             ]
-            if (params.kraken2bracken) {
+            if (params.kraken2bracken
+                && kmer_distribution.name != 'OPTIONAL_FILE') {
                 br = bracken(
                     kr2.kraken2_report,
                     database
@@ -395,6 +398,7 @@ workflow pipeline {
                 ref2taxid,
                 taxonomy
             )
+            lineages = lineages.mix(mm2.lineage_json)
             outputs += [
                 mm2.bam,
                 mm2.assignments,
@@ -410,18 +414,12 @@ workflow pipeline {
             }
         }
 
-        if (params.kraken2) {
-            lineages = kr2.lineage_json
-        }
-        if (params.minimap2) {
-            lineages = mm2.lineage_json
-        }
-
         // Reporting
         software_versions = getVersions()
         workflow_params = getParams()
         report = makeReport(
-            reads.stats.join(lineages).toList().transpose().toList(),
+            reads.stats.flatMap { it -> [ it[1] ] }.collect(),
+            lineages.flatMap { it -> [ it[1] ] }.collect(),
             software_versions.collect(), 
             workflow_params,
             template
@@ -449,70 +447,112 @@ workflow {
     template = file("$projectDir/bin/report-visualisation.html")
 
     // Checking user parameters
-    println("Checking inputs.")
+    log.info("Checking inputs.")
 
     if (!(params.minimap2 || params.kraken2)) {
-        println("")
-        println("Nothing comes of nothing. Either minimap2 or kraken2 must be enabled.")
+        log.info("")
+        log.info("You must specify a classification method(s) with --kraken2 or --minimap2 (or both)")
         exit 1
     }
 
     if (params.kraken2filter && !params.kraken2) {
-        println("")
-        println("Usage of kraken2filter requires `--kraken2`.")
+        log.info("")
+        log.info("Usage of kraken2filter requires `--kraken2`.")
         exit 1
     }
 
-    source = params.source
+    // Check source param is valid
     sources = params.sources
-    if (!sources.containsKey(source)) {
+    source_name = params.source
+    source_data = sources.get(source_name, false)
+    if (!sources.containsKey(source_name) || !source_data) {
         keys = sources.keySet()
-        println("Default $params.defaultdb is not valid, must be one of $keys")
+        log.info("Source $params.source is invalid, must be one of $keys")
         exit 1
     }
 
-    reference = file(sources[source]["reference"], type: "file")
-    if (params.reference) {
-        println("Checking custom reference exists")
-        reference = file(params.reference, type: "file", checkIfExists:true)
-    }
-
-    refindex = file(sources[source]["refindex"], type: "file")
-    if (params.reference) {
-        println("Checking custom reference index exists")
-        refindex = file(params.reference + '.fai', type: "file")
-        if (!refindex.exists()) {
-            refindex = file(OPTIONAL, type: "file")
-        }
-    }
-
-    ref2taxid = file(sources[source]["ref2taxid"], type: "file")
-    if (params.ref2taxid) {
-        println("Checking custom ref2taxid mapping exists")
-        ref2taxid = file(params.ref2taxid, type: "file", checkIfExists:true)
-    }
-
-    taxonomy = file(sources[source]["taxonomy"], type: "file")
+    // Grab taxonomy files
+    taxonomy = file(sources[source_name]["taxonomy"], type: "file")
     if (params.taxonomy) {
-        println("Checking custom taxonomy mapping exists")
+        log.info("Checking custom taxonomy mapping exists")
         taxonomy = file(params.taxonomy, type: "dir", checkIfExists:true)
     }
 
-    database = file(sources[source]["database"], type: "file")
-    if (params.database) {
-        println("Checking custom kraken2 database exists")
-        database = file(params.database, type: "dir", checkIfExists:true)
+    // Handle getting alignment reference files if minimap2 is enabled
+    reference = null
+    refindex  = null
+    ref2taxid = null
+    if (params.minimap2) {
+        // .fasta
+        if (params.reference) {
+            log.info("Checking custom reference exists")
+            reference = file(params.reference, type: "file", checkIfExists:true)
+        } else {
+            source_reference = source_data.get("reference", false)
+            if (!source_reference) {
+                log.info(
+                    "Error: Source $source_name does not include a reference for "
+                    + "use with minimap2, please choose another source, "
+                    + "provide a custom reference or disable minimap2.")
+                exit 1
+            }
+            reference = file(source_reference, type: "file")
+        }
+        // .fasta.fai
+        refindex = file(sources[source_name]["refindex"], type: "file")
+        if (params.reference) {
+            log.info("Checking custom reference index exists")
+            refindex = file(params.reference + '.fai', type: "file")
+            if (!refindex.exists()) {
+                refindex = file(OPTIONAL, type: "file")
+            }
+        }
+        // .ref2taxid.csv
+        ref2taxid = file(sources[source_name]["ref2taxid"], type: "file")
+        if (params.ref2taxid) {
+            log.info("Checking custom ref2taxid mapping exists")
+            ref2taxid = file(params.ref2taxid, type: "file", checkIfExists:true)
+        }
     }
 
-    kmer_distribution = file(sources[source]["kmer_dist"], type: "file")
-    if (params.bracken_dist) {
-        println("Checking custom kraken2 database exists")
-        kmer_distribution = file(
-            params.bracken_dist, type: "file", checkIfExists:true)
+    // Handle getting kraken2 database files if kraken2 is enabled
+    database = null
+    kmer_distribution = null
+    if (params.kraken2) {
+        // kraken2.tar.gz
+        if (params.database) {
+            log.info("Checking custom kraken2 database exists")
+            database = file(params.database, type: "dir", checkIfExists:true)
+        } else {
+            source_database = source_data.get("database", false)
+            if (!source_database) {
+                log.info(
+                    "Error: Source $source_name does not include a database for "
+                    + "use with kraken2, please choose another source, "
+                    + "provide a custom database or disable kraken2.")
+                exit 1
+            }
+            database = file(source_database, type: "file")
+        }
+        // kmer_distrib
+        kmer_dist_path = sources[source_name]["kmer_dist"]
+        if (params.bracken_dist) {
+            log.info("Checking custom bracken2 database exists")
+            kmer_distribution = file(
+                params.bracken_dist, type: "file", checkIfExists:true)
+        } else if (!kmer_dist_path) {
+            kmer_distribution = file(OPTIONAL, type: "file")
+            if (params.kraken2bracken) {
+                log.info("Kmer distribution not found, bracken2 disabled.")
+            }
+        } else {
+            kmer_distribution = file(sources[source_name]["kmer_dist"], type: "file")
+        }
     }
 
     samples = fastq_ingress(
-        params.fastq, params.out_dir, params.sample, params.sample_sheet, params.sanitize_fastq)
+        params.fastq, params.out_dir, params.sample, params.sample_sheet,
+        params.sanitize_fastq)
 
     results = pipeline(
         samples, reference, refindex, ref2taxid, taxonomy,

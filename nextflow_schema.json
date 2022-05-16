@@ -54,10 +54,12 @@
                 },
                 "source": {
                     "type": "string",
-                    "default": "TARGLOCI",
+                    "default": "ncbi_16s_18s",
                     "description": "Sets the default reference, databases and taxonomy used. Choices: ['TARGLOCI']",
                     "enum": [
-                        "TARGLOCI"
+                        "ncbi_16s_18s",
+                        "ncbi_16s_18s_28s_ITS",
+                        "PlusPF-8"
                     ]
                 },
                 "sources": {
@@ -119,6 +121,7 @@
             "properties": {
                 "kraken2": {
                     "type": "boolean",
+                    "default": true,
                     "description": "Enables classification via kmer-assignment"
                 },
                 "database": {
@@ -181,7 +184,7 @@
                 },
                 "wfversion": {
                     "type": "string",
-                    "default": "v1.1.3",
+                    "default": "v1.1.4",
                     "hidden": true
                 },
                 "disable_ping": {
