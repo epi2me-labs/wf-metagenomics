@@ -59,7 +59,7 @@ def main():
 
     sample_lineages = {}
     for lineage in natsort.natsorted(args.lineages):
-        lineage_name = lineage.split('.')[0]
+        lineage_name = ' '.join(lineage.split('.')[0:-2])
         with open(lineage, 'r') as lf:
             sample_lineages[lineage_name] = json.load(lf)
 
@@ -78,8 +78,7 @@ def main():
         pd.DataFrame(
             seq_summary['sample_name'].value_counts()
         ).sort_index().reset_index().rename(
-            columns={'index': 'sample', 'sample_name': 'count'})
-    )
+            columns={'index': 'sample', 'sample_name': 'count'}))
     bc_counts_plot = bars.simple_bar(
         bc_counts['sample'].astype(str),
         bc_counts['count'],
