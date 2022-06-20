@@ -9,3 +9,4 @@ variables:
     # Only common file inputs and option values need to be given here
     # (not things such as -profile)
     NF_WORKFLOW_OPTS: "--fastq test_data/reads.fastq.gz --kraken2"
+    NF_IGNORE_PROCESSES: "extractKraken2Reads,extractMinimap2Reads,minimap2"
