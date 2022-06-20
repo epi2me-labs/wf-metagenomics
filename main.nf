@@ -10,24 +10,24 @@ process unpackDatabase {
     label "wfmetagenomics"
     cpus 1
     input:
-        file database
-        file kmer_distribution
+        path database
+        path kmer_distribution
     output:
-        file "database_dir"
+        path "database_dir"
     """
     if [[ $database == *.tar.gz ]]
     then
         mkdir database_dir
-        tar xf $database -C database_dir
-    elif [ -d $database ]
+        tar xf "${database}" -C database_dir
+    elif [ -d "${database}" ]
     then
-        mv $database database_dir
+        mv "${database}" database_dir
     else
         echo "Error: database is neither .tar.gz nor a dir"
         echo "Exiting".
         exit 1
     fi
-    mv $kmer_distribution database_dir
+    mv "${kmer_distribution}" database_dir
     """
 }
 
@@ -36,17 +36,17 @@ process unpackTaxonomy {
     label "wfmetagenomics"
     cpus 1
     input:
-        file taxonomy
+        path taxonomy
     output:
-        file "taxonomy_dir"
+        path "taxonomy_dir"
     """
-    if [[ $taxonomy == *.tar.gz ]]
+    if [[ "${taxonomy}" == *.tar.gz ]]
     then
         mkdir taxonomy_dir
-        tar xf $taxonomy -C taxonomy_dir
-    elif [ -d $taxonomy ]
+        tar xf "${taxonomy}" -C taxonomy_dir
+    elif [ -d "${taxonomy}" ]
     then
-        mv $taxonomy taxonomy_dir
+        mv "${taxonomy}" taxonomy_dir
     else
         echo "Error: taxonomy is neither .tar.gz nor a dir"
         echo "Exiting".
@@ -60,7 +60,7 @@ process combineFilterFastq {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple file(directory), val(sample_id), val(type)
+        tuple path(directory), val(sample_id), val(type)
     output:
         tuple(
             val(sample_id),
@@ -73,12 +73,12 @@ process combineFilterFastq {
     shell:
     """
     fastcat \
-        -a $params.min_len \
-        -b $params.max_len \
+        -a "${params.min_len}" \
+        -b "${params.max_len}" \
         -q 10 \
-        -s ${sample_id} \
-        -r ${sample_id}.stats \
-        -x ${directory} > ${sample_id}.fastq
+        -s "${sample_id}" \
+        -r "${sample_id}.stats" \
+        -x "${directory}" > "${sample_id}.fastq"
     """
 }
 
@@ -87,11 +87,11 @@ process minimap2 {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple val(sample_id), file(reads)
-        file reference
-        file refindex
-        file ref2taxid
-        file taxonomy
+        tuple val(sample_id), path(reads)
+        path reference
+        path refindex
+        path ref2taxid
+        path taxonomy
     output:
         tuple(
             val(sample_id),
@@ -113,16 +113,16 @@ process minimap2 {
     script:
         def split = params.split_prefix ? '--split-prefix tmp' : ''
     """
-    minimap2 -t $params.threads -ax map-ont $split $reference $reads \
+    minimap2 -t "${params.threads}" -ax map-ont "${split}" "${reference}" "${reads}" \
     | samtools view -h -F 2304 - \
-    | format_minimap2.py - -o ${sample_id}.minimap2.assignments.tsv -r $ref2taxid \
-    | samtools sort -o ${sample_id}.bam -
-    samtools index ${sample_id}.bam
-    awk -F '\\t' '{print \$3}' ${sample_id}.minimap2.assignments.tsv > taxids.tmp
+    | format_minimap2.py - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
+    | samtools sort -o "${sample_id}.bam" -
+    samtools index "${sample_id}.bam"
+    awk -F '\\t' '{print \$3}' "${sample_id}.minimap2.assignments.tsv" > taxids.tmp
     taxonkit \
-        --data-dir $taxonomy \
+        --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
-        | aggregate_lineages.py -p ${sample_id}.minimap2
+        | aggregate_lineages.py -p "${sample_id}.minimap2"
     """
 }
 
@@ -131,9 +131,9 @@ process extractMinimap2Reads {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple val(sample_id), file(bam), file(bai)
-        file ref2taxid
-        file taxonomy
+        tuple val(sample_id), path(bam), file(bai)
+        path ref2taxid
+        path taxonomy
     output:
         tuple(
             val(sample_id),
@@ -143,15 +143,15 @@ process extractMinimap2Reads {
         def policy = params.minimap2exclude ? '--exclude' : ''
     """
     taxonkit \
-        --data-dir $taxonomy \
-        list -i $params.minimap2filter \
+        --data-dir "${taxonomy}" \
+        list -i "${params.minimap2filter}" \
         --indent "" > taxids.tmp
     extract_minimap2_reads.py \
-        $bam \
-        -r $ref2taxid \
-        -o ${sample_id}.minimap2.extracted.fastq \
+        "${bam}" \
+        -r "${ref2taxid}" \
+        -o "${sample_id}.minimap2.extracted.fastq" \
         -t taxids.tmp \
-        $policy
+        "${policy}"
     """
 }
 
@@ -160,9 +160,9 @@ process kraken2 {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple val(sample_id), file(reads)
-        file database
-        file taxonomy
+        tuple val(sample_id), path(reads)
+        path database
+        path taxonomy
     output:
         tuple(
             val(sample_id),
@@ -190,17 +190,17 @@ process kraken2 {
             emit: kraken2_report)
     """
     kraken2 \
-        --db $database \
-        --threads $params.threads \
-        --report ${sample_id}.kraken2_report.txt \
-        --classified-out ${sample_id}.kraken2.classified.fastq \
-        --unclassified-out ${sample_id}.kraken2.unclassified.fastq \
-        $reads > ${sample_id}.kraken2.assignments.tsv
-    awk -F '\\t' '{print \$3}' ${sample_id}.kraken2.assignments.tsv > taxids.tmp
+        --db "${database}" \
+        --threads "${params.threads}" \
+        --report "${sample_id}.kraken2_report.txt" \
+        --classified-out "${sample_id}.kraken2.classified.fastq" \
+        --unclassified-out "${sample_id}.kraken2.unclassified.fastq" \
+        "${reads}" > "${sample_id}.kraken2.assignments.tsv"
+    awk -F '\\t' '{print \$3}' "${sample_id}.kraken2.assignments.tsv" > taxids.tmp
     taxonkit \
-        --data-dir $taxonomy \
+        --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
-        | aggregate_lineages.py -p ${sample_id}.kraken2
+        | aggregate_lineages.py -p "${sample_id}.kraken2"
     """
 }
 
@@ -209,7 +209,7 @@ process extractKraken2Reads {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple val(sample_id), file(reads), file(kraken_assignments), file(kraken_report)
+        tuple val(sample_id), path(reads), path(kraken_assignments), path(kraken_report)
     output:
         tuple(
             val(sample_id),
@@ -220,14 +220,14 @@ process extractKraken2Reads {
         def policy = params.kraken2exclude ? '--exclude' : ''
     """
     extract_kraken_reads.py \
-        -k $kraken_assignments \
-        -r $kraken_report \
-        -s1 $reads \
-        -o ${sample_id}.kraken2.extracted.fastq \
-        -t $taxids \
+        -k "${kraken_assignments}" \
+        -r "${kraken_report}" \
+        -s1 "${reads}" \
+        -o "${sample_id}.kraken2.extracted.fastq" \
+        -t "${taxids}" \
         --fastq-output \
         --include-children
-        $policy
+        "${policy}"
     """
 }
 
@@ -236,8 +236,8 @@ process bracken {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple val(sample_id), file(kraken2_report)
-        file database
+        tuple val(sample_id), path(kraken2_report)
+        path database
     output:
         tuple(
             val(sample_id),
@@ -245,11 +245,11 @@ process bracken {
             emit: bracken_report)
     """
     run_bracken.py \
-        $database \
-        $kraken2_report \
-        $params.bracken_length \
-        $params.bracken_level \
-        ${sample_id}.bracken_report.txt
+        "${database}" \
+        "${kraken2_report}" \
+        "${params.bracken_length}" \
+        "${params.bracken_level}" \
+        "${sample_id}.bracken_report.txt"
     """
 }
 
@@ -300,12 +300,12 @@ process makeReport {
         report_name = "wf-metagenomics-" + params.report_name + '.html'
     """
     report.py \
-        $report_name \
+        "${report_name}" \
         --versions versions \
         --params params.json \
-        --summaries $stats \
-        --lineages $lineages \
-        --vistempl $template
+        --summaries "${stats}" \
+        --lineages "${lineages}" \
+        --vistempl "${template}"
     """
 }
 
