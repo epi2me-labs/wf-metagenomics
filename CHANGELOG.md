@@ -4,10 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [unreleased]
+## [v1.1.5]
 
 ### Changed
 - Better help text on cli
+- Fastq ingress and Args update
+- Set out_dir option type to ensure output is written to correct directory on Windows
 
 ## [v1.1.4]
 
