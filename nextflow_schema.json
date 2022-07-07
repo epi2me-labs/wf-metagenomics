@@ -30,6 +30,7 @@
                 },
                 "out_dir": {
                     "type": "string",
+                    "format": "path",
                     "default": "output",
                     "description": "Directory for output of all user-facing files."
                 },
@@ -184,7 +185,7 @@
                 },
                 "wfversion": {
                     "type": "string",
-                    "default": "v1.1.4",
+                    "default": "v1.1.5",
                     "hidden": true
                 },
                 "disable_ping": {
