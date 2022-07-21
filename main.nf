@@ -3,9 +3,9 @@
 import groovy.json.JsonBuilder
 nextflow.enable.dsl = 2
 
-include { fastq_ingress } from './lib/fastqingress' 
- 
- 
+include { fastq_ingress } from './lib/fastqingress'
+
+
 process unpackDatabase {
     label "wfmetagenomics"
     cpus 1
@@ -60,15 +60,15 @@ process combineFilterFastq {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple path(directory), val(sample_id), val(type)
+        tuple path(directory), val(meta)
     output:
         tuple(
-            val(sample_id),
-            path("${sample_id}.fastq"),
+            val(meta.sample_id),
+            path("${meta.sample_id}.fastq"),
             emit: filtered)
         tuple(
-            val(sample_id),
-            path("${sample_id}.stats"),
+            val(meta.sample_id),
+            path("${meta.sample_id}.stats"),
             emit: stats)
     shell:
     """
@@ -76,9 +76,9 @@ process combineFilterFastq {
         -a "${params.min_len}" \
         -b "${params.max_len}" \
         -q 10 \
-        -s "${sample_id}" \
-        -r "${sample_id}.stats" \
-        -x "${directory}" > "${sample_id}.fastq"
+        -s "${meta.sample_id}" \
+        -r "${meta.sample_id}.stats" \
+        -x "${directory}" > "${meta.sample_id}.fastq"
     """
 }
 
@@ -137,7 +137,7 @@ process extractMinimap2Reads {
     output:
         tuple(
             val(sample_id),
-            path("*extracted.fastq"), 
+            path("*extracted.fastq"),
             emit: extracted)
     script:
         def policy = params.minimap2exclude ? '--exclude' : ''
@@ -213,7 +213,7 @@ process extractKraken2Reads {
     output:
         tuple(
             val(sample_id),
-            path("*extracted.fastq"), 
+            path("*extracted.fastq"),
             emit: extracted)
     script:
         def taxids = (params.kraken2filter as String).replaceAll(',',' ')
@@ -241,7 +241,7 @@ process bracken {
     output:
         tuple(
             val(sample_id),
-            path("*bracken_report.txt"), 
+            path("*bracken_report.txt"),
             emit: bracken_report)
     """
     run_bracken.py \
@@ -355,8 +355,8 @@ workflow pipeline {
         // Run Kraken2
         if (params.kraken2) {
             kr2 = kraken2(
-                reads.filtered, 
-                database, 
+                reads.filtered,
+                database,
                 taxonomy
             )
             reads_to_align = kr2.classified
@@ -420,7 +420,7 @@ workflow pipeline {
         report = makeReport(
             reads.stats.flatMap { it -> [ it[1] ] }.collect(),
             lineages.flatMap { it -> [ it[1] ] }.collect(),
-            software_versions.collect(), 
+            software_versions.collect(),
             workflow_params,
             template
         )

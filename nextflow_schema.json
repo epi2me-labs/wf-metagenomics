@@ -30,7 +30,7 @@
                 },
                 "out_dir": {
                     "type": "string",
-                    "format": "path",
+                    "format": "directory-path",
                     "default": "output",
                     "description": "Directory for output of all user-facing files."
                 },
