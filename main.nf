@@ -113,7 +113,7 @@ process minimap2 {
     script:
         def split = params.split_prefix ? '--split-prefix tmp' : ''
     """
-    minimap2 -t "${params.threads}" -ax map-ont "${split}" "${reference}" "${reads}" \
+    minimap2 -t "${params.threads}" ${split} -ax map-ont "${reference}" "${reads}" \
     | samtools view -h -F 2304 - \
     | format_minimap2.py - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
     | samtools sort -o "${sample_id}.bam" -
@@ -123,6 +123,7 @@ process minimap2 {
         --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
         | aggregate_lineages.py -p "${sample_id}.minimap2"
+
     """
 }
 
@@ -140,7 +141,7 @@ process extractMinimap2Reads {
             path("*extracted.fastq"),
             emit: extracted)
     script:
-        def policy = params.minimap2exclude ? '--exclude' : ''
+        def policy = params.minimap2exclude ? '--exclude' : ""
     """
     taxonkit \
         --data-dir "${taxonomy}" \
@@ -151,7 +152,7 @@ process extractMinimap2Reads {
         -r "${ref2taxid}" \
         -o "${sample_id}.minimap2.extracted.fastq" \
         -t taxids.tmp \
-        "${policy}"
+        ${policy}
     """
 }
 
@@ -216,18 +217,19 @@ process extractKraken2Reads {
             path("*extracted.fastq"),
             emit: extracted)
     script:
-        def taxids = (params.kraken2filter as String).replaceAll(',',' ')
+        def taxids = (params.kraken2filter as String).replaceAll(',',' ').replaceAll("'","")
         def policy = params.kraken2exclude ? '--exclude' : ''
     """
     extract_kraken_reads.py \
         -k "${kraken_assignments}" \
         -r "${kraken_report}" \
-        -s1 "${reads}" \
+        -s "${reads}" \
         -o "${sample_id}.kraken2.extracted.fastq" \
-        -t "${taxids}" \
+        -t ${taxids} \
         --fastq-output \
-        --include-children
-        "${policy}"
+        --include-children \
+        ${policy}
+    
     """
 }
 
@@ -304,7 +306,7 @@ process makeReport {
         --versions versions \
         --params params.json \
         --summaries "${stats}" \
-        --lineages "${lineages}" \
+        --lineages ${lineages} \
         --vistempl "${template}"
     """
 }
@@ -377,10 +379,9 @@ workflow pipeline {
                 outputs += [br.bracken_report]
             }
             if (params.kraken2filter) {
+                extractReads = reads_to_align.join(kr2.assignments).join(kr2.kraken2_report)
                 kr2_filt = extractKraken2Reads(
-                    reads_to_align,
-                    kr2.assignments,
-                    kr2.kraken2_report
+                    extractReads
                 )
                 outputs += [kr2_filt.extracted]
                 reads_to_align = kr2_filt.extracted
@@ -438,6 +439,13 @@ workflow pipeline {
 WorkflowMain.initialise(workflow, params, log)
 
 workflow {
+
+    if (params.disable_ping == false) {
+        try { 
+            Pinguscript.ping_post(workflow, "start", "none", params.out_dir, params)
+        } catch(RuntimeException e1) {
+        }
+    }
     dataDir = projectDir + '/data'
 
     // Ready the optional file
@@ -562,4 +570,20 @@ workflow {
         database, kmer_distribution, template)
 
     output(results)
+}
+
+if (params.disable_ping == false) {
+    workflow.onComplete {
+        try{
+            Pinguscript.ping_post(workflow, "end", "none", params.out_dir, params)
+        }catch(RuntimeException e1) {
+        }
+    }
+    
+    workflow.onError {
+        try{
+            Pinguscript.ping_post(workflow, "error", "$workflow.errorMessage", params.out_dir, params)
+        }catch(RuntimeException e1) {
+        }
+    }
 }
