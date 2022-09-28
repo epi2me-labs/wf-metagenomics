@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
-    "title": "epi2me-labs/wf-metagenomics",
+    "title": "epi2me-labs/wf-metagenomics pipeline",
     "description": "General purpose metagenomics workflow using kraken2 and/or minimap2",
     "url": "https://github.com/epi2me-labs/wf-clone-validation",
     "type": "object",
@@ -185,6 +185,7 @@
                 },
                 "wfversion": {
                     "type": "string",
+                    "description": "Workflow version.",
                     "default": "v1.1.5",
                     "hidden": true
                 },
@@ -196,10 +197,12 @@
                 },
                 "aws_image_prefix": {
                     "type": "string",
+                    "description": "aws image prefix.",
                     "hidden": true
                 },
                 "aws_queue": {
                     "type": "string",
+                    "description": "aws queue.",
                     "hidden": true
                 }
             }

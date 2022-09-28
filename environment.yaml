@@ -13,7 +13,7 @@ dependencies:
     - minimap2
     - samtools
     - kraken2
-    - krakentools
+    - krakentools >=1.2
     - seqkit 
     - taxonkit
     - bracken

@@ -3,6 +3,7 @@ include:
     - project: "epi2melabs/ci-templates"
       file: "wf-containers.yaml"
 
+
 variables:
     # Workflow inputs given to nextflow.
     # The workflow should define `--out_dir`, the CI template sets this.
@@ -10,3 +11,33 @@ variables:
     # (not things such as -profile)
     NF_WORKFLOW_OPTS: "--fastq test_data/reads.fastq.gz --kraken2"
     NF_IGNORE_PROCESSES: "extractKraken2Reads,extractMinimap2Reads,minimap2"
+
+
+docker-run:
+
+    # Remove this directive in downstream templates
+    tags: [] # no need for big ram
+
+    # Define a 1D job matrix to inject a variable named MATRIX_NAME into
+    #   the CI environment, we can use the value of MATRIX_NAME to determine
+    #   which options to apply as part of the rules block below
+    # NOTE There is a slightly cleaner way to define this matrix to include
+    #   the variables, but it is broken when using long strings! See CW-756
+    parallel:
+        matrix:
+            - MATRIX_NAME: [
+                "kraken2", "minimap2"
+            ]
+    rules:
+     - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
+       when: never
+     - if: $MATRIX_NAME == "kraken2"
+       variables:
+          NF_WORKFLOW_OPTS: "--fastq test_data/reads.fastq.gz --kraken2 --kraken2filter '9606,1404'"
+          NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2
+     - if: $MATRIX_NAME == "minimap2"
+       variables:
+          NF_WORKFLOW_OPTS: "--fastq test_data/reads.fastq.gz --minimap2 --minimap2filter '9606,1404'"
+          NF_IGNORE_PROCESSES: extractKraken2Reads,kraken2
+
+

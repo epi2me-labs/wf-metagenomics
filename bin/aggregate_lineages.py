@@ -82,7 +82,7 @@ def yield_entries(entries, total, indent=0):
     """Get entries in printable form."""
     for i, j in entries.items():
         perc = "{:.2%}".format(j['count'] / total)
-        yield(indent, i, j['count'], perc, j['rank'])
+        yield (indent, i, j['count'], perc, j['rank'])
         for k in yield_entries(j['children'], total, indent + 1):
             yield k
 
