@@ -85,8 +85,7 @@
             "properties": {
                 "minimap2": {
                     "type": "boolean",
-                    "description": "Enables classification via alignment",
-                    "default": false
+                    "description": "Enables classification via alignment"
                 },
                 "reference": {
                     "type": "string",
@@ -143,11 +142,6 @@
                     "default": true,
                     "description": "Run minimap2 only on reads classified by Kraken2"
                 },
-                "kraken2bracken": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Run bracken on the output of kraken2"
-                },
                 "bracken_dist": {
                     "type": "string",
                     "format": "file-path",
@@ -157,6 +151,24 @@
                     "type": "integer",
                     "default": 1000,
                     "description": "Set the length value bracken will use"
+                },
+                "watch_path": {
+                    "type": "boolean",
+                    "description": "Specify if you want the workflow to continuously process input files as they become available in the input --fastq directories."
+                },
+                "read_limit": {
+                    "type": "integer",
+                    "description": "Use with watch_path if you don't want workflow to run indefinitely, will STOP pipeline when this number of reads have been processed.,"
+                },
+                "batch_size": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Number of fastq files to process in each batch"
+                },
+                "port": {
+                    "type": "integer",
+                    "description": "Port number for the kraken server to use",
+                    "default": 8080
                 },
                 "bracken_level": {
                     "type": "string",
@@ -191,7 +203,6 @@
                 },
                 "disable_ping": {
                     "type": "boolean",
-                    "default": false,
                     "description": "Enable to prevent sending a workflow ping.",
                     "hidden": true
                 },
@@ -223,7 +234,7 @@
         }
     ],
     "docs": {
-        "intro": "## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n- Kraken2 offers the fastest functionality and in combination with the accompanying bracken software can be used for a more quantitative assessment of taxonomic representation within a sample.\n- Minimap2 provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis. The workflow is not tied to this database and can also be used with custom databases as required.\n\n\n",
+        "intro": "## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n### Kraken2 \n\n[Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample. This part of the workflow can be run in real time. See quickstart below for more details.\n\n### Minimap2 \n\n[Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently this method does not support real-time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.\n\n",
         "links": "## Useful links\n\n* [nextflow](https://www.nextflow.io/)\n* [docker](https://www.docker.com/products/docker-desktop)\n* [conda](https://docs.conda.io/en/latest/miniconda.html)"
     }
 }

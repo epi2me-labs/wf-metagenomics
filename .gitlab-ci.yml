@@ -9,8 +9,17 @@ variables:
     # The workflow should define `--out_dir`, the CI template sets this.
     # Only common file inputs and option values need to be given here
     # (not things such as -profile)
-    NF_WORKFLOW_OPTS: "--fastq test_data/reads.fastq.gz --kraken2"
-    NF_IGNORE_PROCESSES: "extractKraken2Reads,extractMinimap2Reads,minimap2"
+    NF_WORKFLOW_OPTS: "--fastq test_data --kraken2"
+    NF_IGNORE_PROCESSES: "extractKraken2Reads,extractMinimap2Reads,minimap2,mergeBAM"
+
+aws-run:
+    artifacts:
+        when: always
+        paths:
+            - ${CI_PROJECT_NAME}
+            - .nextflow.log
+        exclude: [] # give me everything pal
+    allow_failure: true
 
 
 docker-run:
@@ -33,11 +42,11 @@ docker-run:
        when: never
      - if: $MATRIX_NAME == "kraken2"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data/reads.fastq.gz --kraken2 --kraken2filter '9606,1404'"
-          NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2
+          NF_WORKFLOW_OPTS: "--fastq test_data --kraken2 --kraken2filter '9606,1404' --read_limit 50 --watch_path"
+          NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
      - if: $MATRIX_NAME == "minimap2"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data/reads.fastq.gz --minimap2 --minimap2filter '9606,1404'"
-          NF_IGNORE_PROCESSES: extractKraken2Reads,kraken2
+          NF_WORKFLOW_OPTS: "--fastq test_data --minimap2 --minimap2filter '9606,1404' --kraken2 false"
+          NF_IGNORE_PROCESSES: extractKraken2Reads,kraken2,mergeKrakenFiltered
 
 
