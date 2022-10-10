@@ -3,19 +3,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-[Unreleased]
+[v1.1.5]
 ### Updated
 - Bumped base container to v0.2.0
 - Use groovy script to ping after workflow has run
+- Kraken workflow now in real time mode with watch_path
+- Kraken and Minimap now in subworkflows
 ### Fixed
 - Output argument in Fastqingress homogenised.
 
 ## Changed
 - Fastqingress metadata map
-
-## [v1.1.5]
-
-### Changed
+- Can only run Kraken or Minimap subworkflow not bot-
 - Better help text on cli
 - Fastq ingress and Args update
 - Set out_dir option type to ensure output is written to correct directory on Windows
