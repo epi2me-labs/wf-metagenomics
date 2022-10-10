@@ -23,6 +23,30 @@ nextflow run epi2me-labs/wf-metagenomics --help
 
 to see the options for the workflow.
 
+The main options are 
+
+*`fastq`: A fastq file or directory containing fastq input files or directories of input files. 
+*`kraken2`: When set to true will run the analysis with Kraken2 and Bracken
+*`minimap2`: When set to true will run the analysis with minimap2
+*`watch_path`: Used to run the workflow in real-time, will continue to watch until a "STOP.fastq" is found
+*`read_limit`: Used in combination with watch_path the specify an end point
+
+***Kraken2***
+
+You can run the workflow with test_data available in the github repository.
+
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --kraken2```
+
+You can also run the workflow in real-time, meaning the workflow will watch the input directory(s) and process inputs at they become available in the batch sizes specified.
+
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --kraken2 --watch_path --batch_size 1``` 
+
+*** Minimap2 ***
+
+Alternatively you can run using minimap2 instead. Currently this mode does not support real-time.
+
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --minimap2```
+
 **Workflow outputs**
 
 The primary outputs of the workflow include:
@@ -30,3 +54,4 @@ The primary outputs of the workflow include:
 * classified and unclassified reads,
 * text files detailing lineages found,
 * an HTML report document detailing the primary findings of the workflow.
+

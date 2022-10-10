@@ -13,9 +13,10 @@ dependencies:
     - minimap2
     - samtools
     - kraken2
-    - krakentools >=1.2
+    - krakentools
     - seqkit 
     - taxonkit
     - bracken
     - epi2melabs
     - natsort
+    - kraken2-server>=0.0.5
