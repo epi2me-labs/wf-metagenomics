@@ -271,7 +271,7 @@ process stopCondition {
 // the server processes
 process kraken_server {
     errorStrategy 'ignore'
-    containerOptions "--network host"
+    containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     label "wfmetagenomics"
     input:
         path database
@@ -289,13 +289,12 @@ process kraken2_client {
     errorStrategy 'retry'
     maxErrors 5
     label "wfmetagenomics"
-    containerOptions "--network host"
+    containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     maxForks 1 
     input:
         tuple val(sample_id), path(reads)
     output:
         tuple val(sample_id), path("*kraken2_report.txt"), path(reads), path("*.tsv")
-      
     script:
     """
     kraken2_client --port $params.port --sequence "${reads}" > "${sample_id}.kraken2.assignments.tsv"
@@ -377,7 +376,7 @@ process taxon_kit {
 
 process stop_kraken_server {
     label "wfmetagenomics"
-    containerOptions "--network host"
+    containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     input:
         val stop
     """
