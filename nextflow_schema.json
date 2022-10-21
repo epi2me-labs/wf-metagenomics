@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
-    "title": "epi2me-labs/wf-metagenomics pipeline",
+    "title": "epi2me-labs/wf-metagenomics",
     "description": "General purpose metagenomics workflow using kraken2 and/or minimap2",
     "url": "https://github.com/epi2me-labs/wf-clone-validation",
     "type": "object",
@@ -47,11 +47,6 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "CSV file with columns named `barcode`, `sample_name` and `type`. Permissible if passing a directory containing barcodeXX sub-directories."
-                },
-                "sanitize_fastq": {
-                    "type": "boolean",
-                    "description": "Use additional heuristics to identify barcodes from file paths.",
-                    "help_text": "Enabling this option will group together files into samples by the presence of strings of the form `barcodeXXX` present in filenames, rather than simply files grouped into directories (as output by MinKNOW and the Guppy basecaller)."
                 },
                 "source": {
                     "type": "string",
@@ -198,7 +193,7 @@
                 "wfversion": {
                     "type": "string",
                     "description": "Workflow version.",
-                    "default": "v2.0.0",
+                    "default": "v2.0.1",
                     "hidden": true
                 },
                 "disable_ping": {
