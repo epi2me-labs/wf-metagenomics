@@ -554,15 +554,28 @@ workflow kraken_pipeline {
             )
             kraken_server(database)
         }
-       
-        //Get input fastqs
-        initial_items = Channel.fromPath("${params.fastq}/**/*f*q*")
+        input = file("${params.fastq}")
+        if (input.isFile() && params.watch_path){
+            throw new Exception("Watch path can only be used with input directories")
+        }
+        if (input.isFile()) {
+            initial_items = channel.fromPath("${params.fastq}")
+            batch_items = initial_items.map{ it -> return tuple(it.simpleName, it) }
+        }
+        if (input.isDirectory()) {
+            log.info("")
+            log.info("Input directory assumed to be containing one or more directories containing fastq files.")
+            initial_items = Channel.fromPath("${params.fastq}/**/*f*q*")
+        }
         all_items = initial_items
         if (params.watch_path){
             added_items = Channel.watchPath("${params.fastq}/**/*f*q*").until{ file->file.name == 'STOP.fastq.gz' }
-            all_items = initial_items.concat(added_items) 
+            all_items = initial_items.concat(added_items)
+         
         }   
-        if (params.sample_sheet){
+
+        if (input.isDirectory()) {
+            if (params.sample_sheet){
             //check sample sheet
             sample_sheet = get_sample_sheet(params.sample_sheet)
             //Use sample sheet to name samples and batch
@@ -570,11 +583,11 @@ workflow kraken_pipeline {
                                         .map{ it -> return tuple("$it".split(/\//)[-2], it) }
                                         .combine(sample_sheet, by: [0])
                                         .map { it -> tuple(it[2], it[1]) }
-        }else{
-            //Use name of directories as sample_names and batch
-            batch_items = all_items.buffer( size:params.batch_size ).map{ it -> return tuple("$it".split(/\//)[-2], it) }
+            }else{
+                //Use name of directories as sample_names and batch
+                batch_items = all_items.buffer( size:params.batch_size ).map{ it -> return tuple("$it".split(/\//)[-2], it) }
+            }
         }
-        
         // combine reads
         reads = combineFilterFastq(batch_items, database)
 
@@ -583,7 +596,7 @@ workflow kraken_pipeline {
         stats = progressiveStats.scan(just_stats)
    
         //  Stop file to input folder when read_limit stop condition is met. Only used when --watch_path is true
-        if (params.read_limit){
+        if (params.watch_path && params.read_limit){
             stopCondition(stats)
         }
 
@@ -595,7 +608,7 @@ workflow kraken_pipeline {
         if (params.kraken2filter) {
                 kr2_filt = extractKraken2Reads(
                     kr2.map { it -> return tuple(it[0], it[1], it[3], it[6])})
-                
+             
             }
         br = bracken(
                 combined_kreport,
