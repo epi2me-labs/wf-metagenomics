@@ -5,7 +5,7 @@ import nextflow.util.BlankSeparatedList
 process unpackDatabase {
     label "wfmetagenomics"
     cpus 1
-    //storeDir "${params.out_dir}/database"
+    storeDir "${params.store_dir}" 
     input:
         path database
         path kmer_distribution
