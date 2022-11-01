@@ -48,6 +48,11 @@
                     "format": "file-path",
                     "description": "CSV file with columns named `barcode`, `sample_name` and `type`. Permissible if passing a directory containing barcodeXX sub-directories."
                 },
+                "store_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Where to store initial download of taxonomy database."
+                },
                 "source": {
                     "type": "string",
                     "default": "ncbi_16s_18s",
