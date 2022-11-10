@@ -2,8 +2,8 @@
 """Script to create an aggregated count from lineage data."""
 import argparse
 import json
+import logging
 import sys
-from typing import Union
 
 UNCLASSIFIED = 'Unclassified'
 UNKNOWN = 'Unknown'
@@ -49,7 +49,8 @@ def update_or_create_count(entry, entries):
         if str(entry).strip() == '0':
             return update_or_create_unclassified(entries)
         else:
-            print('Error: unknown lineage {}'.format(entry))
+            log = logging.getLogger(__name__)
+            log.warning('Error: unknown lineage {}'.format(entry))
             sys.exit(1)
 
     lineage_split = lineage.split(';')
@@ -87,7 +88,7 @@ def yield_entries(entries, total, indent=0):
             yield k
 
 
-def main(prefix: str, lineages: Union[str, None] = None):
+def main(prefix, lineages=None):
     """Run lineage aggregation algorithm."""
     if lineages:
         infile = open(lineages)
@@ -110,7 +111,7 @@ def main(prefix: str, lineages: Union[str, None] = None):
     output_json.write(json.dumps(entries))
 
 
-def execute(argv) -> None:
+def execute(argv):
     """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
         description="Aggregates lineage counts in a kraken2-like format",

@@ -8,10 +8,10 @@ from pysam import AlignmentFile
 
 
 def main(
-    sam: str,
-    output: str,
-    reference2taxid: str
-) -> None:
+    sam,
+    output,
+    reference2taxid
+):
     """Write row with taxid and classification status for each alignment."""
     aln_infile = AlignmentFile(sam, "r")
     aln_outfile = AlignmentFile('-', "w", template=aln_infile)
@@ -38,7 +38,7 @@ def main(
         aln_outfile.write(aln)
 
 
-def execute(argv) -> None:
+def execute(argv):
     """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
         description="Outputs assignments in a kraken2-like format",

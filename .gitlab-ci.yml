@@ -35,7 +35,7 @@ docker-run:
     parallel:
         matrix:
             - MATRIX_NAME: [
-                "kraken2", "minimap2", "kraken2-single-file"
+                "kraken2", "minimap2", "kraken2-single-file", "batch"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -43,6 +43,10 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2"
        variables:
           NF_WORKFLOW_OPTS: "--fastq test_data --kraken2 --kraken2filter '9606,1404' --read_limit 50"
+          NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
+     - if: $MATRIX_NAME == "batch"
+       variables:
+          NF_WORKFLOW_OPTS: "--fastq test_data --kraken2 --kraken2filter '9606,1404' --read_limit 50 --batch_size 3"
           NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
      - if: $MATRIX_NAME == "kraken2-single-file"
        variables:

@@ -70,6 +70,8 @@ process combineFilterFastq {
             val(sample_id),
             path("*.json"),
             emit: stats)
+    script:
+        def listFiles = directory.join(" ")
     shell:
     """
     fastcat \
@@ -78,7 +80,7 @@ process combineFilterFastq {
         -q 10 \
         -s "${sample_id}" \
         -r "${sample_id}.${task.index}.stats" \
-        -x "${directory}" | bgzip > "${sample_id}.${task.index}.fastq.gz"
+        ${listFiles} | bgzip > "${sample_id}.${task.index}.fastq.gz"
     fastcat_histogram.py --file "${sample_id}.${task.index}.stats" --sample_id "$sample_id" 
     """
 }

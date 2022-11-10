@@ -20,17 +20,15 @@ def write_fastq_record(outfile, name, seq, qual):
 
 
 def main(
-    sam: str,
-    output: str,
-    taxids: str,
-    reference2taxid: str,
-    exclude: bool = False,
-) -> None:
+    sam,
+    output,
+    taxids,
+    reference2taxid,
+    exclude,
+):
     """Run alignment taxonomic filtering."""
     alignments = AlignmentFile(sam, "r")
     tax_ids = set(line.strip() for line in open(taxids))
-    print(tax_ids)
-
     ref2taxid_df = pd.read_csv(
         reference2taxid, sep='\t', names=['acc', 'taxid'], index_col=0)
 
@@ -58,7 +56,7 @@ def main(
     outfile.close()
 
 
-def execute(argv) -> None:
+def execute(argv):
     """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
         description="Outputs assignments in a kraken2-like format",
