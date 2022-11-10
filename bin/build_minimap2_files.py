@@ -2,17 +2,16 @@
 """Produce the ref2taxid file needed by wf-ribosomal-survey."""
 import argparse
 import sys
-from typing import List
 
 import pandas as pd
 from pysam import FastxFile
 
 
 def main(
-    references: List[str],
-    accession2taxid: str,
-    output_tsv: str,
-    output_ref: str
+    references,
+    accession2taxid,
+    output_tsv,
+    output_ref
 ):
     """Write out a tsv file mapping reference names to taxids."""
     output_tsv_file = open(output_tsv, 'w')
@@ -39,7 +38,7 @@ def main(
     output_ref_file.close()
 
 
-def execute(argv) -> None:
+def execute(argv):
     """Parse command line arguments and run main."""
     parser = argparse.ArgumentParser(
         description="Build a mapping of targ loci ref to taxid in .tsv format",

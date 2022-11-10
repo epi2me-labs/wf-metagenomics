@@ -6,6 +6,7 @@ channels:
     - defaults
 dependencies:
     - python==3.8.*
+    - bokeh==2.4.*
     - aplanat >=0.3.5
     - pysam >=0.17.0
     - pandas

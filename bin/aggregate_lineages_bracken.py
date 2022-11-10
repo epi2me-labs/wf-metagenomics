@@ -2,6 +2,7 @@
 """Script to create an aggregated count from lineage data."""
 import argparse
 import json
+import logging
 import sys
 
 UNCLASSIFIED = 'Unclassified'
@@ -48,7 +49,8 @@ def update_or_create_count(entry, entries, bracken_counts):
         if str(entry).strip() == '0':
             return update_or_create_unclassified(entries)
         else:
-            print('Error: unknown lineage {}'.format(entry))
+            log = logging.getLogger(__name__)
+            log.warning('Error: unknown lineage {}'.format(entry))
             sys.exit(1)
 
     lineage_split = lineage.split(';')
@@ -87,7 +89,7 @@ def yield_entries(entries, total, indent=0):
             yield k
 
 
-def main(prefix: str, lineages, bracken):
+def main(prefix, lineages, bracken):
     """Run lineage aggregation algorithm."""
     bracken_counts = {}
     with open(bracken) as f:
