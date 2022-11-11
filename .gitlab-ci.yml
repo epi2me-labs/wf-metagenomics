@@ -42,15 +42,15 @@ docker-run:
        when: never
      - if: $MATRIX_NAME == "kraken2"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data --kraken2 --kraken2filter '9606,1404' --read_limit 50"
+          NF_WORKFLOW_OPTS: "--fastq test_data --kraken2 --read_limit 50"
           NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
      - if: $MATRIX_NAME == "batch"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data --kraken2 --kraken2filter '9606,1404' --read_limit 50 --batch_size 3"
+          NF_WORKFLOW_OPTS: "--fastq test_data --kraken2--read_limit 50 --batch_size 3"
           NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
      - if: $MATRIX_NAME == "kraken2-single-file"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data/barcode01/reads.fastq.gz --kraken2 --kraken2filter '9606,1404'"
+          NF_WORKFLOW_OPTS: "--fastq test_data/barcode01/reads.fastq.gz --kraken2"
           NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
      - if: $MATRIX_NAME == "minimap2"
        variables:

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Updated
 - Use store directory for database
+- Use per file kraken_report instead of cumulative
+- Handling for unclassified with Bracken
 ### Fixed
 - Batch size breaking fastcat step
   

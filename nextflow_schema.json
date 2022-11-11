@@ -129,10 +129,6 @@
                     "format": "path",
                     "description": "Specifically override database [.tar.gz or Dir]"
                 },
-                "kraken2filter": {
-                    "type": "string",
-                    "description": "Filter output of kraken2 by taxids inc. child nodes, E.g. \"9606,1404\""
-                },
                 "kraken2exclude": {
                     "type": "boolean",
                     "description": "Invert kraken2exclude and exclude the given taxids instead"

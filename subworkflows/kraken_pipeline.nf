@@ -92,7 +92,7 @@ process extractKraken2Reads {
     maxForks forks <= 0 ? 1 : forks
     cpus 1
     input:
-        tuple val(sample_id), path(reads), path(kraken_assignments), path(kraken_report)
+        tuple val(sample_id), path(kraken_assignments), path(kraken_report), path(reads)
     output:
         tuple(
             val(sample_id),
@@ -127,7 +127,7 @@ process bracken {
         path database
         path taxonomy
     output:
-        tuple val("${sample_id}"), path("*.kreport_bracken_species.txt"),emit: bracken_report
+        tuple val("${sample_id}"), path("*.kreport_bracken_species.txt"),emit: bracken_report, optional: true
         path kraken2_report, emit: report
     script:
     """
@@ -137,13 +137,13 @@ process bracken {
         "${params.bracken_length}" \
         "${params.bracken_level}" \
         "${sample_id}.bracken_report.txt"
-    mv "${kraken2_report}/${sample_id}.kreport_bracken_species.txt" .
+    mv "${kraken2_report}/${sample_id}.kreport_bracken_species.txt" . || echo "no bracken report"
     awk '{ print \$3,\$7}' "${sample_id}.bracken_report.txt" |  awk 'NR!=1 {print}' > taxacounts.txt
     awk '{print \$3}' "${sample_id}.bracken_report.txt" |  awk 'NR!=1 {print}' > taxa.txt
     taxonkit \
         --data-dir $taxonomy \
         lineage -R taxa.txt  > lineages.txt
-    aggregate_lineages_bracken.py -i "lineages.txt" -b "taxacounts.txt" -p "${sample_id}.kraken2"
+    aggregate_lineages_bracken.py -i "lineages.txt" -b "taxacounts.txt" -u "${kraken2_report}/${sample_id}.kreport.txt" -p "${sample_id}.kraken2"
     file1=`cat *.json`
     echo "{"'"$sample_id"'": "\$file1"}" >> "$sample_id.${task.index}.json"
     cp "${sample_id}.${task.index}.json" "${kraken2_report}/${sample_id}.json"
@@ -296,14 +296,12 @@ process kraken2_client {
     input:
         tuple val(sample_id), path(reads)
     output:
-        tuple val(sample_id), path("*kraken2_report.txt"), path(reads), path("*.tsv")
+        tuple val(sample_id), path(reads), path("*.tsv"), path("*kraken2_report.txt"), emit: assignments
     script:
     """
     kraken2_client --port $params.port --sequence "${reads}" > "${sample_id}.kraken2.assignments.tsv"
-    kraken2_client --port $params.port --report --sequence "${reads}" > "out.txt"
-    tail -n +2 "out.txt" > "tmp.txt"
-    head -n -6 "tmp.txt"  > "${sample_id}.kraken2_report.txt"
-    
+    kraken2_client --port $params.port --report "tmp.txt" --sequence "${reads}"
+    tail -n +1 "tmp.txt" > "${sample_id}.kraken2_report.txt"
     """
 
 }
@@ -334,7 +332,7 @@ process progressive_kreports {
     if [[ ! -f "kreports/${sample_id}.kreport.txt" ]]; then
         touch "$state/${sample_id}.kreport.txt";
     fi
-    combine_kreports.py -r "$new_input" "$state/${sample_id}.kreport.txt" -o ${sample_id}.kreport.txt --no-headers --only-combined 
+    combine_kreports_modified.py -r "$new_input"  "$state/${sample_id}.kreport.txt" -o ${sample_id}.kreport.txt --only-combined --no-headers
     mv ${sample_id}.kreport.txt $state/${sample_id}.kreport.txt
     if [[ "${task.index}" != "1" ]]; then
          mv "$state" "reports.${task.index}"
@@ -346,13 +344,11 @@ process progressive_kreports {
 process taxon_kit {
     label "wfmetagenomics"
     input:
-        tuple val(sample_id), path(report), path(reads), path(tsv)
+        tuple val(sample_id), path(reads), path(tsv), path(report)
         path taxonomy
     output:
         tuple(
             val(sample_id),
-            path("*.classified.fastq.gz"),
-            path("*.unclassified.fastq.gz"),
             path(tsv),
             path("*lineages.txt"),
             path("*lineages.json"),
@@ -361,17 +357,11 @@ process taxon_kit {
     // this step takes a lot of time because of the extract_kraken python script so would be good to just output these files from the kraken step
     // can also just remove these steps but no classified fastq file output. 
     """
-    grep -v '^U' "${tsv}" > classified.tsv || echo "no classifications"
-    taxids=\$(awk 'NR>0{a[\$3]++} END{for(b in a) print b}' classified.tsv)
-    extract_kraken_reads.py -k  classified.tsv -s $reads -t \$taxids -o  ${sample_id}.kraken2.classified.fastq --fastq-output
-    extract_kraken_reads.py -k  "${tsv}" -s $reads --exclude -t \$taxids -o  ${sample_id}.kraken2.unclassified.fastq --fastq-output
     awk -F '\\t' '{print \$3}' "${tsv}" > taxids.tmp
     taxonkit \
         --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
         | aggregate_lineages.py -p "${sample_id}.kraken2"
-    gzip "${sample_id}.kraken2.classified.fastq"
-    gzip "${sample_id}.kraken2.unclassified.fastq"
     """
 }
 
@@ -422,66 +412,6 @@ process output_dir {
 }
 
 
-process mergeclassifiedProgressive {
-    label "wfmetagenomics"
-    cpus 1
-    input: 
-        path classified
-    output:
-        path("classified.${task.index}")
-    script:
-    if (classified instanceof BlankSeparatedList){
-            new_input =  classified.getAt(0); state = classified.getAt(-1)
-            }
-            else { new_input = classified; state = "classified.${task.index}" }
-    sample_id = "${new_input}".split(/\./)[0] 
-    """
-    if [[ "${task.index}" == "1" ]]; then
-        mkdir "$state";
-    fi
-    if [[ ! -f "classified/${sample_id}.kreport.txt" ]]; then
-        touch "$state/${sample_id}.classified.kraken2.fastq.gz";
-    fi
-    fastcat $new_input "$state/${sample_id}.classified.kraken2.fastq.gz" | bgzip > "${sample_id}.classified.kraken2.fastq.gz" 
-    mv "${sample_id}.classified.kraken2.fastq.gz" "$state/${sample_id}.classified.kraken2.fastq.gz"
-    if [[ "${task.index}" != "1" ]]; then
-         mv "$state" "classified.${task.index}"
-    fi
-    
-    """
-}
-
-
-process mergeunclassifiedProgressive {
-    label "wfmetagenomics"
-    cpus 1
-    input: 
-        path unclassified
-    output:
-        path("unclassified.${task.index}")
-    script:
-    if (unclassified instanceof BlankSeparatedList){
-            new_input =  unclassified.getAt(0); state = unclassified.getAt(-1)
-            }
-            else { new_input = unclassified; state = "unclassified.${task.index}" }
-    sample_id = "${new_input}".split(/\./)[0] 
-    """
-    if [[ "${task.index}" == "1" ]]; then
-        mkdir "$state";
-    fi
-    if [[ ! -f "unclassified/${sample_id}.kreport.txt" ]]; then
-        touch "$state/${sample_id}.unclassified.kraken2.fastq.gz";
-    fi
-    fastcat $new_input "$state/${sample_id}.unclassified.kraken2.fastq.gz" | bgzip > "${sample_id}.unclassified.kraken2.fastq.gz" 
-    mv "${sample_id}.unclassified.kraken2.fastq.gz" "$state/${sample_id}.unclassified.kraken2.fastq.gz"
-    if [[ "${task.index}" != "1" ]]; then
-         mv "$state" "unclassified.${task.index}"
-    fi
-    
-    """
-}
-
-
 process mergeKrakenFiltered {
     label "wfmetagenomics"
     cpus 1
@@ -502,7 +432,7 @@ process catAssignmentsprogressive {
         path assignments
         path taxonomy
     output:
-        path "assignments.${task.index}"
+        path "assignments.${task.index}", emit: assignments
         path taxonomy
     script:
     if (assignments instanceof BlankSeparatedList){
@@ -531,9 +461,9 @@ process catAssignmentsprogressive {
         mv $state assignments.${task.index}
     fi
     
+
     """
 }
-
 
 
 workflow kraken_pipeline {
@@ -549,13 +479,13 @@ workflow kraken_pipeline {
         
         outputs = []
         taxonomy = unpackTaxonomy(taxonomy)
-        if (params.kraken2) {
-            database= unpackDatabase(
+        
+        database = unpackDatabase(
                 database,
                 kmer_distribution
-            )
-            kraken_server(database)
-        }
+        )
+        kraken_server(database)
+        
         input = file("${params.fastq}")
         if (input.isFile() && params.watch_path){
             throw new Exception("Watch path can only be used with input directories")
@@ -604,14 +534,9 @@ workflow kraken_pipeline {
 
         // Run Kraken2
         kraken2_response = kraken2_client(reads.filtered)
-        combined_kreport = progressive_kreports.scan(kraken2_response.map { it -> it[1]}, taxonomy)
-        kr2 = taxon_kit(kraken2_response, taxonomy)
-           
-        if (params.kraken2filter) {
-                kr2_filt = extractKraken2Reads(
-                    kr2.map { it -> return tuple(it[0], it[1], it[3], it[6])})
-             
-            }
+    
+        combined_kreport = progressive_kreports.scan(kraken2_response.map { it -> it[3]}, taxonomy)
+        kr2 = taxon_kit(kraken2_response.assignments, taxonomy)
         br = bracken(
                 combined_kreport,
                 database, 
@@ -630,23 +555,16 @@ workflow kraken_pipeline {
             template
         )
 
-        if (params.kraken2filter) {
-            kr2_filtered = mergeKrakenFiltered(kr2_filt.extracted.groupTuple())
-            outputs += [kr2_filtered]
-        }
-
         // Kraken2 outputs with scan to accumulate results
-        merged_classified = mergeclassifiedProgressive.scan(kr2.map { it -> it[1] })
-        merged_unclassified = mergeunclassifiedProgressive.scan(kr2.map { it -> it[2] })
-        kr2_merged = catAssignmentsprogressive.scan(kr2.map { it -> it[3] }, taxonomy)
+        kr2_merged = catAssignmentsprogressive.scan(kr2.map { it -> it[1] }, taxonomy)
 
         // Stop server when all are processed
-        stop_kraken_server(merged_classified.collect())
+        stop_kraken_server(kr2_merged.assignments.collect())
 
         // output updating file as part of this pipeline
         output(report.report_html)
        
-        output_dir(merged_classified.concat(merged_unclassified, catAssignmentsprogressive.out[0], progressive_kreports.out[0]))
+        output_dir(catAssignmentsprogressive.out[0].concat(progressive_kreports.out[0]))
 
 
     emit:
