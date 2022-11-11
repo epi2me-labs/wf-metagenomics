@@ -2,7 +2,6 @@
 """Script to create an aggregated count from lineage data."""
 import argparse
 import json
-import logging
 import sys
 
 UNCLASSIFIED = 'Unclassified'
@@ -20,24 +19,19 @@ RANKS = [
 ]
 
 
-def update_or_create_unclassified(entries):
+def update_or_create_unclassified(entries, unclassified_count):
     """Handle unclassified entries."""
-    unclass = entries.get(UNCLASSIFIED)
-    if not unclass:
-        entries[UNCLASSIFIED] = {
-            'rank': RANKS[0],
-            'count': 1,
-            'children': {
-                UNKNOWN: {
-                    'rank': "species",
-                    'count': 1,
-                    'children': {}
-                }
+    entries[UNCLASSIFIED] = {
+        'rank': RANKS[0],
+        'count': int(unclassified_count),
+        'children': {
+            UNKNOWN: {
+                'rank': "species",
+                'count': int(unclassified_count),
+                'children': {}
             }
         }
-    else:
-        unclass['count'] += 1
-        unclass['children'][UNKNOWN]['count'] += 1
+    }
     return entries
 
 
@@ -49,8 +43,7 @@ def update_or_create_count(entry, entries, bracken_counts):
         if str(entry).strip() == '0':
             return update_or_create_unclassified(entries)
         else:
-            log = logging.getLogger(__name__)
-            log.warning('Error: unknown lineage {}'.format(entry))
+            sys.stderr('Error: unknown lineage {}'.format(entry))
             sys.exit(1)
 
     lineage_split = lineage.split(';')
@@ -82,6 +75,7 @@ def update_or_create_count(entry, entries, bracken_counts):
 
 def yield_entries(entries, total, indent=0):
     """Get entries in printable form."""
+    total = min(total, 1)
     for i, j in entries.items():
         perc = "{:.2%}".format(j['count'] / total)
         yield (indent, i, j['count'], perc, j['rank'])
@@ -89,7 +83,7 @@ def yield_entries(entries, total, indent=0):
             yield k
 
 
-def main(prefix, lineages, bracken):
+def main(prefix, lineages, bracken, report):
     """Run lineage aggregation algorithm."""
     bracken_counts = {}
     with open(bracken) as f:
@@ -103,6 +97,13 @@ def main(prefix, lineages, bracken):
     for line in infile:
         entries = update_or_create_count(line, entries, bracken_counts)
         total += 1
+    with open(report) as f:
+        report_file = f.readlines()
+        for line in report_file:
+            if "unclassified" in line:
+                unclassified_count = line.split()[1]
+                entries = update_or_create_unclassified(
+                    entries, unclassified_count)
     output_report = open('{}.lineages.txt'.format(prefix), 'w')
     output_json = open('{}.lineages.json'.format(prefix), 'w')
     for entry in yield_entries(entries, total):
@@ -135,6 +136,14 @@ def execute():
     )
 
     parser.add_argument(
+        '-u',
+        help=(
+            "full report to get unclassified count"
+        ),
+        dest="report",
+    )
+
+    parser.add_argument(
         '-p',
         help="Prefix to append to output file names.",
         dest="prefix",
@@ -147,6 +156,7 @@ def execute():
         lineages=args.lineages,
         prefix=args.prefix,
         bracken=args.bracken,
+        report=args.report
     )
 
 
