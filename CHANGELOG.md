@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use store directory for database
 - Use per file kraken_report instead of cumulative
 - Handling for unclassified with Bracken
+- Add a run indefinitely parameter
 ### Fixed
 - Batch size breaking fastcat step
 - Consider white space in bracken report

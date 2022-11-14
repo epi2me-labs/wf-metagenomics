@@ -537,7 +537,7 @@ workflow kraken_pipeline {
         stats = progressiveStats.scan(just_stats)
    
         //  Stop file to input folder when read_limit stop condition is met. Only used when --watch_path is true
-        if (params.watch_path && params.read_limit){
+        if (params.watch_path && params.run_indefinitely == false){
             stopCondition(stats)
         }
 

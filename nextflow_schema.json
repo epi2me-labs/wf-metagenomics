@@ -156,6 +156,11 @@
                     "type": "integer",
                     "description": "Use with watch_path if you don't want workflow to run indefinitely, will STOP pipeline when this number of reads have been processed.,"
                 },
+                "run_indefinitely": {
+                    "type": "boolean",
+                    "description": "When used with watch_path will watch indefinitely if set to true",
+                    "default": true
+                },
                 "batch_size": {
                     "type": "integer",
                     "default": 1,
