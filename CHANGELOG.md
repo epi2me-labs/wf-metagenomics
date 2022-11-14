@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handling for unclassified with Bracken
 ### Fixed
 - Batch size breaking fastcat step
+- Consider white space in bracken report
   
 ## [v2.0.1]
 ### Fixed
