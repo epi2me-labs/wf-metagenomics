@@ -130,6 +130,7 @@ process bracken {
         tuple val("${sample_id}"), path("*.kreport_bracken_species.txt"),emit: bracken_report, optional: true
         path kraken2_report, emit: report
     script:
+    def awktab="awk -F '\t' -v OFS='\t'"
     """
     run_bracken.py \
         "${database}" \
@@ -138,12 +139,20 @@ process bracken {
         "${params.bracken_level}" \
         "${sample_id}.bracken_report.txt"
     mv "${kraken2_report}/${sample_id}.kreport_bracken_species.txt" . || echo "no bracken report"
-    awk '{ print \$3,\$7}' "${sample_id}.bracken_report.txt" |  awk 'NR!=1 {print}' > taxacounts.txt
-    awk '{print \$3}' "${sample_id}.bracken_report.txt" |  awk 'NR!=1 {print}' > taxa.txt
+
+    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \
+        | ${awktab} 'NR!=1 {print}' \
+        | tee taxacounts.txt \
+        | ${awktab} '{ print \$1 }' > taxa.txt
     taxonkit \
         --data-dir $taxonomy \
         lineage -R taxa.txt  > lineages.txt
-    aggregate_lineages_bracken.py -i "lineages.txt" -b "taxacounts.txt" -u "${kraken2_report}/${sample_id}.kreport.txt" -p "${sample_id}.kraken2"
+
+    aggregate_lineages_bracken.py \
+        -i "lineages.txt" -b "taxacounts.txt" \
+        -u "${kraken2_report}/${sample_id}.kreport.txt" \
+        -p "${sample_id}.kraken2"
+
     file1=`cat *.json`
     echo "{"'"$sample_id"'": "\$file1"}" >> "$sample_id.${task.index}.json"
     cp "${sample_id}.${task.index}.json" "${kraken2_report}/${sample_id}.json"
