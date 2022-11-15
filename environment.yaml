@@ -20,4 +20,4 @@ dependencies:
     - bracken
     - epi2melabs
     - natsort
-    - kraken2-server>=0.0.6
+    - kraken2-server>=0.0.8

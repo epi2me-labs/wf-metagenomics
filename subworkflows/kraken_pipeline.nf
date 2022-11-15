@@ -297,22 +297,17 @@ process kraken_server {
 
 
 process kraken2_client {
-    errorStrategy 'retry'
-    maxErrors 5
     label "wfmetagenomics"
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
-    maxForks 1 
     input:
         tuple val(sample_id), path(reads)
     output:
-        tuple val(sample_id), path(reads), path("*.tsv"), path("*kraken2_report.txt"), emit: assignments
+        tuple val(sample_id), path(reads), path("${sample_id}.kraken2.assignments.tsv"), path("${sample_id}.kraken2.report.txt"), emit: assignments
     script:
     """
-    kraken2_client --port $params.port --sequence "${reads}" > "${sample_id}.kraken2.assignments.tsv"
-    kraken2_client --port $params.port --report "tmp.txt" --sequence "${reads}"
-    tail -n +1 "tmp.txt" > "${sample_id}.kraken2_report.txt"
+    kraken2_client --port $params.port --report report.txt --sequence "${reads}" > "${sample_id}.kraken2.assignments.tsv"
+    tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
-
 }
 
 // combine kraken reports scan step
