@@ -41,6 +41,27 @@ You can also run the workflow in real-time, meaning the workflow will watch the 
 
 ```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --kraken2 --watch_path --batch_size 1``` 
 
+**Important Note**
+
+When using the real-time functionality of the workflow, the input directory must contain sub-directories which themselves contain sequencing reads in fastq files. The is in contrast to the standard workflow which will accept reads provided as a single file or fastq files directly under the provided input directory.
+
+The below is therefore the only input layout supported by the real-time functionality (the names of the child directories is unrestricted):
+
+eg.
+
+```
+─── input_directory
+    ├── barcode01
+    │   ├── reads0.fastq
+    │   └── reads1.fastq
+    ├── barcode02
+    │   ├── reads0.fastq
+    │   ├── reads1.fastq
+    │   └── reads2.fastq
+    └── barcode03
+        └── reads0.fastq
+```
+
 *** Minimap2 ***
 
 Alternatively you can run using minimap2 instead. Currently this mode does not support real-time.
