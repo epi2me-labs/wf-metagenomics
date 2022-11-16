@@ -199,7 +199,7 @@
                 "wfversion": {
                     "type": "string",
                     "description": "Workflow version.",
-                    "default": "v2.0.1",
+                    "default": "v2.0.2",
                     "hidden": true
                 },
                 "disable_ping": {
