@@ -57,11 +57,6 @@ workflow {
         exit 1
     }
 
-    if (params.kraken2filter && !params.kraken2) {
-        log.info("")
-        log.info("Usage of kraken2filter requires `--kraken2`.")
-        exit 1
-    }
 
     // Check source param is valid
     sources = params.sources
