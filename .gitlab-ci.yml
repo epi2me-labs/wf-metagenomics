@@ -11,6 +11,7 @@ variables:
     # (not things such as -profile)
     NF_WORKFLOW_OPTS: "--fastq test_data --kraken2"
     NF_IGNORE_PROCESSES: "extractKraken2Reads,extractMinimap2Reads,minimap2,mergeBAM"
+    CI_FLAVOUR: "new"
 
 aws-run:
     artifacts:
