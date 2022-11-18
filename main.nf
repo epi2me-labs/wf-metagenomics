@@ -40,9 +40,7 @@ workflow {
     }
 
     if (params.kraken2 && params.minimap2){
-        log.info("")
-        log.info("You must specify a classification method(s) with --kraken2 or --minimap2 but not both")
-        exit 1
+        throw new Exception("You must specify a classification method(s) with --kraken2 or --minimap2 but not both")
     }
 
     dataDir = projectDir + '/data'
@@ -58,10 +56,14 @@ workflow {
 
     if (!(params.minimap2 || params.kraken2)) {
         log.info("")
-        log.info("You must specify a classification method with --kraken2 or --minimap2")
-        exit 1
+        throw new Exception("You must specify a classification method with --kraken2 or --minimap2")
+        
     }
-
+    // check input fastq exists
+    input_fastq = file("${params.fastq}")
+    if (!input_fastq.exists()) {
+            throw new Exception("--fastq: File doesn't exist, check path.")
+        }
 
     // Check source param is valid
     sources = params.sources
@@ -69,8 +71,7 @@ workflow {
     source_data = sources.get(source_name, false)
     if (!sources.containsKey(source_name) || !source_data) {
         keys = sources.keySet()
-        log.info("Source $params.source is invalid, must be one of $keys")
-        exit 1
+        throw new Exception("Source $params.source is invalid, must be one of $keys")
     }
 
     // Grab taxonomy files
@@ -92,11 +93,10 @@ workflow {
         } else {
             source_reference = source_data.get("reference", false)
             if (!source_reference) {
-                log.info(
+                throw new Exception(
                     "Error: Source $source_name does not include a reference for "
                     + "use with minimap2, please choose another source, "
                     + "provide a custom reference or disable minimap2.")
-                exit 1
             }
             reference = file(source_reference, type: "file")
         }
@@ -139,11 +139,10 @@ workflow {
         } else {
             source_database = source_data.get("database", false)
             if (!source_database) {
-                log.info(
+                throw new Exception(
                     "Error: Source $source_name does not include a database for "
                     + "use with kraken2, please choose another source, "
                     + "provide a custom database or disable kraken2.")
-                exit 1
             }
             database = file(source_database, type: "file")
         }
@@ -164,8 +163,7 @@ workflow {
         // check combination of params are set
         if (params.watch_path && !params.run_indefinitely){
             if (!params.read_limit){
-                log.error("Must specify read limit parameter if run indefinitely is false")
-                exit 1 
+                throw new Exception("Must specify read limit parameter if run indefinitely is false")
             }
             log.info("Workflow will stop processing files after ${params.read_limit} reads when run_indefinitely is set to False")  
         }
