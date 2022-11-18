@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Script to run bracken or create empty output."""
 import argparse
+import pathlib
 import subprocess
 import sys
 
@@ -27,8 +28,8 @@ def main():
                 "kraken2 report is all unclassified, "
                 "writing empty output.")
             sys.stdout.write(message)
-            with open(args.output, 'w') as out:
-                out.write(message)
+            p = pathlib.Path(args.output)
+            p.touch()
             sys.exit(0)
 
     ret = subprocess.run(

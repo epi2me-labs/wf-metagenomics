@@ -324,7 +324,7 @@ def main():
     all_nodes = [root_node]
     curr_node = -1
     prev_node = -1
-    while len(all_nodes) > 0:
+    while len(all_nodes) > 0 and root_node != -1:
         # Remove node and insert children
         curr_node = all_nodes.pop()
         if len(curr_node.children) > 0:
