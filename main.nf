@@ -34,6 +34,11 @@ workflow {
        
     }
 
+    // throw an exception for deprecated conda users
+    if (workflow.profile.contains("conda")) {
+        throw new Exception("Sorry, this workflow is not compatible with --profile conda, please use --profile standard (Docker) or --profile singularity.")
+    }
+
     if (params.kraken2 && params.minimap2){
         log.info("")
         log.info("You must specify a classification method(s) with --kraken2 or --minimap2 but not both")
