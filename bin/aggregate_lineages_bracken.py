@@ -75,7 +75,6 @@ def update_or_create_count(entry, entries, bracken_counts):
 
 def yield_entries(entries, total, indent=0):
     """Get entries in printable form."""
-    total = min(total, 1)
     for i, j in entries.items():
         perc = "{:.2%}".format(j['count'] / total)
         yield (indent, i, j['count'], perc, j['rank'])
@@ -86,17 +85,18 @@ def yield_entries(entries, total, indent=0):
 def main(prefix, lineages, bracken, report):
     """Run lineage aggregation algorithm."""
     bracken_counts = {}
-    with open(bracken) as f:
-        bracken = f.readlines()
-    for i in bracken:
-        bracken_counts[i.split()[0]] = i.split()[1]
-    with open(lineages) as f:
-        infile = f.readlines()
     entries = {}
     total = 0
-    for line in infile:
-        entries = update_or_create_count(line, entries, bracken_counts)
-        total += 1
+    with open(bracken) as f:
+        bracken = f.readlines()
+    if len(bracken) > 0:
+        for i in bracken:
+            bracken_counts[i.split()[0]] = i.split()[1]
+        with open(lineages) as f:
+            infile = f.readlines()
+        for line in infile:
+            entries = update_or_create_count(line, entries, bracken_counts)
+            total += 1
     with open(report) as f:
         report_file = f.readlines()
         for line in report_file:
@@ -104,6 +104,7 @@ def main(prefix, lineages, bracken, report):
                 unclassified_count = line.split()[1]
                 entries = update_or_create_unclassified(
                     entries, unclassified_count)
+                total += int(unclassified_count)
     output_report = open('{}.lineages.txt'.format(prefix), 'w')
     output_json = open('{}.lineages.json'.format(prefix), 'w')
     for entry in yield_entries(entries, total):
