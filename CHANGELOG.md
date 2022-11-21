@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 ### Fixed
 - Add classifier param and only allow running of minimap2 or kraken2 workflow.
+### Removed
+- conda support
   
 ## [v2.0.3]
 ### Fixed
