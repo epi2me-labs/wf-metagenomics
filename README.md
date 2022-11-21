@@ -7,7 +7,7 @@ The kraken2 mode can be used in real-time, allowing the workflow to run continuo
 
 wf-metagenomics offers two different approaches to assigning sequence reads to a species:
 
-### Kraken2 
+### Kraken2 - Default
 
 [Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample which can be visualised in the report. The Kraken2 workflow mode can be run in real time. See quickstart below for more details.
 
@@ -25,9 +25,9 @@ to run the workflow.
 
 The workflow can currently be run using either
 [Docker](https://www.docker.com/products/docker-desktop) or
-[conda](https://docs.conda.io/en/latest/miniconda.html) to provide isolation of
+[Singularity](https://sylabs.io/singularity/) to provide isolation of
 the required software. Both methods are automated out-of-the-box provided
-either docker of conda is installed.
+either docker or singularity is installed.
 
 It is not required to clone or download the git repository in order to run the workflow.
 For more information on running EPI2ME Labs workflows [visit out website](https://labs.epi2me.io/wfindex).
@@ -54,11 +54,11 @@ The main options are
 
 You can run the workflow with test_data available in the github repository.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --kraken2```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data```
 
 You can also run the workflow in real-time, meaning the workflow will watch the input directory(s) and process inputs at they become available in the batch sizes specified.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --kraken2 --watch_path --batch_size 1``` 
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --batch_size 1``` 
 
 **Important Note**
 
@@ -85,7 +85,7 @@ eg.
 
 Alternatively you can run using minimap2 instead. Currently this mode does not support real-time.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --minimap2```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --classifier minimap2```
 
 **Workflow outputs**
 
@@ -99,4 +99,3 @@ The primary outputs of the workflow include:
 
 * [nextflow](https://www.nextflow.io/)
 * [docker](https://www.docker.com/products/docker-desktop)
-* [conda](https://docs.conda.io/en/latest/miniconda.html)

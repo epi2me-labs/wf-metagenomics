@@ -18,6 +18,16 @@
                     "description": "A fastq file or directory containing fastq input files or directories of input files.",
                     "help_text": "If directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file."
                 },
+                "classifier": {
+                    "type": "string",
+                    "default": "kraken2",
+                    "description": "Kraken2 or Minimap2 workflow to be used for classification of reads.",
+                    "enum": [
+                        "kraken2",
+                        "minimap2"
+                    ],
+                    "help_text": "Use kraken2 for fast classification and minimap2 for more finer resolution, see read me for further info."
+                },
                 "max_len": {
                     "type": "integer",
                     "default": 2000,
@@ -83,10 +93,6 @@
             "type": "object",
             "fa_icon": "fas fa-dna",
             "properties": {
-                "minimap2": {
-                    "type": "boolean",
-                    "description": "Enables classification via alignment"
-                },
                 "reference": {
                     "type": "string",
                     "format": "file-path",
@@ -119,24 +125,10 @@
             "fa_icon": "fas fa-university",
             "help_text": "Kraken2\nIt is possible to enable classification by kraken2, \nand disable alignment which is a faster but coarser method of \nclassification reliant on the presence of a kraken2 database.\n\nUsing kraken2 + minimap2\nIf both are enabled and --kraken2minimap is set, only reads \nclassified by kraken2 (and  optionally filtered by --kraken2filter) \nare passed to the alignment step.",
             "properties": {
-                "kraken2": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enables classification via kmer-assignment"
-                },
                 "database": {
                     "type": "string",
                     "format": "path",
                     "description": "Specifically override database [.tar.gz or Dir]"
-                },
-                "kraken2exclude": {
-                    "type": "boolean",
-                    "description": "Invert kraken2exclude and exclude the given taxids instead"
-                },
-                "kraken2minimap": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Run minimap2 only on reads classified by Kraken2"
                 },
                 "bracken_dist": {
                     "type": "string",
@@ -235,7 +227,7 @@
         }
     ],
     "docs": {
-        "intro": "\n## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n### Kraken2 \n\n[Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample which can be visualised in the report. The Kraken2 workflow mode can be run in real time. See quickstart below for more details.\n\n### Minimap2 \n\n[Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.\n\n",
-        "links": "## Useful links\n\n* [nextflow](https://www.nextflow.io/)\n* [docker](https://www.docker.com/products/docker-desktop)\n* [conda](https://docs.conda.io/en/latest/miniconda.html)"
+        "intro": "\n## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n### Kraken2 - Default\n\n[Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample which can be visualised in the report. The Kraken2 workflow mode can be run in real time. See quickstart below for more details.\n\n### Minimap2 \n\n[Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.\n\n",
+        "links": "## Useful links\n\n* [nextflow](https://www.nextflow.io/)\n* [docker](https://www.docker.com/products/docker-desktop)"
     }
 }
