@@ -39,10 +39,6 @@ workflow {
         throw new Exception("Sorry, this workflow is not compatible with --profile conda, please use --profile standard (Docker) or --profile singularity.")
     }
 
-    if (params.kraken2 && params.minimap2){
-        throw new Exception("You must specify a classification method(s) with --kraken2 or --minimap2 but not both")
-    }
-
     dataDir = projectDir + '/data'
 
     // Ready the optional file
@@ -54,11 +50,6 @@ workflow {
     // Checking user parameters
     log.info("Checking inputs.")
 
-    if (!(params.minimap2 || params.kraken2)) {
-        log.info("")
-        throw new Exception("You must specify a classification method with --kraken2 or --minimap2")
-        
-    }
     // check input fastq exists
     input_fastq = file("${params.fastq}")
     if (!input_fastq.exists()) {
@@ -81,11 +72,11 @@ workflow {
         taxonomy = file(params.taxonomy, type: "dir", checkIfExists:true)
     }
 
-    // Handle getting alignment reference files if minimap2 is enabled
+    // Handle getting alignment reference files if minimap2 classifier selected
     reference = null
     refindex  = null
     ref2taxid = null
-    if (params.minimap2) {
+    if ("${params.classifier}" == "minimap2") {
         // .fasta
         if (params.reference) {
             log.info("Checking custom reference exists")
@@ -128,10 +119,10 @@ workflow {
 
     }
 
-    // Handle getting kraken2 database files if kraken2 is enabled
+    // Handle getting kraken2 database files if kraken2 classifier selected
     database = null
     kmer_distribution = null
-    if (params.kraken2) {
+    if ("${params.classifier}" == "kraken2") {
         // kraken2.tar.gz
         if (params.database) {
             log.info("Checking custom kraken2 database exists")
