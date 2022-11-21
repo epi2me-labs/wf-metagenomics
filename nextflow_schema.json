@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
     "title": "epi2me-labs/wf-metagenomics",
-    "description": "General purpose metagenomics workflow using kraken2 and/or minimap2",
+    "description": "General purpose metagenomics workflow using kraken2 or minimap2",
     "url": "https://github.com/epi2me-labs/wf-clone-validation",
     "type": "object",
     "definitions": {
@@ -16,7 +16,8 @@
                     "type": "string",
                     "format": "path",
                     "description": "A fastq file or directory containing fastq input files or directories of input files.",
-                    "help_text": "If directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file."
+                    "help_text": "If directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file.",
+                    "demo_data": "test_data"
                 },
                 "classifier": {
                     "type": "string",
@@ -180,7 +181,7 @@
             "properties": {
                 "threads": {
                     "type": "integer",
-                    "default": 8,
+                    "default": 4,
                     "description": "Set max number of threads to use. Note: limited by config executor cpus."
                 },
                 "help": {

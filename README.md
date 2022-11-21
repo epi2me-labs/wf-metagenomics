@@ -81,7 +81,7 @@ eg.
         └── reads0.fastq
 ```
 
-*** Minimap2 ***
+***Minimap2***
 
 Alternatively you can run using minimap2 instead. Currently this mode does not support real-time.
 

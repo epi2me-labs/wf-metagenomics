@@ -34,11 +34,6 @@ workflow {
        
     }
 
-    // throw an exception for deprecated conda users
-    if (workflow.profile.contains("conda")) {
-        throw new Exception("Sorry, this workflow is not compatible with --profile conda, please use --profile standard (Docker) or --profile singularity.")
-    }
-
     dataDir = projectDir + '/data'
 
     // Ready the optional file
