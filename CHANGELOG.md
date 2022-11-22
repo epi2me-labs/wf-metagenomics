@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add classifier param and only allow running of minimap2 or kraken2 workflow.
 ### Removed
 - conda support
+### Added
+- `nextflow run epi2me-labs/wf-metagenomics --version` will now print the workflow version number and exit
   
 ## [v2.0.3]
 ### Fixed
