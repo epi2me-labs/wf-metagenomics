@@ -189,6 +189,12 @@
                     "description": "Display help text.",
                     "fa_icon": "fas fa-question-circle"
                 },
+                "version": {
+                    "type": "boolean",
+                    "description": "Display version and exit.",
+                    "fa_icon": "fas fa-question-circle",
+                    "hidden": true
+                },
                 "wfversion": {
                     "type": "string",
                     "description": "Workflow version.",
