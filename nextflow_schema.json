@@ -3,11 +3,12 @@
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
     "title": "epi2me-labs/wf-metagenomics",
     "description": "General purpose metagenomics workflow using kraken2 or minimap2",
+    "demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/demo_data.tar.gz",
     "url": "https://github.com/epi2me-labs/wf-clone-validation",
     "type": "object",
     "definitions": {
-        "core_options": {
-            "title": "Core options",
+        "input_options": {
+            "title": "Input Options",
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
@@ -29,169 +30,231 @@
                     ],
                     "help_text": "Use kraken2 for fast classification and minimap2 for more finer resolution, see read me for further info."
                 },
-                "max_len": {
-                    "type": "integer",
-                    "default": 2000,
-                    "description": "Specify read length upper limit"
-                },
-                "min_len": {
-                    "type": "integer",
-                    "default": 200,
-                    "description": "Specify read length lower limit"
-                },
-                "out_dir": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "default": "output",
-                    "description": "Directory for output of all user-facing files."
-                },
-                "report_name": {
-                    "type": "string",
-                    "default": "report",
-                    "description": "Optional report suffix"
-                },
-                "sample": {
-                    "type": "string",
-                    "description": "A sample name for non-multiplexed data. Permissible if passing a file or directory of .fastq(.gz)."
-                },
-                "sample_sheet": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "CSV file with columns named `barcode`, `sample_name` and `type`. Permissible if passing a directory containing barcodeXX sub-directories."
-                },
-                "store_dir": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "Where to store initial download of taxonomy database."
-                },
-                "source": {
-                    "type": "string",
-                    "default": "ncbi_16s_18s",
-                    "description": "Sets the default reference, databases and taxonomy used. Choices: ['TARGLOCI']",
-                    "enum": [
-                        "ncbi_16s_18s",
-                        "ncbi_16s_18s_28s_ITS",
-                        "PlusPF-8"
-                    ]
-                },
-                "sources": {
-                    "type": "object",
-                    "hidden": true,
-                    "description": "A map containing the available sources and their default resource paths"
-                },
-                "taxonomy": {
-                    "type": "string",
-                    "format": "path",
-                    "description": "Optionally override the taxonomy used [.tar.gz or Dir]"
+                "analyse_unclassified": {
+                    "type": "boolean",
+                    "description": "Analyse unclassified reads from input directory. By default the workflow will not process reads in the unclassified directory.",
+                    "help_text": "If selected and if the input is a multiplex directory the workflow will also process the unclassified directory."
                 }
             },
             "required": [
                 "fastq"
             ]
         },
+        "sample_options": {
+            "title": "Sample Options",
+            "type": "object",
+            "default": "",
+            "properties": {
+                "sample_sheet": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "A CSV file used to map barcodes to sample aliases. The sample sheet can be provided when the input data is a directory containing sub-directories with FASTQ files.",
+                    "help_text": "The sample sheet is a CSV file with, minimally, columns named `barcode` , `sample_id`,  `alias`. Extra columns are allowed. A `type` column is required for certain workflows and should have the following values; `test_sample`, `positive_control`, `negative_control`, `no_template_control`."
+                },
+                "sample": {
+                    "type": "string",
+                    "description": "A single sample name for non-multiplexed data. Permissible if passing a single .fastq(.gz) file or directory of .fastq(.gz) files."
+                }
+            },
+            "description": "Parameters that relate to samples such as sample sheets and sample names."
+        },
+        "reference_options": {
+            "title": "Reference Options",
+            "type": "object",
+            "description": "Files will be downloaded as part of the first run of workflow and automatically stored for subsequent runs.",
+            "default": "",
+            "properties": {
+                "taxonomy": {
+                    "type": "string",
+                    "format": "path",
+                    "description": "Latest NCBI taxonomy file will be downloaded and used",
+                    "help_text": "Change the default to use a different taxonomy file  [.tar.gz or Dir]."
+                },
+                "database_set": {
+                    "type": "string",
+                    "default": "ncbi_16s_18s",
+                    "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s',ncbi_16s_18s_28s_ITS','PlusPF-8']",
+                    "enum": [
+                        "ncbi_16s_18s",
+                        "ncbi_16s_18s_28s_ITS",
+                        "PlusPF-8"
+                    ],
+                    "help_text": "To override set the taxonomy, database parameter for kraken2 or reference parameter for minimap2."
+                },
+                "store_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Where to store initial download of database.",
+                    "default": "store_dir",
+                    "help_text": "database set selected will be downloaded as part of the workflow and saved in this location, on subsequent runs it will use this as the database. "
+                },
+                "database_sets": {
+                    "type": "object",
+                    "hidden": true,
+                    "description": "A map containing the available sources and their default resource paths"
+                }
+            }
+        },
+        "kraken2_options": {
+            "title": "Kraken2 Options",
+            "type": "object",
+            "fa_icon": "fas fa-university",
+            "help_text": "\nKraken2\nIt is possible to enable classification by kraken2, \nand disable alignment which is a faster but coarser method of \nclassification reliant on the presence of a kraken2 database.\n",
+            "properties": {
+                "database": {
+                    "type": "string",
+                    "format": "path",
+                    "description": "Not required but can be used to specifically override database [.tar.gz or Dir]",
+                    "help_text": "By default uses database chosen in database_set parameter"
+                },
+                "bracken_dist": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Specifically override bracken kmer dist file",
+                    "help_text": "A default kmer_dist is provided in database_set selected. Which was generated from the kraken database."
+                },
+                "bracken_length": {
+                    "type": "integer",
+                    "default": 1000,
+                    "description": "Set the length value bracken will use",
+                    "minimum": 1,
+                    "help_text": "Should be set to 1000 if using the default kmer file, or whatever length used to generate the kmer distribution file supplied."
+                },
+                "watch_path": {
+                    "type": "boolean",
+                    "description": "Specify if you want the workflow to continuously process input files as they become available in the input --fastq directories.",
+                    "help_text": "See read_limit and run_indefinitely parameters for information on how to stop the watch_path. "
+                },
+                "read_limit": {
+                    "type": "integer",
+                    "description": "Use with watch_path if you don't want workflow to run indefinitely, will STOP pipeline when this number of reads have been processed.,",
+                    "help_text": "Run indefinitely must be set to False for this parameter to be considered."
+                },
+                "run_indefinitely": {
+                    "type": "boolean",
+                    "description": "When used with watch_path will watch indefinitely if set to true",
+                    "default": true,
+                    "help_text": "See read_limit parameter if you set this to false."
+                },
+                "batch_size": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Number of fastq files to process in each batch",
+                    "help_text": "Watch path will wait for this number of files per sample to be created in the input directories before processing."
+                },
+                "port": {
+                    "type": "integer",
+                    "description": "Port number for the kraken server to use",
+                    "default": 8080,
+                    "help_text": "The workflow uses a server so the workflow only has to load the database once which will be available on this port for the duration of the workflow run."
+                },
+                "bracken_level": {
+                    "type": "string",
+                    "default": "S",
+                    "description": "Set the level that bracken will estimate abundance at. Default: S (species). Other possible options are K (kingdom level), P (phylum), C (class), O (order), F (family), and G (genus).",
+                    "enum": [
+                        "S",
+                        "G",
+                        "k",
+                        "F",
+                        "O",
+                        "C",
+                        "P"
+                    ]
+                }
+            },
+            "description": "Kraken2 classification options. Only relevant if classifier parameter is set to kraken2"
+        },
         "minimap2_options": {
-            "title": "Minimap2 options",
+            "title": "Minimap2 Options",
             "type": "object",
             "fa_icon": "fas fa-dna",
             "properties": {
                 "reference": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Specifically override reference [.fna]"
+                    "description": "Not required but can be used to specify a reference file [.fna]",
+                    "help_text": "By default uses reference chosen in database_set parameter"
+                },
+                "minimap2filter": {
+                    "type": "string",
+                    "description": "Filter output of minimap2 by taxids inc. child nodes, E.g. \"9606,1404\"",
+                    "help_text": "Provide a list of taxids if you are only interested in certain ones in your minimap2 analysis outputs."
+                },
+                "minimap2exclude": {
+                    "type": "boolean",
+                    "description": "Invert minimap2filter and exclude the given taxids instead",
+                    "help_text": "Provide a list of taxids that you want to exclude from analysis outputs."
                 },
                 "ref2taxid": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Specifically override ref2taxid mapping. Format is .tsv (refname  taxid), no header row."
-                },
-                "minimap2filter": {
-                    "type": "string",
-                    "description": "Filter output of minimap2 by taxids inc. child nodes, E.g. \"9606,1404\""
-                },
-                "minimap2exclude": {
-                    "type": "boolean",
-                    "description": "Invert minimap2filter and exclude the given taxids instead"
+                    "description": "Not required but can be used to specify a  ref2taxid mapping. Format is .tsv (refname  taxid), no header row.",
+                    "help_text": "By default uses ref2taxid for option chosen in database_set parameter"
                 },
                 "split_prefix": {
                     "type": "boolean",
-                    "description": "Enable if using a very large reference with minimap2"
+                    "description": "Enable if using a very large reference with minimap2",
+                    "help_text": "If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2. "
                 }
             },
-            "description": "Minimap2 classification options",
+            "description": "Minimap2 classification options. Only relevant if classifier parameter is set to minimap2.",
             "help_text": "Minimap2\nThe default strategy is using minimap2 to perform full\nalignments against .fasta formatted references sequences. "
         },
-        "kraken2_options": {
-            "title": "Kraken2 options",
+        "output_options": {
+            "title": "Output Options",
             "type": "object",
-            "fa_icon": "fas fa-university",
-            "help_text": "Kraken2\nIt is possible to enable classification by kraken2, \nand disable alignment which is a faster but coarser method of \nclassification reliant on the presence of a kraken2 database.\n\nUsing kraken2 + minimap2\nIf both are enabled and --kraken2minimap is set, only reads \nclassified by kraken2 (and  optionally filtered by --kraken2filter) \nare passed to the alignment step.",
+            "description": "Parameters for saving and naming workflow outputs.",
+            "default": "",
             "properties": {
-                "database": {
+                "out_dir": {
                     "type": "string",
-                    "format": "path",
-                    "description": "Specifically override database [.tar.gz or Dir]"
-                },
-                "bracken_dist": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Specifically override bracken kmer dist file"
-                },
-                "bracken_length": {
-                    "type": "integer",
-                    "default": 1000,
-                    "description": "Set the length value bracken will use"
-                },
-                "watch_path": {
-                    "type": "boolean",
-                    "description": "Specify if you want the workflow to continuously process input files as they become available in the input --fastq directories."
-                },
-                "read_limit": {
-                    "type": "integer",
-                    "description": "Use with watch_path if you don't want workflow to run indefinitely, will STOP pipeline when this number of reads have been processed.,"
-                },
-                "run_indefinitely": {
-                    "type": "boolean",
-                    "description": "When used with watch_path will watch indefinitely if set to true",
-                    "default": true
-                },
-                "batch_size": {
-                    "type": "integer",
-                    "default": 1,
-                    "description": "Number of fastq files to process in each batch"
-                },
-                "port": {
-                    "type": "integer",
-                    "description": "Port number for the kraken server to use",
-                    "default": 8080
-                },
-                "bracken_level": {
-                    "type": "string",
-                    "default": "S",
-                    "description": "Set the level that bracken will output at"
+                    "format": "directory-path",
+                    "default": "output",
+                    "description": "Directory for output of all user-facing files."
                 }
-            },
-            "description": "Kraken2 classification options"
+            }
         },
-        "generic_options": {
-            "title": "Generic options",
+        "advanced_options": {
+            "title": "Advanced Options",
             "type": "object",
-            "fa_icon": "fas fa-file-import",
-            "description": "Less common options for the pipeline, typically set in a config file.",
-            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "description": "Advanced options for configuring processes inside the workflow.",
+            "default": "",
             "properties": {
+                "min_len": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Specify read length lower limit",
+                    "help_text": "Any reads shorter than this limit will not be included in the analysis."
+                },
+                "max_len": {
+                    "type": "integer",
+                    "description": "Specify read length upper limit",
+                    "help_text": "Any reads longer than this limit will not be included in the analysis."
+                },
                 "threads": {
                     "type": "integer",
                     "default": 4,
-                    "description": "Set max number of threads to use. Note: limited by config executor cpus."
+                    "description": "Set max number of threads to use per process. Note: limited by config executor cpus.",
+                    "help_text": "For processes in the workflow that have better performance if run with multiple threads."
+                }
+            }
+        },
+        "miscellaneous_options": {
+            "title": "Miscellaneous Options",
+            "type": "object",
+            "fa_icon": "fas fa-file-import",
+            "description": "Everything else.",
+            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "properties": {
+                "disable_ping": {
+                    "type": "boolean",
+                    "description": "Enable to prevent sending a workflow ping.",
+                    "hidden": true
                 },
                 "help": {
                     "type": "boolean",
                     "description": "Display help text.",
-                    "fa_icon": "fas fa-question-circle"
-                },
-                "version": {
-                    "type": "boolean",
-                    "description": "Display version and exit.",
                     "fa_icon": "fas fa-question-circle",
                     "hidden": true
                 },
@@ -201,9 +264,10 @@
                     "default": "v2.0.3",
                     "hidden": true
                 },
-                "disable_ping": {
+                "version": {
                     "type": "boolean",
-                    "description": "Enable to prevent sending a workflow ping.",
+                    "description": "Display version and exit.",
+                    "fa_icon": "fas fa-question-circle",
                     "hidden": true
                 },
                 "aws_image_prefix": {
@@ -221,18 +285,38 @@
     },
     "allOf": [
         {
-            "$ref": "#/definitions/core_options"
+            "$ref": "#/definitions/input_options"
         },
         {
-            "$ref": "#/definitions/minimap2_options"
+            "$ref": "#/definitions/sample_options"
+        },
+        {
+            "$ref": "#/definitions/reference_options"
         },
         {
             "$ref": "#/definitions/kraken2_options"
         },
         {
-            "$ref": "#/definitions/generic_options"
+            "$ref": "#/definitions/minimap2_options"
+        },
+        {
+            "$ref": "#/definitions/output_options"
+        },
+        {
+            "$ref": "#/definitions/advanced_options"
+        },
+        {
+            "$ref": "#/definitions/miscellaneous_options"
         }
     ],
+    "properties": {
+        "process_label": {
+            "type": "string",
+            "description": "The main process label for template processes to use by default",
+            "hidden": true,
+            "default": "wf-template"
+        }
+    },
     "docs": {
         "intro": "\n## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n### Kraken2 - Default\n\n[Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample which can be visualised in the report. The Kraken2 workflow mode can be run in real time. See quickstart below for more details.\n\n### Minimap2 \n\n[Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.\n\n",
         "links": "## Useful links\n\n* [nextflow](https://www.nextflow.io/)\n* [docker](https://www.docker.com/products/docker-desktop)"

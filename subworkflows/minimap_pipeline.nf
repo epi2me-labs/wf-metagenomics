@@ -38,11 +38,13 @@ process combineFilterFastq {
             val(meta.sample_id),
             path("${meta.sample_id}.stats"),
             emit: stats)
+    script:
+        def max_length = "${params.max_len}"== null ? '' : "-b ${params.max_len}"
     shell:
     """
     fastcat \
         -a "${params.min_len}" \
-        -b "${params.max_len}" \
+        ${max_length} \
         -q 10 \
         -s "${meta.sample_id}" \
         -r "${meta.sample_id}.stats" \
@@ -80,7 +82,7 @@ process minimap {
     script:
         def split = params.split_prefix ? '--split-prefix tmp' : ''
     """
-    minimap2 -t "${params.threads}" ${split} -ax map-ont "${reference}" "${reads}" \
+    minimap2 -t "${task.cpus}" ${split} -ax map-ont "${reference}" "${reads}" \
     | samtools view -h -F 2304 - \
     | format_minimap2.py - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
     | samtools sort -o "${sample_id}.bam" -
@@ -171,7 +173,7 @@ process makeReport {
     output:
         path "wf-metagenomics-*.html"
     script:
-        report_name = "wf-metagenomics-" + params.report_name + '.html'
+        report_name = "wf-metagenomics-report.html"
     """
     report.py \
         "${report_name}" \
