@@ -52,8 +52,8 @@ workflow {
         }
 
     // Check source param is valid
-    sources = params.sources
-    source_name = params.source
+    sources = params.database_sets
+    source_name = params.database_set
     source_data = sources.get(source_name, false)
     if (!sources.containsKey(source_name) || !source_data) {
         keys = sources.keySet()
@@ -66,6 +66,8 @@ workflow {
         log.info("Checking custom taxonomy mapping exists")
         taxonomy = file(params.taxonomy, type: "dir", checkIfExists:true)
     }
+
+
 
     // Handle getting alignment reference files if minimap2 classifier selected
     reference = null
@@ -105,7 +107,8 @@ workflow {
         samples = fastq_ingress([
         "input":params.fastq,
         "sample":params.sample,
-        "sample_sheet":params.sample_sheet])
+        "sample_sheet":params.sample_sheet,
+        "unclassified":params.analyse_unclassified])
 
 
         results = minimap_pipeline(
@@ -154,8 +157,7 @@ workflow {
             log.info("Workflow will stop processing files after ${params.read_limit} reads when run_indefinitely is set to False")  
         }
         results = kraken_pipeline(
-        reference, refindex, ref2taxid, taxonomy,
-        database, kmer_distribution, template)
+        taxonomy, database, kmer_distribution, template)
 
     }
 

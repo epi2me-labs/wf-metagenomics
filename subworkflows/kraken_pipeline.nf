@@ -72,11 +72,12 @@ process combineFilterFastq {
             emit: stats)
     script:
         def listFiles = directory.join(" ")
+        def max_length = "${params.max_len}"== null ? "-b ${params.max_len}" : ""
     shell:
     """
     fastcat \
         -a "${params.min_len}" \
-        -b "${params.max_len}" \
+        ${max_length} \
         -q 10 \
         -s "${sample_id}" \
         -r "${sample_id}.${task.index}.stats" \
@@ -205,7 +206,7 @@ process makeReport {
     output:
         path "wf-metagenomics-*.html", emit: report_html
     script:
-        report_name = "wf-metagenomics-" + params.report_name + '.html'
+        report_name = "wf-metagenomics-report.html"
     """
     report.py \
         "${report_name}" \
@@ -472,9 +473,6 @@ process catAssignmentsprogressive {
 
 workflow kraken_pipeline {
     take:
-        reference
-        refindex
-        ref2taxid
         taxonomy
         database
         kmer_distribution
