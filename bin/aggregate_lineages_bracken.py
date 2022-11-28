@@ -37,15 +37,7 @@ def update_or_create_unclassified(entries, unclassified_count):
 
 def update_or_create_count(entry, entries, bracken_counts):
     """Increment lineage counts given entries."""
-    try:
-        tax_id, lineage, ranks = entry.rstrip().split('\t')
-    except ValueError:
-        if str(entry).strip() == '0':
-            return update_or_create_unclassified(entries)
-        else:
-            sys.stderr('Error: unknown lineage {}'.format(entry))
-            sys.exit(1)
-
+    tax_id, lineage, ranks = entry.rstrip().split('\t')
     lineage_split = lineage.split(';')
     ranks_split = ranks.split(';')
     count = int(bracken_counts[tax_id])
@@ -95,8 +87,13 @@ def main(prefix, lineages, bracken, report):
         with open(lineages) as f:
             infile = f.readlines()
         for line in infile:
-            entries = update_or_create_count(line, entries, bracken_counts)
-            total += 1
+            try:
+                entries = update_or_create_count(line, entries, bracken_counts)
+                total += 1
+            except ValueError:
+                sys.stderr.write(
+                    """Lineage for tax id {} not found in taxonomy database"""
+                    .format(str(line)))
     with open(report) as f:
         report_file = f.readlines()
         for line in report_file:
