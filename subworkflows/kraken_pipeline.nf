@@ -237,7 +237,7 @@ process kraken2_client {
     input:
         tuple val(sample_id), path(reads)
     output:
-        tuple val(sample_id), path(reads), path("${sample_id}.kraken2.assignments.tsv"), path("${sample_id}.kraken2.report.txt"), emit: assignments
+        tuple val(sample_id), path("${sample_id}.kraken2.report.txt")
     script:
     """
     kraken2_client --port $params.port --report report.txt --sequence "${reads}" > "${sample_id}.kraken2.assignments.tsv"
@@ -260,71 +260,110 @@ process stop_kraken_server {
 
 
 // Combine kraken reports scan step
-// Named a directory with a unique id to avoid dir name clash, but overwrite 'state' files in directory.
-// Sample_id has to come from filename because can't scan tuples
+//
+// Nextflow scan does a silly thing where it feeds back the growing list of
+// historical outputs. We only ever need the most recent output (the "state").
+// Our state here is a directory of aggregated kraken2 reports, one file per
+// sample. The state is named with the task.index so its unique, and also
+// with the sample_id just analysed (see below for why).
+//
+// Every new input to the process is a kraken report for a single sample. We
+// don't want to update all aggregated reports, just the report for the sample
+// of the latest report received. Scan cannot handle a tuple as a piece of
+// state because the input channel is bodged to contain a list of the newest
+// input and the growing list -- so we have to grotesquely pull out the sample_id
+// from the file name.
+//
 // - maxForks is one to keep things in order, but this step can be slow.
 process progressive_kreports {
     label "wfmetagenomics"
     maxForks 1 
+    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "kraken.*.*", saveAs: {name -> "kraken"}, overwrite: true
     input:
         path kreport
         path taxonomy
     output:
-        path("reports.${task.index}")
-        val ("${sample_id}")
+        path("kraken.${task.index}.${sample_id}"), emit: reports
+        val sample_id
     script:
         if (kreport instanceof BlankSeparatedList){
+            // second and subsequent iterations
             new_input =  kreport.getAt(0); state = kreport.getAt(-1)
         }
         else {
-            new_input = kreport; state = "reports.${task.index}"
+            // first iteration
+            new_input = kreport; state = "null"
         }
-        sample_id = "${new_input}".split(/\./)[0] 
+        // If sample_id contains a "." this will break
+        sample_id = "${new_input}".split(/\./)[0]
+        new_state = "kraken.${task.index}.${sample_id}"
+        // n.b where this is used below the files will have been moved, hence new_state
+        old_input = "${new_state}/${sample_id}.kreport.txt"
     """
     if [[ "${task.index}" == "1" ]]; then
-        mkdir "$state";
+        mkdir "${new_state}"
+    else
+        mv "${state}" "${new_state}" 
     fi
-    if [[ ! -f "kreports/${sample_id}.kreport.txt" ]]; then
-        touch "$state/${sample_id}.kreport.txt";
-    fi
-    combine_kreports_modified.py -r "$new_input"  "$state/${sample_id}.kreport.txt" -o ${sample_id}.kreport.txt --only-combined --no-headers
-    mv ${sample_id}.kreport.txt $state/${sample_id}.kreport.txt
-    if [[ "${task.index}" != "1" ]]; then
-         mv "$state" "reports.${task.index}"
-    fi
+    touch "${old_input}"
+
+    combine_kreports_modified.py \
+        -r "${new_input}" "${old_input}" \
+        -o "${sample_id}.kreport.txt" --only-combined --no-headers
+    # note on a shared FS with symlink staging, this overwrites
+    mv "${sample_id}.kreport.txt" "${new_state}/${sample_id}.kreport.txt"
     """
 }
 
-// TODO: What is this process doing?!?!?
-//       We end up remitting the kraken report directory and that gets used to build
-//       our HTML report? Why isn't the .kreport_bracken_species.txt file 
-//       always produced? And why do we not seem to care? How on Earth is it that the
-//       .json files produced here end up in the progressive_kreports.out[0] directories
-//       that get published? (Answer to the last one is they sometimes are, they sometimes
-//       aren't because we've lost encapsulation by copying things through symlinks to
-//       the input directory). 
+
+// Calculate up-to-date bracken information for latest analysed sample.
+// 
+// The kraken.scan process gives a directory of aggregated kraken2 reports named
+// with the sample_id which was most recently updated. Here we rerun bracken
+// on that sample and output the results to an updating directory of per sample
+// bracken results.
 process bracken {
     label "wfmetagenomics"
     cpus 1
+    maxForks 1
+    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "bracken.*", saveAs: {name -> "bracken"}, overwrite: true
     input:
-        path kraken2_report
-        val sample_id
+        path inputs
+        val sample_id_  // this is here because progressive_kreports has to output two things. Could we just use this?
         path database
         path taxonomy
     output:
-        tuple val("${sample_id}"), path("*.kreport_bracken_species.txt"), emit: bracken_report, optional: true
-        path kraken2_report, emit: report
+        path("${newstate}"), emit: reports
+        // we have to emit four things!
+        val sample_id_
+        val sample_id_
+        val sample_id_
     script:
-    def awktab="awk -F '\t' -v OFS='\t'"
+        newstate = "bracken.${task.index}"
+        def kreports = ""
+        if (inputs instanceof BlankSeparatedList){
+            // second and subsequent iterations
+            kreports = inputs.getAt(0); state = inputs.getAt(-1)
+        }
+        else {
+            // first iteration
+            kreports = inputs; state = "PLACEHOLDER"
+        }
+        // If sample_id contains a "." this will break
+        sample_id = "${kreports}".split(/\./)[2]
+        def awktab="awk -F '\t' -v OFS='\t'"
     """
+    # run bracken on the latest kreports, is this writing some outputs
+    # alongside the inputs? seems at least {}.kreport_bracken_species.txt
+    # is written alongside the input
     run_bracken.py \
         "${database}" \
-        "${kraken2_report}/${sample_id}.kreport.txt" \
+        "${kreports}/${sample_id}.kreport.txt" \
         "${params.bracken_length}" \
         "${params.bracken_level}" \
         "${sample_id}.bracken_report.txt"
-    mv "${kraken2_report}/${sample_id}.kreport_bracken_species.txt" . || echo "no bracken report"
 
+    # do some stuff...
     ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \
         | ${awktab} 'NR!=1 {print}' \
         | tee taxacounts.txt \
@@ -332,15 +371,25 @@ process bracken {
     taxonkit \
         --data-dir $taxonomy \
         lineage -R taxa.txt  > lineages.txt
-
     aggregate_lineages_bracken.py \
         -i "lineages.txt" -b "taxacounts.txt" \
-        -u "${kraken2_report}/${sample_id}.kreport.txt" \
+        -u "${kreports}/${sample_id}.kreport.txt" \
         -p "${sample_id}.kraken2"
 
     file1=`cat *.json`
-    echo "{"'"$sample_id"'": "\$file1"}" >> "$sample_id.${task.index}.json"
-    cp "${sample_id}.${task.index}.json" "${kraken2_report}/${sample_id}.json"
+    echo "{"'"$sample_id"'": "\$file1"}" >> "bracken.json"
+
+    # collate the latest bracken outputs into state
+    if [[ "${task.index}" != "1" ]]; then
+        mv "${state}" "${newstate}"
+    else
+        # make fresh directory
+        mkdir "${newstate}"
+    fi;
+
+    # first output here is just for end user
+    mv "${kreports}/${sample_id}.kreport_bracken_species.txt" "${newstate}" || echo "No bracken report"
+    mv "bracken.json" "${newstate}/${sample_id}.json"
     """
 }
 
@@ -453,12 +502,11 @@ workflow kraken_pipeline {
         // Run Kraken2
         kraken2_response = kraken2_client(reads.filtered)
     
-        combined_kreport = progressive_kreports.scan(
-            kraken2_response.map{ it -> it[3] },
+        kraken_reports = progressive_kreports.scan(
+            kraken2_response.map{ it -> it[1] },
             taxonomy)
-        // TODO: what do we actually want back from this? See notes above `process bracken {}`
-        br = bracken(combined_kreport, database, taxonomy)
-        
+        bracken_reports = bracken.scan(kraken_reports, database, taxonomy)
+         
         // report step
         //   Nasty: we assume br.report and stats are similarly ordered, they aren't.
         //   This doesn't matter too much as stats is read lengths and qualities: its
@@ -466,24 +514,22 @@ workflow kraken_pipeline {
         //   so just ram the channels into the process. The alternative is needing to add
         //   keys into br.report and stats, but thats difficult because process.scan doesn't
         //   accept scan, because, ya know, reasons.
+
         versions = getVersions().collect()
         parameters = getParams().collect()
         stuff = stats
             .combine(versions)
             .combine(parameters)
             .combine(Channel.of(template))
-        report = makeReport(br.report, stuff)
-        
-        // Stop server when all are processed
-        stop_kraken_server(kraken2_response.collect())
+        report = makeReport(bracken_reports.reports, stuff)
 
         // output updating files as part of this pipeline
-        // note, we don't overwrite the progressive kreport for now
-        // TODO: see notes above `process bracken {}`
         output(report.report_html.mix(
-            versions, parameters,
-            progressive_kreports.out[0]),
+            versions, parameters),
         )
+
+        // Stop server when all are processed
+        stop_kraken_server(kraken2_response.collect())
 
     emit:
         report.report_html  // just emit something
