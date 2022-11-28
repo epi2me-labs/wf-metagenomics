@@ -9,22 +9,6 @@ include { kraken_pipeline } from './subworkflows/kraken_pipeline'
 
 nextflow.preview.recursion=true
    
-// See https://github.com/nextflow-io/nextflow/issues/1636
-// This is the only way to publish files from a workflow whilst
-// decoupling the publish from the process steps.
-process output {
-    // publish inputs to output directory
-    label "wfmetagenomics"
-    publishDir "${params.out_dir}", mode: 'copy', pattern: "*"
-    input:
-        path fname
-    output:
-        path fname
-    """
-    echo "Writing output files"
-    """
-}
-
 
 // entrypoint workflow
 WorkflowMain.initialise(workflow, params, log)
@@ -66,8 +50,6 @@ workflow {
         log.info("Checking custom taxonomy mapping exists")
         taxonomy = file(params.taxonomy, type: "dir", checkIfExists:true)
     }
-
-
 
     // Handle getting alignment reference files if minimap2 classifier selected
     reference = null
@@ -112,9 +94,8 @@ workflow {
 
 
         results = minimap_pipeline(
-        samples, reference, refindex, ref2taxid, taxonomy,
-        template)
-
+            samples, reference, refindex, ref2taxid, taxonomy,
+            template)
     }
 
     // Handle getting kraken2 database files if kraken2 classifier selected
@@ -157,11 +138,10 @@ workflow {
             log.info("Workflow will stop processing files after ${params.read_limit} reads when run_indefinitely is set to False")  
         }
         results = kraken_pipeline(
-        taxonomy, database, kmer_distribution, template)
+            taxonomy, database, kmer_distribution, template)
 
     }
 
-    output(results)
 }
 
 

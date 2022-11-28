@@ -138,9 +138,9 @@
                 },
                 "batch_size": {
                     "type": "integer",
-                    "default": 1,
-                    "description": "Number of fastq files to process in each batch",
-                    "help_text": "Watch path will wait for this number of files per sample to be created in the input directories before processing."
+                    "default": 0,
+                    "description": "Maximum number of sequence records to process in a batch.",
+                    "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 4000 is recommended to rebatch large files."
                 },
                 "port": {
                     "type": "integer",
@@ -234,9 +234,9 @@
                 },
                 "threads": {
                     "type": "integer",
-                    "default": 4,
-                    "description": "Set max number of threads to use per process. Note: limited by config executor cpus.",
-                    "help_text": "For processes in the workflow that have better performance if run with multiple threads."
+                    "default": 2,
+                    "description": "Number of CPU threads used for classifying reads.",
+                    "help_text": "For the real-time kraken2 workflow, this is the number of CPU threads used by the kraken2 server (and the number of clients sending reads to the server). For the minimap2 workflow, it is the number of CPU threads used by minimap2. For the real-time kraken2 workflow the `threads` parameter should not be set to no more than 4 fewer than the executor CPU limit."
                 }
             }
         },
