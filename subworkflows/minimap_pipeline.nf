@@ -55,6 +55,7 @@ process combineFilterFastq {
 
 process minimap {
     label "wfmetagenomics"
+    cpus params.threads
     input:
         tuple val(sample_id), path(reads)
         path reference
@@ -171,7 +172,7 @@ process makeReport {
         path "params.json"
         path template
     output:
-        path "wf-metagenomics-*.html"
+        path "wf-metagenomics-*.html", emit: report_html
     script:
         report_name = "wf-metagenomics-report.html"
     """
@@ -255,13 +256,11 @@ workflow minimap_pipeline {
             workflow_params,
             template
         )
+
+        output(report.report_html.mix(
+            software_versions, workflow_params))
     emit:
-        report.concat(
-            *outputs.collect { chan ->
-                chan.flatMap { it -> [ it[1] ] }},
-            software_versions,
-            workflow_params
-        )
+        report.report_html  // just emit something
 }
 
 

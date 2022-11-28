@@ -9,8 +9,9 @@ variables:
     # The workflow should define `--out_dir`, the CI template sets this.
     # Only common file inputs and option values need to be given here
     # (not things such as -profile)
-    NF_WORKFLOW_OPTS: "--fastq test_data"
-    NF_IGNORE_PROCESSES: "extractKraken2Reads,extractMinimap2Reads,minimap2,mergeBAM"
+    NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+    NF_WORKFLOW_OPTS: "--fastq test_data "
+    NF_IGNORE_PROCESSES: "rebatchFastq"
     CI_FLAVOUR: "new"
 
 aws-run:
@@ -43,19 +44,23 @@ docker-run:
        when: never
      - if: $MATRIX_NAME == "kraken2"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data --read_limit 50"
-          NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
+          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data "
+          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
      - if: $MATRIX_NAME == "batch"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data --read_limit 50 --batch_size 3"
-          NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
+          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data --batch_size 1000 "
+          NF_IGNORE_PROCESSES: "stopCondition"
      - if: $MATRIX_NAME == "kraken2-single-file"
        variables:
+          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/barcode01/reads.fastq.gz"
-          NF_IGNORE_PROCESSES: extractMinimap2Reads,minimap2,mergeBAM
+          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
      - if: $MATRIX_NAME == "minimap2"
        variables:
-          NF_WORKFLOW_OPTS: "--fastq test_data --minimap2 --minimap2filter '9606,1404' --classifier minimap2"
-          NF_IGNORE_PROCESSES: extractKraken2Reads,kraken2,mergeKrakenFiltered
+          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data --minimap2filter '9606,1404' --classifier minimap2"
+          NF_IGNORE_PROCESSES: ""
 
 
