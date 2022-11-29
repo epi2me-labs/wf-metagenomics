@@ -64,6 +64,7 @@ process unpackDatabase {
 process unpackTaxonomy {
     label "wfmetagenomics"
     cpus 1
+    storeDir "${params.store_dir}"
     input:
         path taxonomy
     output:
@@ -140,28 +141,19 @@ process progressiveStats {
     input: 
         path fastcat_stats
     output:
-        path("stats.${task.index}")
+        path("all_stats.${task.index}")
     script: 
         if (fastcat_stats instanceof BlankSeparatedList) {
             new_input = fastcat_stats.getAt(0);
             state = fastcat_stats.getAt(-1)
         } else { 
             new_input = fastcat_stats;
-            state = "stats.${task.index}"
+            state = "NOSTATE"
         }
-        output = "fastcat_stats.csv"
+        output = "all_stats.${task.index}"
     """
-    if [[ "${task.index}" == "1" ]]; then
-        mkdir "$state";
-    fi
-    if [[ ! -f "$state/all_stats.json" ]]; then
-        touch "$state/all_stats.json";
-    fi
-    add_jsons.py --new_file "${new_input}" --state "${state}/all_stats.json"
-    mv "all_stats.json" "$state/all_stats.json"
-    if [[ "${task.index}" != "1" ]]; then
-         mv "$state" "stats.${task.index}"
-    fi
+    touch "${state}"
+    add_jsons.py "${new_input}" "${state}" "${output}"
     """
 }
 
@@ -292,7 +284,7 @@ process progressive_kreports {
         }
         else {
             // first iteration
-            new_input = kreport; state = "null"
+            new_input = kreport; state = "NOSTATE"
         }
         // If sample_id contains a "." this will break
         sample_id = "${new_input}".split(/\./)[0]
@@ -301,16 +293,15 @@ process progressive_kreports {
         old_input = "${new_state}/${sample_id}.kreport.txt"
     """
     if [[ "${task.index}" == "1" ]]; then
-        mkdir "${new_state}"
-    else
-        mv "${state}" "${new_state}" 
+        mkdir "${state}"
     fi
+
+    cp -r "${state}" "${new_state}" 
     touch "${old_input}"
 
     combine_kreports_modified.py \
         -r "${new_input}" "${old_input}" \
         -o "${sample_id}.kreport.txt" --only-combined --no-headers
-    # note on a shared FS with symlink staging, this overwrites
     mv "${sample_id}.kreport.txt" "${new_state}/${sample_id}.kreport.txt"
     """
 }
@@ -324,7 +315,7 @@ process progressive_kreports {
 // bracken results.
 process bracken {
     label "wfmetagenomics"
-    cpus 1
+    cpus 2
     maxForks 1
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "bracken.*", saveAs: {name -> "bracken"}, overwrite: true
     input:
@@ -347,7 +338,7 @@ process bracken {
         }
         else {
             // first iteration
-            kreports = inputs; state = "PLACEHOLDER"
+            kreports = inputs; state = "NOSTATE"
         }
         // If sample_id contains a "." this will break
         sample_id = "${kreports}".split(/\./)[2]
@@ -368,9 +359,10 @@ process bracken {
         | ${awktab} 'NR!=1 {print}' \
         | tee taxacounts.txt \
         | ${awktab} '{ print \$1 }' > taxa.txt
-    taxonkit \
+    taxonkit lineage \
+        -j ${task.cpus} \
         --data-dir $taxonomy \
-        lineage -R taxa.txt  > lineages.txt
+        -R taxa.txt  > lineages.txt
     aggregate_lineages_bracken.py \
         -i "lineages.txt" -b "taxacounts.txt" \
         -u "${kreports}/${sample_id}.kreport.txt" \
@@ -381,7 +373,7 @@ process bracken {
 
     # collate the latest bracken outputs into state
     if [[ "${task.index}" != "1" ]]; then
-        mv "${state}" "${newstate}"
+        cp -r "${state}" "${newstate}"
     else
         # make fresh directory
         mkdir "${newstate}"
@@ -410,7 +402,7 @@ process makeReport {
         "${report_name}" \
         --versions versions \
         --params params.json \
-        --summaries ${stats}/* \
+        --summaries ${stats} \
         --lineages "${lineages}" \
         --vistempl template.html \
     """
@@ -484,7 +476,8 @@ workflow kraken_pipeline {
 
         // maybe split up large files
         if (params.batch_size != 0) {
-            batch_items = rebatchFastq(batch_items.transpose()).transpose()
+            batch_items = rebatchFastq(batch_items.transpose())
+                .transpose()
         }
 
         // filter reads and calculate stats

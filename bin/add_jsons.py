@@ -26,11 +26,10 @@ def add_dicts(d1, d2):
 def main():
     """Run the entry point."""
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--new_file")
-    parser.add_argument(
-        "--state"
-    )
+    parser.add_argument("new_file")
+    parser.add_argument("state")
+    parser.add_argument("output")
+
     args = parser.parse_args()
     if os.stat(args.state).st_size == 0:
         state = {}
@@ -40,7 +39,7 @@ def main():
     with open(args.new_file) as json_file:
         new_file = json.load(json_file)
     combined = add_dicts(state, new_file)
-    with open("all_stats.json", "w") as outfile:
+    with open(args.output, "w") as outfile:
         json.dump(combined, outfile)
 
 
