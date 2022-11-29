@@ -360,7 +360,6 @@ process bracken {
         sample_id = "${kreports}".split(/\./)[2]
         def awktab="awk -F '\t' -v OFS='\t'"
         def bracken_len = bracken_length.getAt(0)
-        
     """
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
