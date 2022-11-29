@@ -3,8 +3,8 @@
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
     "title": "epi2me-labs/wf-metagenomics",
     "description": "General purpose metagenomics workflow using kraken2 or minimap2",
-    "demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/demo_data.tar.gz",
-    "url": "https://github.com/epi2me-labs/wf-clone-validation",
+    "demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz",
+    "url": "https://github.com/epi2me-labs/wf-metagenomics",
     "type": "object",
     "definitions": {
         "input_options": {
