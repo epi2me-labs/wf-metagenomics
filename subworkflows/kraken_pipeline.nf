@@ -107,57 +107,6 @@ process rebatchFastq {
 }
 
 
-process filterFastq {
-    label "wfmetagenomics"
-    maxForks params.threads  // no point having more inputs than processing threads
-    cpus 2
-    input:
-        tuple val(sample_id), path(fastq)
-    output:
-        tuple val(sample_id), path("${sample_id}.${task.index}.fastq.gz"), emit: filtered
-        tuple val(sample_id), path("${sample_id}.${task.index}.json"), emit: stats
-    script:
-        def max_length = "${params.max_len}"== null ? "-b ${params.max_len}" : ""
-    shell:
-    """
-    fastcat \
-        -a "${params.min_len}" \
-        ${max_length} \
-        -s "${sample_id}" \
-        -r "${sample_id}.${task.index}.stats" \
-        "${fastq}" | bgzip > "${sample_id}.${task.index}.fastq.gz"
-    fastcat_histogram.py \
-        --sample_id "${sample_id}" \
-        "${sample_id}.${task.index}.stats" "${sample_id}.${task.index}.json"
-    """
-}
-
-
-// scan step for accumulating fastcat stats
-process progressiveStats {
-    label "wfmetagenomics"
-    maxForks 1
-    cpus 1
-    input: 
-        path fastcat_stats
-    output:
-        path("all_stats.${task.index}")
-    script: 
-        if (fastcat_stats instanceof BlankSeparatedList) {
-            new_input = fastcat_stats.getAt(0);
-            state = fastcat_stats.getAt(-1)
-        } else { 
-            new_input = fastcat_stats;
-            state = "NOSTATE"
-        }
-        output = "all_stats.${task.index}"
-    """
-    touch "${state}"
-    add_jsons.py "${new_input}" "${state}" "${output}"
-    """
-}
-
-
 // watch path stop condition, if params.read_limit is met will inject a stop file in to input folder.
 process stopCondition { 
     label "wfmetagenomics"
@@ -220,6 +169,12 @@ process kraken_server {
 }
 
 
+// Filter reads, calculate some stats, and run kraken2 classification
+//
+// The per file statistics are calculated here rather than in a separate process
+// in order to more easily define the parallelism (otherwise an independent stats
+// job may queue up hundreds of jobs before kraken jobs, leaving the server consuming
+// resource but not actually doing anything).
 process kraken2_client {
     label "wfmetagenomics"
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
@@ -227,12 +182,26 @@ process kraken2_client {
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
     maxForks kraken_compute
     input:
-        tuple val(sample_id), path(reads)
+        tuple val(sample_id), path(fastq)
     output:
-        tuple val(sample_id), path("${sample_id}.kraken2.report.txt")
+        tuple val(sample_id), path("${sample_id}.kraken2.report.txt"), path("${sample_id}.${task.index}.json")
     script:
+        def max_length = "${params.max_len}"== null ? "-b ${params.max_len}" : ""
     """
-    kraken2_client --port $params.port --report report.txt --sequence "${reads}" > "${sample_id}.kraken2.assignments.tsv"
+
+    fastcat \
+        -a "${params.min_len}" \
+        ${max_length} \
+        -s "${sample_id}" \
+        -r "${sample_id}.${task.index}.stats" \
+        "${fastq}" > filtered.fastq
+    fastcat_histogram.py \
+        --sample_id "${sample_id}" \
+        "${sample_id}.${task.index}.stats" "${sample_id}.${task.index}.json"
+
+    kraken2_client \
+        --port $params.port --report report.txt \
+        --sequence filtered.fastq > "${sample_id}.kraken2.assignments.tsv"
     tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
 }
@@ -247,6 +216,34 @@ process stop_kraken_server {
         val stop
     """
     kraken2_client --port $params.port --shutdown
+    """
+}
+
+
+// Scan step for accumulating fastcat stats
+//
+// Nextflow scan does a silly thing where it feeds back the growing list of
+// historical outputs. We only ever need the most recent output (the "state").
+process progressiveStats {
+    label "wfmetagenomics"
+    maxForks 1
+    cpus 1
+    input: 
+        path fastcat_stats
+    output:
+        path("all_stats.${task.index}")
+    script: 
+        if (fastcat_stats instanceof BlankSeparatedList) {
+            new_input = fastcat_stats.getAt(0);
+            state = fastcat_stats.getAt(-1)
+        } else { 
+            new_input = fastcat_stats;
+            state = "NOSTATE"
+        }
+        output = "all_stats.${task.index}"
+    """
+    touch "${state}"
+    add_jsons.py "${new_input}" "${state}" "${output}"
     """
 }
 
@@ -270,7 +267,7 @@ process stop_kraken_server {
 process progressive_kreports {
     label "wfmetagenomics"
     maxForks 1 
-    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "kraken.*.*", saveAs: {name -> "kraken"}, overwrite: true
+    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "kraken"}, overwrite: true
     input:
         path kreport
         path taxonomy
@@ -317,20 +314,20 @@ process bracken {
     label "wfmetagenomics"
     cpus 2
     maxForks 1
-    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "bracken.*", saveAs: {name -> "bracken"}, overwrite: true
+    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "bracken"}, overwrite: true
     input:
         path inputs
         val sample_id_  // this is here because progressive_kreports has to output two things. Could we just use this?
         path database
         path taxonomy
     output:
-        path("${newstate}"), emit: reports
+        path("${new_state}"), emit: reports
         // we have to emit four things!
         val sample_id_
         val sample_id_
         val sample_id_
     script:
-        newstate = "bracken.${task.index}"
+        new_state = "bracken.${task.index}"
         def kreports = ""
         if (inputs instanceof BlankSeparatedList){
             // second and subsequent iterations
@@ -373,15 +370,15 @@ process bracken {
 
     # collate the latest bracken outputs into state
     if [[ "${task.index}" != "1" ]]; then
-        cp -r "${state}" "${newstate}"
+        cp -r "${state}" "${new_state}"
     else
         # make fresh directory
-        mkdir "${newstate}"
+        mkdir "${new_state}"
     fi;
 
     # first output here is just for end user
-    mv "${kreports}/${sample_id}.kreport_bracken_species.txt" "${newstate}" || echo "No bracken report"
-    mv "bracken.json" "${newstate}/${sample_id}.json"
+    mv "${kreports}/${sample_id}.kreport_bracken_species.txt" "${new_state}" || echo "No bracken report"
+    mv "bracken.json" "${new_state}/${sample_id}.json"
     """
 }
 
@@ -480,21 +477,13 @@ workflow kraken_pipeline {
                 .transpose()
         }
 
-        // filter reads and calculate stats
-        reads = filterFastq(batch_items)
-
+        // Run Kraken2
+        kraken2_response = kraken2_client(batch_items)
+    
         // progressive stats -- scan doesn't like tuple :/
         stats = progressiveStats.scan(
-            reads.stats.map{ it -> it[1] })
+            kraken2_response.map{ it -> it[2] })
    
-        //  Stop file to input folder when read_limit stop condition is met.
-        if (params.watch_path && params.run_indefinitely == false){
-            stopCondition(stats)
-        }
-
-        // Run Kraken2
-        kraken2_response = kraken2_client(reads.filtered)
-    
         kraken_reports = progressive_kreports.scan(
             kraken2_response.map{ it -> it[1] },
             taxonomy)
@@ -523,6 +512,11 @@ workflow kraken_pipeline {
 
         // Stop server when all are processed
         stop_kraken_server(kraken2_response.collect())
+
+        //  Stop file to input folder when read_limit stop condition is met.
+        if (params.watch_path && params.run_indefinitely == false){
+            stopCondition(stats)
+        }
 
     emit:
         report.report_html  // just emit something

@@ -6,11 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 ### Fixed
-- Add classifier param and only allow running of minimap2 or kraken2 workflow.
+- Issue where discrepancies between taxonomy and databases led to error.
+### Added
+- `nextflow run epi2me-labs/wf-metagenomics --version` will now print the workflow version number and exit.
+### Changed:
+- Parameter name for selecting known database is now `--database_set` (was `--source`).
+- Add classifier parameter and only allow running of minimap2 or kraken2 workflow.
+- Workflow logic in kraken workflow has been reorganised for simpler parallelism.
 ### Removed
 - conda support
-### Added
-- `nextflow run epi2me-labs/wf-metagenomics --version` will now print the workflow version number and exit
   
 ## [v2.0.3]
 ### Fixed
@@ -18,24 +22,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Check if fastq input exists
 
 ## [v2.0.2]
-### Updated
+### Changed
 - Use store directory for database.
 - Use per file kraken_report instead of cumulative.
-- Handling for unclassified with Bracken.
 - Kraken2-server v0.0.8.
+### Added
 - Add a run indefinitely parameter.
 ### Fixed
 - Batch size breaking fastcat step.
 - Consider white space in bracken report.
+- Handling for unclassified with Bracken.
   
 ## [v2.0.1]
 ### Fixed
 - Handling with kraken2 for single input file
-### Updated
+### Removed
 - Removed sanitize option
 
 ## [v2.0.0]
-### Updated
+### Changed
 - Bumped base container to v0.2.0
 - Kraken workflow now in real time mode with watch_path
 - Kraken and Minimap now in subworkflows
