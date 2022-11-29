@@ -37,7 +37,7 @@ process getParams {
 process unpackDatabase {
     label "wfmetagenomics"
     cpus 1
-    storeDir "${params.store_dir}" 
+    storeDir "${params.store_dir}/${database.simpleName}"
     input:
         path database
         path kmer_distribution
@@ -64,7 +64,7 @@ process unpackDatabase {
 process unpackTaxonomy {
     label "wfmetagenomics"
     cpus 1
-    storeDir "${params.store_dir}"
+    storeDir "${params.store_dir}/${taxonomy.simpleName}"
     input:
         path taxonomy
     output:
@@ -487,7 +487,8 @@ workflow kraken_pipeline {
         kraken_reports = progressive_kreports.scan(
             kraken2_response.map{ it -> it[1] },
             taxonomy)
-        bracken_reports = bracken.scan(kraken_reports, database, taxonomy)
+        bracken_reports = bracken.scan(
+            kraken_reports, database, taxonomy, bracken_length)
          
         // report step
         //   Nasty: we assume br.report and stats are similarly ordered, they aren't.
