@@ -17,9 +17,7 @@
                     "type": "string",
                     "format": "path",
                     "description": "A fastq file or directory containing fastq input files or directories of input files.",
-                    "help_text": "If using the kraken2 classifier type, the input must be either a single file or a directory containing sub-directories which themselves contain sequencing reads in fastq files. See Readme for an example.
-
-If using the minimap2 classifier type - directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file.",
+                    "help_text": "If using the kraken2 classifier type, the input must be either a single file or a directory containing sub-directories which themselves contain sequencing reads in fastq files. See Readme for an example.\n\nIf using the minimap2 classifier type - directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file.",
                     "demo_data": "test_data"
                 },
                 "classifier": {
@@ -36,7 +34,7 @@ If using the minimap2 classifier type - directories named \\\"barcode*\\\" are f
                     "type": "integer",
                     "default": 0,
                     "description": "Maximum number of sequence records to process in a batch.",
-                    "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 4000 is recommended to rebatch large files."
+                    "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 32000 is recommended to rebatch large files."
                 },
                 "analyse_unclassified": {
                     "type": "boolean",
