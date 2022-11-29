@@ -17,7 +17,7 @@
                     "type": "string",
                     "format": "path",
                     "description": "A fastq file or directory containing fastq input files or directories of input files.",
-                    "help_text": "If directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file.",
+                    "help_text": "If using the kraken2 classifier type, the input must be either a single file or a directory containing sub-directories which themselves contain sequencing reads in fastq files. See Readme for an example.\n\nIf using the minimap2 classifier type - directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file. \n\n",
                     "demo_data": "test_data"
                 },
                 "classifier": {
@@ -28,7 +28,13 @@
                         "kraken2",
                         "minimap2"
                     ],
-                    "help_text": "Use kraken2 for fast classification and minimap2 for more finer resolution, see read me for further info."
+                    "help_text": "Use kraken2 for fast classification and minimap2 for more finer resolution, see Readme for further info."
+                },
+                "batch_size": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of sequence records to process in a batch.",
+                    "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 4000 is recommended to rebatch large files."
                 },
                 "analyse_unclassified": {
                     "type": "boolean",
@@ -39,6 +45,30 @@
             "required": [
                 "fastq"
             ]
+        },
+        "real_time_analysis_options": {
+            "title": "Real Time Analysis Options",
+            "type": "object",
+            "description": "Options relating to the default real-time Kraken2 workflow.",
+            "default": "",
+            "properties": {
+                "watch_path": {
+                    "type": "boolean",
+                    "description": "Enable to continuously watch the input directory for new input files. Reads will be analysed as they appear",
+                    "help_text": "This option enables the use of Nextflow\u2019s directory watching feature to constantly monitor input directories for new files. As soon as files are written by an external process Nextflow will begin analysing these files. The workflow will accumulate data over time to produce an updating report."
+                },
+                "run_indefinitely": {
+                    "type": "boolean",
+                    "description": "When enabled the workflow will run continuously without stopping. When disabled, set the read_limit option to control when the workflow will stop.",
+                    "default": true,
+                    "help_text": "By default the workflow will indefinitely watch the input directory for new files. It will never stop. Disabling this option allows the workflow to self terminate after a given number of reads have been analysed."
+                },
+                "read_limit": {
+                    "type": "integer",
+                    "description": "Stop processing data when a particular number of reads have been analysed (only used when run_indefinitely is disabled).",
+                    "help_text": "Sets the upper bound on the number of reads that will be analysed before the workflow is automatically stopped and no more data is analysed."
+                }
+            }
         },
         "sample_options": {
             "title": "Sample Options",
@@ -64,12 +94,6 @@
             "description": "Files will be downloaded as part of the first run of workflow and automatically stored for subsequent runs.",
             "default": "",
             "properties": {
-                "taxonomy": {
-                    "type": "string",
-                    "format": "path",
-                    "description": "Latest NCBI taxonomy file will be downloaded and used",
-                    "help_text": "Change the default to use a different taxonomy file  [.tar.gz or Dir]."
-                },
                 "database_set": {
                     "type": "string",
                     "default": "ncbi_16s_18s",
@@ -79,7 +103,19 @@
                         "ncbi_16s_18s_28s_ITS",
                         "PlusPF-8"
                     ],
-                    "help_text": "To override set the taxonomy, database parameter for kraken2 or reference parameter for minimap2."
+                    "help_text": "This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options"
+                },
+                "database": {
+                    "type": "string",
+                    "format": "path",
+                    "description": "Not required but can be used to specifically override kraken2 database [.tar.gz or Directory]",
+                    "help_text": "By default uses database chosen in database_set parameter"
+                },
+                "taxonomy": {
+                    "type": "string",
+                    "format": "path",
+                    "description": "Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory].",
+                    "help_text": "By default NCBI taxonomy file will be downloaded and used"
                 },
                 "store_dir": {
                     "type": "string",
@@ -87,6 +123,12 @@
                     "description": "Where to store initial download of database.",
                     "default": "store_dir",
                     "help_text": "database set selected will be downloaded as part of the workflow and saved in this location, on subsequent runs it will use this as the database. "
+                },
+                "reference": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Override the FASTA reference file selected by the database_set parameter.",
+                    "help_text": "This option should be used in conjunction with the database parameter to specify a custom database"
                 },
                 "database_sets": {
                     "type": "object",
@@ -101,12 +143,6 @@
             "fa_icon": "fas fa-university",
             "help_text": "\nKraken2\nIt is possible to enable classification by kraken2, \nand disable alignment which is a faster but coarser method of \nclassification reliant on the presence of a kraken2 database.\n",
             "properties": {
-                "database": {
-                    "type": "string",
-                    "format": "path",
-                    "description": "Not required but can be used to specifically override database [.tar.gz or Dir]",
-                    "help_text": "By default uses database chosen in database_set parameter"
-                },
                 "bracken_dist": {
                     "type": "string",
                     "format": "file-path",
@@ -115,38 +151,15 @@
                 },
                 "bracken_length": {
                     "type": "integer",
-                    "default": 1000,
                     "description": "Set the length value bracken will use",
                     "minimum": 1,
-                    "help_text": "Should be set to 1000 if using the default kmer file, or whatever length used to generate the kmer distribution file supplied."
-                },
-                "watch_path": {
-                    "type": "boolean",
-                    "description": "Specify if you want the workflow to continuously process input files as they become available in the input --fastq directories.",
-                    "help_text": "See read_limit and run_indefinitely parameters for information on how to stop the watch_path. "
-                },
-                "read_limit": {
-                    "type": "integer",
-                    "description": "Use with watch_path if you don't want workflow to run indefinitely, will STOP pipeline when this number of reads have been processed.,",
-                    "help_text": "Run indefinitely must be set to False for this parameter to be considered."
-                },
-                "run_indefinitely": {
-                    "type": "boolean",
-                    "description": "When used with watch_path will watch indefinitely if set to true",
-                    "default": true,
-                    "help_text": "See read_limit parameter if you set this to false."
-                },
-                "batch_size": {
-                    "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of sequence records to process in a batch.",
-                    "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 4000 is recommended to rebatch large files."
+                    "help_text": "Should be set to the length used to generate the kmer distribution file supplied in the kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 10000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300"
                 },
                 "port": {
                     "type": "integer",
-                    "description": "Port number for the kraken server to use",
+                    "description": "Network port for communication between kraken2 server and clients",
                     "default": 8080,
-                    "help_text": "The workflow uses a server so the workflow only has to load the database once which will be available on this port for the duration of the workflow run."
+                    "help_text": "The workflow uses the server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate"
                 },
                 "bracken_level": {
                     "type": "string",
@@ -170,12 +183,6 @@
             "type": "object",
             "fa_icon": "fas fa-dna",
             "properties": {
-                "reference": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Not required but can be used to specify a reference file [.fna]",
-                    "help_text": "By default uses reference chosen in database_set parameter"
-                },
                 "minimap2filter": {
                     "type": "string",
                     "description": "Filter output of minimap2 by taxids inc. child nodes, E.g. \"9606,1404\"",
@@ -286,6 +293,9 @@
     "allOf": [
         {
             "$ref": "#/definitions/input_options"
+        },
+        {
+            "$ref": "#/definitions/real_time_analysis_options"
         },
         {
             "$ref": "#/definitions/sample_options"
