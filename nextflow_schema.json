@@ -159,7 +159,7 @@
                     "type": "integer",
                     "description": "Network port for communication between kraken2 server and clients",
                     "default": 8080,
-                    "help_text": "The workflow uses the server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate"
+                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate."
                 },
                 "bracken_level": {
                     "type": "string",
