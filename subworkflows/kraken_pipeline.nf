@@ -60,6 +60,23 @@ process unpackDatabase {
     """
 }
 
+process determine_bracken_length {
+    label "wfmetagenomics"
+    input:
+        path database
+    output:
+        env BRACKEN_LENGTH
+    """
+    if [[ -f "${database}"/database${params.bracken_length}mers.kmer_distrib ]]; then
+        BRACKEN_LENGTH="${params.bracken_length}"
+    else
+        cd "${database}"
+        BRACKEN_LENGTH=\$(ls -v1 *.kmer_distrib | tail -1 | sed -e "s@^database@@" -e "s@mers.kmer_distrib@@")
+        cd ..
+    fi
+    """
+}
+
 
 process unpackTaxonomy {
     label "wfmetagenomics"
@@ -320,9 +337,11 @@ process bracken {
         val sample_id_  // this is here because progressive_kreports has to output two things. Could we just use this?
         path database
         path taxonomy
+        val bracken_length
     output:
         path("${new_state}"), emit: reports
         // we have to emit four things!
+        val sample_id_
         val sample_id_
         val sample_id_
         val sample_id_
@@ -340,6 +359,7 @@ process bracken {
         // If sample_id contains a "." this will break
         sample_id = "${kreports}".split(/\./)[2]
         def awktab="awk -F '\t' -v OFS='\t'"
+        def bracken_len = bracken_length.getAt(0)
     """
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
@@ -347,7 +367,7 @@ process bracken {
     run_bracken.py \
         "${database}" \
         "${kreports}/${sample_id}.kreport.txt" \
-        "${params.bracken_length}" \
+        "${bracken_len}" \
         "${params.bracken_level}" \
         "${sample_id}.bracken_report.txt"
 
@@ -434,8 +454,8 @@ workflow kraken_pipeline {
         taxonomy = unpackTaxonomy(taxonomy)
         
         database = unpackDatabase(database, kmer_distribution)
+        bracken_length = determine_bracken_length(database)
         kraken_server(database)
-        
         input = file("${params.fastq}")
         if (input.isFile()){
             if (params.watch_path) {
