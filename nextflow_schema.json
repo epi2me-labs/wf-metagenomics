@@ -262,7 +262,7 @@
                 "wfversion": {
                     "type": "string",
                     "description": "Workflow version.",
-                    "default": "v2.0.3",
+                    "default": "v2.0.4",
                     "hidden": true
                 },
                 "version": {
