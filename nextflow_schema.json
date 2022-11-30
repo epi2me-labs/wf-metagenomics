@@ -57,15 +57,9 @@
                     "description": "Enable to continuously watch the input directory for new input files. Reads will be analysed as they appear",
                     "help_text": "This option enables the use of Nextflow\u2019s directory watching feature to constantly monitor input directories for new files. As soon as files are written by an external process Nextflow will begin analysing these files. The workflow will accumulate data over time to produce an updating report."
                 },
-                "run_indefinitely": {
-                    "type": "boolean",
-                    "description": "When enabled the workflow will run continuously without stopping. When disabled, set the read_limit option to control when the workflow will stop.",
-                    "default": true,
-                    "help_text": "By default the workflow will indefinitely watch the input directory for new files. It will never stop. Disabling this option allows the workflow to self terminate after a given number of reads have been analysed."
-                },
                 "read_limit": {
                     "type": "integer",
-                    "description": "Stop processing data when a particular number of reads have been analysed (only used when run_indefinitely is disabled).",
+                    "description": "Stop processing data when a particular number of reads have been analysed. By default the workflow will run indefinitely.",
                     "help_text": "Sets the upper bound on the number of reads that will be analysed before the workflow is automatically stopped and no more data is analysed."
                 }
             }

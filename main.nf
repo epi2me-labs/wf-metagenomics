@@ -131,11 +131,11 @@ workflow {
             kmer_distribution = file(sources[source_name]["kmer_dist"], type: "file")
         }
         // check combination of params are set
-        if (params.watch_path && !params.run_indefinitely){
+        if (params.watch_path){
             if (!params.read_limit){
-                throw new Exception("Must specify read limit parameter if run indefinitely is false")
+                log.info("Workflow will run indefinitely as no read_limit is set.")
             }
-            log.info("Workflow will stop processing files after ${params.read_limit} reads when run_indefinitely is set to False")  
+            log.info("Workflow will stop processing files after ${params.read_limit} reads.")  
         }
         results = kraken_pipeline(
             taxonomy, database, kmer_distribution, template)

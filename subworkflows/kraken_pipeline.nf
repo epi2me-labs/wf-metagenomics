@@ -138,7 +138,7 @@ process stopCondition {
     """    
     #!/usr/bin/env python
     import json
-    with open("$json/all_stats.json") as json_file:
+    with open("$json") as json_file:
         state = json.load(json_file)
         total = 0 
         for k,v in state.items():
@@ -535,7 +535,7 @@ workflow kraken_pipeline {
         stop_kraken_server(kraken2_response.collect())
 
         //  Stop file to input folder when read_limit stop condition is met.
-        if (params.watch_path && params.run_indefinitely == false){
+        if (params.watch_path && params.read_limit){
             stopCondition(stats)
         }
 
