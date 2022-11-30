@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add classifier parameter and only allow running of minimap2 or kraken2 workflow.
 - Workflow logic in kraken workflow has been reorganised for simpler parallelism.
 ### Removed
-- conda support
+- Conda support
+- `--run_indefinitely` parameter removed, instead implied when `--read_limit` set to null.
   
 ## [v2.0.3]
 ### Fixed
