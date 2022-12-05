@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
     "title": "epi2me-labs/wf-metagenomics",
-    "description": "General purpose metagenomics workflow using kraken2 or minimap2",
+    "description": "Identification of the origin of single reads from both amplicon-targeted and shotgun metagenomics sequencing.",
     "demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz",
     "url": "https://github.com/epi2me-labs/wf-metagenomics",
     "type": "object",
@@ -16,7 +16,7 @@
                 "fastq": {
                     "type": "string",
                     "format": "path",
-                    "description": "A fastq file or directory containing fastq input files or directories of input files.",
+                    "description": "A fastq file or a directory of directories containing fastq input files.",
                     "help_text": "If using the kraken2 classifier type, the input must be either a single file or a directory containing sub-directories which themselves contain sequencing reads in fastq files. See Readme for an example.\n\nIf using the minimap2 classifier type - directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file.",
                     "demo_data": "test_data"
                 },
@@ -262,7 +262,7 @@
                 "wfversion": {
                     "type": "string",
                     "description": "Workflow version.",
-                    "default": "v2.0.5",
+                    "default": "v2.0.6",
                     "hidden": true
                 },
                 "version": {
