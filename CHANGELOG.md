@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Issue where discrepancies between taxonomy and databases led to error.
 ### Added
 - `nextflow run epi2me-labs/wf-metagenomics --version` will now print the workflow version number and exit.
-### Changed:
+### Changed
 - Parameter name for selecting known database is now `--database_set` (was `--source`).
 - Add classifier parameter and only allow running of minimap2 or kraken2 workflow.
 - Workflow logic in kraken workflow has been reorganised for simpler parallelism.
@@ -49,13 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed sanitize option
 
 ## [v2.0.0]
+### Fixed
+- Output argument in Fastqingress homogenised.
 ### Changed
 - Bumped base container to v0.2.0
 - Kraken workflow now in real time mode with watch_path
 - Kraken and Minimap now in subworkflows
-### Fixed
-- Output argument in Fastqingress homogenised.
-### Changed
 - Fastqingress metadata map
 - Can only run Kraken or Minimap subworkflow not both
 - Better help text on cli
@@ -64,29 +63,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v1.1.4]
 
-## Added
+### Added
 - pluspf8, ncbi_16s_18s_28s_ITS databases
 - Add all sample tool combinations to report
-## Changed
+### Changed
 - Enable kraken2 by default
 - Clarify error messages
-## Fixed
+### Fixed
 - Handle no assignments bracken error
 
 ## [v1.1.3]
 
-## Added
+### Added
 - New docs format.
 - Render bokeh.
 
 ## [v1.1.2]
 
-## Changed
+### Changed
 - Update nextflow_schema.json
 
 ## [v1.1.1]
 
-## Fixed
+### Fixed
 - Overriding taxonomy now works correctly
 - Added missing threads param to kraken2
 
