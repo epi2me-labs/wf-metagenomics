@@ -333,56 +333,41 @@ process bracken {
     maxForks 1
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "bracken"}, overwrite: true
     input:
-        path inputs
-        val sample_id_  // this is here because progressive_kreports has to output two things. Could we just use this?
-        path database
-        path taxonomy
-        val bracken_length
+        path(inputs)
+        tuple path(database), path(taxonomy), val(bracken_length)
     output:
         path("${new_state}"), emit: reports
-        // we have to emit four things!
-        val sample_id_
-        val sample_id_
-        val sample_id_
-        val sample_id_
+        tuple path(database), path(taxonomy), val(bracken_length)
     script:
         new_state = "bracken.${task.index}"
-        def kreports = ""
-        if (inputs instanceof BlankSeparatedList){
-            // second and subsequent iterations
-            kreports = inputs.getAt(0); state = inputs.getAt(-1)
-        }
-        else {
-            // first iteration
-            kreports = inputs; state = "NOSTATE"
-        }
+        def kreports = inputs instanceof List ? inputs.first() : inputs
+        def state    = inputs instanceof List ? inputs.last() : "NOSTATE"
         // If sample_id contains a "." this will break
         sample_id = "${kreports}".split(/\./)[2]
         def awktab="awk -F '\t' -v OFS='\t'"
-        def bracken_len = bracken_length.getAt(0)
     """
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
     # is written alongside the input
-    run_bracken.py \
-        "${database}" \
-        "${kreports}/${sample_id}.kreport.txt" \
-        "${bracken_len}" \
-        "${params.bracken_level}" \
+    run_bracken.py \\
+        "${database}" \\
+        "${kreports}/${sample_id}.kreport.txt" \\
+        "${bracken_length}" \\
+        "${params.bracken_level}" \\
         "${sample_id}.bracken_report.txt"
 
     # do some stuff...
-    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \
-        | ${awktab} 'NR!=1 {print}' \
-        | tee taxacounts.txt \
+    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \\
+        | ${awktab} 'NR!=1 {print}' \\
+        | tee taxacounts.txt \\
         | ${awktab} '{ print \$1 }' > taxa.txt
     taxonkit lineage \
-        -j ${task.cpus} \
-        --data-dir $taxonomy \
+        -j ${task.cpus} \\
+        --data-dir $taxonomy \\
         -R taxa.txt  > lineages.txt
-    aggregate_lineages_bracken.py \
-        -i "lineages.txt" -b "taxacounts.txt" \
-        -u "${kreports}/${sample_id}.kreport.txt" \
+    aggregate_lineages_bracken.py \\
+        -i "lineages.txt" -b "taxacounts.txt" \\
+        -u "${kreports}/${sample_id}.kreport.txt" \\
         -p "${sample_id}.kraken2"
 
     file1=`cat *.json`
@@ -498,18 +483,26 @@ workflow kraken_pipeline {
         }
 
         // Run Kraken2
-        kraken2_response = kraken2_client(batch_items)
+        kraken2_client(batch_items)
     
         // progressive stats -- scan doesn't like tuple :/
         stats = progressiveStats.scan(
-            kraken2_response.map{ it -> it[2] })
-   
-        kraken_reports = progressive_kreports.scan(
-            kraken2_response.map{ it -> it[1] },
-            taxonomy)
-        bracken_reports = bracken.scan(
-            kraken_reports, database, taxonomy, bracken_length)
-         
+            kraken2_client.out.map { id, report, json -> json },
+        )
+
+        progressive_kreports.scan(
+            kraken2_client.out.map { id, report, json -> report },
+            taxonomy
+        )
+
+        database
+        .combine( taxonomy )
+        .combine( bracken_length )
+        .first() // To ensure value channel
+        .set { bracken_inputs }
+
+        bracken.scan( progressive_kreports.out.reports, bracken_inputs )
+
         // report step
         //   Nasty: we assume br.report and stats are similarly ordered, they aren't.
         //   This doesn't matter too much as stats is read lengths and qualities: its
@@ -524,7 +517,7 @@ workflow kraken_pipeline {
             .combine(versions)
             .combine(parameters)
             .combine(Channel.of(template))
-        report = makeReport(bracken_reports.reports, stuff)
+        report = makeReport(bracken.out.reports, stuff)
 
         // output updating files as part of this pipeline
         output(report.report_html.mix(
@@ -532,7 +525,7 @@ workflow kraken_pipeline {
         )
 
         // Stop server when all are processed
-        stop_kraken_server(kraken2_response.collect())
+        stop_kraken_server(kraken2_client.out.collect())
 
         //  Stop file to input folder when read_limit stop condition is met.
         if (params.watch_path && params.read_limit){
