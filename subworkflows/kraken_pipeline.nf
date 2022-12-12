@@ -241,7 +241,7 @@ process stop_kraken_server {
 //
 // Nextflow scan does a silly thing where it feeds back the growing list of
 // historical outputs. We only ever need the most recent output (the "state").
-process progressiveStats {
+process progressive_stats {
     label "wfmetagenomics"
     maxForks 1
     cpus 1
@@ -249,14 +249,9 @@ process progressiveStats {
         path fastcat_stats
     output:
         path("all_stats.${task.index}")
-    script: 
-        if (fastcat_stats instanceof BlankSeparatedList) {
-            new_input = fastcat_stats.getAt(0);
-            state = fastcat_stats.getAt(-1)
-        } else { 
-            new_input = fastcat_stats;
-            state = "NOSTATE"
-        }
+    script:
+        new_input = fastcat_stats instanceof BlankSeparatedList ? fastcat_stats.first() : fastcat_stats
+        state = fastcat_stats instanceof BlankSeparatedList ? fastcat_stats.last() : "NOSTATE"
         output = "all_stats.${task.index}"
     """
     touch "${state}"
@@ -267,41 +262,32 @@ process progressiveStats {
 
 // Combine kraken reports scan step
 //
-// Nextflow scan does a silly thing where it feeds back the growing list of
-// historical outputs. We only ever need the most recent output (the "state").
 // Our state here is a directory of aggregated kraken2 reports, one file per
 // sample. The state is named with the task.index so its unique, and also
-// with the sample_id just analysed (see below for why).
+// with the sample_id just analysed.
 //
 // Every new input to the process is a kraken report for a single sample. We
 // don't want to update all aggregated reports, just the report for the sample
 // of the latest report received. Scan cannot handle a tuple as a piece of
 // state because the input channel is bodged to contain a list of the newest
-// input and the growing list -- so we have to grotesquely pull out the sample_id
-// from the file name.
-//
-// - maxForks is one to keep things in order, but this step can be slow.
-process progressive_kreports {
+// input and the growing list -- so we have to grotesquely pass the sample_id
+// in a second channel (that is also accumulating).
+process progressive_kraken_reports {
     label "wfmetagenomics"
     maxForks 1 
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "kraken"}, overwrite: true
     input:
         path kreport
+        val sample_ids
         path taxonomy
     output:
         path("kraken.${task.index}.${sample_id}"), emit: reports
-        val sample_id
+        val(sample_id), emit: sample_id
+        path taxonomy
     script:
-        if (kreport instanceof BlankSeparatedList){
-            // second and subsequent iterations
-            new_input =  kreport.getAt(0); state = kreport.getAt(-1)
-        }
-        else {
-            // first iteration
-            new_input = kreport; state = "NOSTATE"
-        }
-        // If sample_id contains a "." this will break
-        sample_id = "${new_input}".split(/\./)[0]
+        def new_input = kreport instanceof List ? kreport.first() : kreport
+        def state = kreport instanceof List ? kreport.last() : "NOSTATE"
+        sample_id = sample_ids instanceof List ? sample_ids.first() : sample_ids
         new_state = "kraken.${task.index}.${sample_id}"
         // n.b where this is used below the files will have been moved, hence new_state
         old_input = "${new_state}/${sample_id}.kreport.txt"
@@ -323,66 +309,52 @@ process progressive_kreports {
 
 // Calculate up-to-date bracken information for latest analysed sample.
 // 
-// The kraken.scan process gives a directory of aggregated kraken2 reports named
-// with the sample_id which was most recently updated. Here we rerun bracken
+// The kraken.scan process gives a directory of aggregated kraken2 reports
+// together with the sample_id which was most recently updated. Here we rerun bracken
 // on that sample and output the results to an updating directory of per sample
 // bracken results.
-process bracken {
+process progressive_bracken {
     label "wfmetagenomics"
     cpus 2
     maxForks 1
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "bracken"}, overwrite: true
     input:
-        path inputs
-        val sample_id_  // this is here because progressive_kreports has to output two things. Could we just use this?
-        path database
-        path taxonomy
-        val bracken_length
+        path(inputs)
+        val(sample_ids)
+        tuple path(database), path(taxonomy), val(bracken_length)
     output:
         path("${new_state}"), emit: reports
-        // we have to emit four things!
-        val sample_id_
-        val sample_id_
-        val sample_id_
-        val sample_id_
+        val(sample_id), emit: sample_id
+        tuple path(database), path(taxonomy), val(bracken_length)
     script:
         new_state = "bracken.${task.index}"
-        def kreports = ""
-        if (inputs instanceof BlankSeparatedList){
-            // second and subsequent iterations
-            kreports = inputs.getAt(0); state = inputs.getAt(-1)
-        }
-        else {
-            // first iteration
-            kreports = inputs; state = "NOSTATE"
-        }
-        // If sample_id contains a "." this will break
-        sample_id = "${kreports}".split(/\./)[2]
+        def kreports = inputs instanceof List ? inputs.first() : inputs
+        def state = inputs instanceof List ? inputs.last() : "NOSTATE"
+        sample_id = sample_ids instanceof List ? sample_ids.first(): sample_ids
         def awktab="awk -F '\t' -v OFS='\t'"
-        def bracken_len = bracken_length.getAt(0)
     """
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
     # is written alongside the input
-    run_bracken.py \
-        "${database}" \
-        "${kreports}/${sample_id}.kreport.txt" \
-        "${bracken_len}" \
-        "${params.bracken_level}" \
+    run_bracken.py \\
+        "${database}" \\
+        "${kreports}/${sample_id}.kreport.txt" \\
+        "${bracken_length}" \\
+        "${params.bracken_level}" \\
         "${sample_id}.bracken_report.txt"
 
     # do some stuff...
-    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \
-        | ${awktab} 'NR!=1 {print}' \
-        | tee taxacounts.txt \
+    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \\
+        | ${awktab} 'NR!=1 {print}' \\
+        | tee taxacounts.txt \\
         | ${awktab} '{ print \$1 }' > taxa.txt
     taxonkit lineage \
-        -j ${task.cpus} \
-        --data-dir $taxonomy \
+        -j ${task.cpus} \\
+        --data-dir $taxonomy \\
         -R taxa.txt  > lineages.txt
-    aggregate_lineages_bracken.py \
-        -i "lineages.txt" -b "taxacounts.txt" \
-        -u "${kreports}/${sample_id}.kreport.txt" \
+    aggregate_lineages_bracken.py \\
+        -i "lineages.txt" -b "taxacounts.txt" \\
+        -u "${kreports}/${sample_id}.kreport.txt" \\
         -p "${sample_id}.kraken2"
 
     file1=`cat *.json`
@@ -498,33 +470,45 @@ workflow kraken_pipeline {
         }
 
         // Run Kraken2
-        kraken2_response = kraken2_client(batch_items)
+        kraken2_client(batch_items)
     
         // progressive stats -- scan doesn't like tuple :/
-        stats = progressiveStats.scan(
-            kraken2_response.map{ it -> it[2] })
-   
-        kraken_reports = progressive_kreports.scan(
-            kraken2_response.map{ it -> it[1] },
-            taxonomy)
-        bracken_reports = bracken.scan(
-            kraken_reports, database, taxonomy, bracken_length)
-         
-        // report step
-        //   Nasty: we assume br.report and stats are similarly ordered, they aren't.
-        //   This doesn't matter too much as stats is read lengths and qualities: its
-        //   not going to lead to grossly contradictory results. .merge() is deprecated
-        //   so just ram the channels into the process. The alternative is needing to add
-        //   keys into br.report and stats, but thats difficult because process.scan doesn't
-        //   accept scan, because, ya know, reasons.
+        stats = progressive_stats.scan(
+            kraken2_client.out.map { id, report, json -> json },
+        )
 
+        kraken2_client.out.multiMap {
+            id, rep, json ->
+                sample_id: id
+                report: rep
+            }
+            .set { scan_input }
+        progressive_kraken_reports.scan(
+            scan_input.report, scan_input.sample_id, 
+            taxonomy)
+
+        database
+            .combine(taxonomy)
+            .combine(bracken_length)
+            .first() // To ensure value channel for scan
+            .set {bracken_inputs}
+
+        progressive_bracken.scan(
+            progressive_kraken_reports.out.reports, progressive_kraken_reports.out.sample_id,
+            bracken_inputs)
+
+        // report step
+        // Nasty: we assume br.report and stats are similarly
+        // ordered. This is find because everything has been through scan and
+        // is therefore necessarily ordered. This could be tidied up by passing
+        // through a job id but that seems unneccessary at this point.
         versions = getVersions().collect()
         parameters = getParams().collect()
         stuff = stats
             .combine(versions)
             .combine(parameters)
             .combine(Channel.of(template))
-        report = makeReport(bracken_reports.reports, stuff)
+        report = makeReport(progressive_bracken.out.reports, stuff)
 
         // output updating files as part of this pipeline
         output(report.report_html.mix(
@@ -532,7 +516,7 @@ workflow kraken_pipeline {
         )
 
         // Stop server when all are processed
-        stop_kraken_server(kraken2_response.collect())
+        stop_kraken_server(kraken2_client.out.collect())
 
         //  Stop file to input folder when read_limit stop condition is met.
         if (params.watch_path && params.read_limit){
