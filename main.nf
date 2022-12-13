@@ -92,7 +92,6 @@ workflow {
         "sample_sheet":params.sample_sheet,
         "unclassified":params.analyse_unclassified])
 
-
         results = minimap_pipeline(
             samples, reference, refindex, ref2taxid, taxonomy,
             template)
@@ -102,6 +101,13 @@ workflow {
     database = null
     kmer_distribution = null
     if ("${params.classifier}" == "kraken2") {
+        if (params.sample_sheet != null) {
+            log.info("The `sample_sheet` parameter is not used in the kraken2 classifier mode.")
+        }
+        if (params.sample != null) {
+            log.info("The `sample` parameter is not used in the kraken2 classifier mode.")
+        }
+
         // kraken2.tar.gz
         if (params.database) {
             log.info("Checking custom kraken2 database exists")
@@ -139,9 +145,7 @@ workflow {
         }
         results = kraken_pipeline(
             taxonomy, database, kmer_distribution, template)
-
     }
-
 }
 
 
