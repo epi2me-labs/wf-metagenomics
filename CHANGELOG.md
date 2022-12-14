@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v2.0.7]
 ### Fixed
 - Issue where processing more than ~28 input files lead to excessive memory use.
+- Minor typos in docs.
 
 ## [v2.0.6]
 ### Changed
