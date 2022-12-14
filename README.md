@@ -2,7 +2,8 @@
 
 wf-metagenomics is a Nextflow workflow for identification of the origin of single reads from both amplicon-targeted and shotgun metagenomics sequencing. The workflow has two modes of operation, it can use either [kraken2](https://ccb.jhu.edu/software/kraken2/) or [minimap2](https://github.com/lh3/minimap2) to determine the origin of reads.
 
-The kraken2 mode can be used in real-time, allowing the workflow to run continuously alongside an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies' sequencing instrument. The user can visualise the calssification of reads and species abundances in a real-time updating report.
+The kraken2 mode can be used in real-time, allowing the workflow to run continuously alongside an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies' sequencing instrument. The user can visualise the classification of reads and species abundances in a real-time updating report.
+
 ## Introduction
 
 wf-metagenomics offers two different approaches to assigning sequence reads to a species:
@@ -44,11 +45,11 @@ to see the options for the workflow.
 
 The main options are 
 
-*`fastq`: A fastq file or directory containing fastq input files or directories of input files. 
-*`kraken2`: When set to true will run the analysis with Kraken2 and Bracken
-*`minimap2`: When set to true will run the analysis with minimap2
-*`watch_path`: Used to run the workflow in real-time, will continue to watch until a "STOP.fastq" is found
-*`read_limit`: Used in combination with watch_path the specify an end point
+* `fastq`: A fastq file or directory containing fastq input files or directories of input files. 
+* `kraken2`: When set to true will run the analysis with Kraken2 and Bracken
+* `minimap2`: When set to true will run the analysis with minimap2
+* `watch_path`: Used to run the workflow in real-time, will continue to watch until a "STOP.fastq" is found
+* `read_limit`: Used in combination with watch_path the specify an end point
 
 ***Kraken2***
 
@@ -64,7 +65,7 @@ You can also run the workflow in real-time, meaning the workflow will watch the 
 
 When using the real-time functionality of the workflow, the input directory must contain sub-directories which themselves contain sequencing reads in fastq files. The is in contrast to the standard workflow which will accept reads provided as a single file or fastq files directly under the provided input directory.
 
-The below is therefore the only input layout supported by the real-time functionality (the names of the child directories is unrestricted):
+The below is therefore the only input layout supported by the real-time functionality (the names of the child directories are unrestricted):
 
 eg.
 
