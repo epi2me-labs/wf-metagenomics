@@ -25,11 +25,11 @@ to see the options for the workflow.
 
 The main options are 
 
-*`fastq`: A fastq file or directory containing fastq input files or directories of input files. 
-*`kraken2`: When set to true will run the analysis with Kraken2 and Bracken
-*`minimap2`: When set to true will run the analysis with minimap2
-*`watch_path`: Used to run the workflow in real-time, will continue to watch until a "STOP.fastq" is found
-*`read_limit`: Used in combination with watch_path the specify an end point
+* `fastq`: A fastq file or directory containing fastq input files or directories of input files. 
+* `kraken2`: When set to true will run the analysis with Kraken2 and Bracken
+* `minimap2`: When set to true will run the analysis with minimap2
+* `watch_path`: Used to run the workflow in real-time, will continue to watch until a "STOP.fastq" is found
+* `read_limit`: Used in combination with watch_path the specify an end point
 
 ***Kraken2***
 
@@ -45,7 +45,7 @@ You can also run the workflow in real-time, meaning the workflow will watch the 
 
 When using the real-time functionality of the workflow, the input directory must contain sub-directories which themselves contain sequencing reads in fastq files. The is in contrast to the standard workflow which will accept reads provided as a single file or fastq files directly under the provided input directory.
 
-The below is therefore the only input layout supported by the real-time functionality (the names of the child directories is unrestricted):
+The below is therefore the only input layout supported by the real-time functionality (the names of the child directories are unrestricted):
 
 eg.
 
