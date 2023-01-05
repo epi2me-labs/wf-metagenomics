@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 ### Fixed
-- example_cmd in config
+- Example_cmd in config.
+- Minimap2 subworkflow fixed for when no alignments.
+- Remove quality 10 parameter from Minimap2 subworkflow.
 
 ## [v2.0.7]
 ### Fixed

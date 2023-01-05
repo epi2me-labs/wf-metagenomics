@@ -39,13 +39,12 @@ process combineFilterFastq {
             path("${meta.sample_id}.stats"),
             emit: stats)
     script:
-        def max_length = "${params.max_len}"== null ? '' : "-b ${params.max_len}"
+        def max_length = "${params.max_len}"== null ? "-b ${params.max_len}" : ""
     shell:
     """
     fastcat \
         -a "${params.min_len}" \
         ${max_length} \
-        -q 10 \
         -s "${meta.sample_id}" \
         -r "${meta.sample_id}.stats" \
         -x "${directory}" > "${meta.sample_id}.fastq"
@@ -106,13 +105,13 @@ process extractMinimap2Reads {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple val(sample_id), path(bam), file(bai)
+        tuple val(sample_id), path("alignment.bam"), path("alignment.bai")
         path ref2taxid
         path taxonomy
     output:
         tuple(
             val(sample_id),
-            path("*extracted.fastq"),
+            path("${sample_id}.minimap2.extracted.fastq"),
             emit: extracted)
     script:
         def policy = params.minimap2exclude ? '--exclude' : ""
@@ -121,8 +120,9 @@ process extractMinimap2Reads {
         --data-dir "${taxonomy}" \
         list -i "${params.minimap2filter}" \
         --indent "" > taxids.tmp
+    samtools view -b -F 4 "alignment.bam" > "mapped.bam"
     extract_minimap2_reads.py \
-        "${bam}" \
+        "mapped.bam" \
         -r "${ref2taxid}" \
         -o "${sample_id}.minimap2.extracted.fastq" \
         -t taxids.tmp \
