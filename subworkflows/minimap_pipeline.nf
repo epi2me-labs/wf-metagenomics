@@ -84,14 +84,14 @@ process minimap {
     """
     minimap2 -t "${task.cpus}" ${split} -ax map-ont "${reference}" "${reads}" \
     | samtools view -h -F 2304 - \
-    | format_minimap2.py - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
+    | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
     | samtools sort -o "${sample_id}.bam" -
     samtools index "${sample_id}.bam"
     awk -F '\\t' '{print \$3}' "${sample_id}.minimap2.assignments.tsv" > taxids.tmp
     taxonkit \
         --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
-        | aggregate_lineages.py -p "${sample_id}.minimap2"
+        | workflow-glue aggregate_lineages -p "${sample_id}.minimap2"
     file1=`cat *.json`
     echo "{"'"$sample_id"'": "\$file1"}" >> temp
     cp "temp" "${sample_id}.json"
@@ -121,7 +121,7 @@ process extractMinimap2Reads {
         list -i "${params.minimap2filter}" \
         --indent "" > taxids.tmp
     samtools view -b -F 4 "alignment.bam" > "mapped.bam"
-    extract_minimap2_reads.py \
+    workflow-glue extract_minimap2_reads \
         "mapped.bam" \
         -r "${ref2taxid}" \
         -o "${sample_id}.minimap2.extracted.fastq" \
@@ -176,7 +176,7 @@ process makeReport {
     script:
         report_name = "wf-metagenomics-report.html"
     """
-    report.py \
+    workflow-glue report \
         "${report_name}" \
         --versions versions \
         --params params.json \
@@ -187,7 +187,7 @@ process makeReport {
     """
 }
 
-
+ 
 // See https://github.com/nextflow-io/nextflow/issues/1636
 // This is the only way to publish files from a workflow whilst
 // decoupling the publish from the process steps.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Script to create an aggregated count from lineage data."""
-import argparse
 import json
 import sys
+from .util import wf_parser  # noqa: ABS101
 
 UNCLASSIFIED = 'Unclassified'
 UNKNOWN = 'Unknown'
@@ -74,8 +74,12 @@ def yield_entries(entries, total, indent=0):
             yield k
 
 
-def main(prefix, lineages, bracken, report):
+def main(args):
     """Run lineage aggregation algorithm."""
+    lineages = args.lineages
+    prefix = args.prefix
+    bracken = args.bracken
+    report = args.report
     bracken_counts = {}
     entries = {}
     total = 0
@@ -112,11 +116,9 @@ def main(prefix, lineages, bracken, report):
     output_json.write(json.dumps(entries))
 
 
-def execute():
-    """Parse command line arguments and run main."""
-    parser = argparse.ArgumentParser(
-        description="Aggregates lineage counts in a kraken2-like format",
-    )
+def argparser():
+    """Create argument parser."""
+    parser = wf_parser("aggregate_lineages_bracken")
     parser.add_argument(
         '-i',
         help=(
@@ -147,16 +149,9 @@ def execute():
         dest="prefix",
         required=True,
     )
-
-    args = parser.parse_args()
-
-    main(
-        lineages=args.lineages,
-        prefix=args.prefix,
-        bracken=args.bracken,
-        report=args.report
-    )
+    return parser
 
 
 if __name__ == "__main__":
-    execute()
+    args = argparser().parse_args()
+    main(args)
