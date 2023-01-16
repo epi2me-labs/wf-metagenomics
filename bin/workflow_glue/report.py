@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """Create workflow report."""
-import argparse
 import json
 import os
 
@@ -14,6 +13,7 @@ from bokeh.plotting import figure
 from bokeh.resources import INLINE
 from jinja2 import Template
 import pandas as pd
+from .util import wf_parser  # noqa: ABS101
 
 
 def read_files(summaries, sep='\t'):
@@ -109,35 +109,8 @@ def minimap(summary, report):
             ))
 
 
-def main():
+def main(args):
     """Run the entry point."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("report", help="Report output file")
-    parser.add_argument(
-        "--summaries", nargs='+', required=True,
-        help="Read summary file.")
-    parser.add_argument(
-        "--lineages", nargs='+', required=True,
-        help="Read lineage file.")
-    parser.add_argument(
-        "--vistempl", required=True)
-    parser.add_argument(
-        "--versions", required=True,
-        help="directory containing CSVs containing name,version.")
-    parser.add_argument(
-        "--params", default=None, required=True,
-        help="A JSON file containing the workflow parameter key/values")
-    parser.add_argument(
-        "--revision", default='unknown',
-        help="git branch/tag of the executed workflow")
-    parser.add_argument(
-        "--commit", default='unknown',
-        help="git commit of the executed workflow")
-    parser.add_argument(
-        "--pipeline", default='unknown',
-        help="kraken or minimap")
-    args = parser.parse_args()
-
     report = WFReport(
         "Workflow Metagenomics Report", "wf-metagenomics",
         revision=args.revision, commit=args.commit)
@@ -183,5 +156,36 @@ def main():
     report.write(args.report)
 
 
+def argparser():
+    """Argument parser for entrypoint."""
+    parser = wf_parser("report")
+    parser.add_argument("report", help="Report output file")
+    parser.add_argument(
+        "--summaries", nargs='+', required=True,
+        help="Read summary file.")
+    parser.add_argument(
+        "--lineages", nargs='+', required=True,
+        help="Read lineage file.")
+    parser.add_argument(
+        "--vistempl", required=True)
+    parser.add_argument(
+        "--versions", required=True,
+        help="directory containing CSVs containing name,version.")
+    parser.add_argument(
+        "--params", default=None, required=True,
+        help="A JSON file containing the workflow parameter key/values")
+    parser.add_argument(
+        "--revision", default='unknown',
+        help="git branch/tag of the executed workflow")
+    parser.add_argument(
+        "--commit", default='unknown',
+        help="git commit of the executed workflow")
+    parser.add_argument(
+        "--pipeline", default='unknown',
+        help="kraken or minimap")
+    return parser
+
+
 if __name__ == "__main__":
-    main()
+    args = argparser().parse_args()
+    main(args)

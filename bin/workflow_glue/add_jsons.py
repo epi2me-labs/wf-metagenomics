@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """Histogram-json."""
 
-import argparse
 import json
 import os
+
+from .util import wf_parser  # noqa: ABS101
 
 
 def add_dicts(d1, d2):
@@ -23,14 +24,8 @@ def add_dicts(d1, d2):
     return result
 
 
-def main():
+def main(args):
     """Run the entry point."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("new_file")
-    parser.add_argument("state")
-    parser.add_argument("output")
-
-    args = parser.parse_args()
     if os.stat(args.state).st_size == 0:
         state = {}
     else:
@@ -43,5 +38,15 @@ def main():
         json.dump(combined, outfile)
 
 
+def argparser():
+    """Create argument parser."""
+    parser = wf_parser("add_jsons")
+    parser.add_argument("new_file")
+    parser.add_argument("state")
+    parser.add_argument("output")
+    return parser
+
+
 if __name__ == "__main__":
-    main()
+    args = argparser().parse_args()
+    main(args)

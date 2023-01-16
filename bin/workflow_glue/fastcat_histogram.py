@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Histogram-json."""
 
-import argparse
 import json
 import sys
 
 import numpy as np
 import pandas as pd
+from .util import wf_parser  # noqa: ABS101
 
 
 def histogram_counts(data, dmin=0, bin_width=100):
@@ -37,16 +37,8 @@ def get_stats(seq_summary):
     return stats_json
 
 
-def main():
+def main(args):
     """Run the entry point."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "input", help="Read summary file.")
-    parser.add_argument(
-        "output", help="Output summary JSON.")
-    parser.add_argument(
-        "--sample_id", help="Sample name.")
-    args = parser.parse_args()
     df = pd.read_csv(
         args.input, sep="\t",
         usecols=['read_length', 'mean_quality'],
@@ -56,5 +48,13 @@ def main():
         json.dump(final, fp)
 
 
-if __name__ == "__main__":
-    main()
+def argparser():
+    """Argument parser for entrypoint."""
+    parser = wf_parser("fastcat_histogram")
+    parser.add_argument(
+        "input", help="Read summary file.")
+    parser.add_argument(
+        "output", help="Output summary JSON.")
+    parser.add_argument(
+        "--sample_id", help="Sample name.")
+    return parser

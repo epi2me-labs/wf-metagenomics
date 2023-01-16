@@ -1,23 +1,15 @@
 #!/usr/bin/env python
 """Script to run bracken or create empty output."""
-import argparse
 import pathlib
 import subprocess
 import sys
 
 import pandas as pd
+from .util import wf_parser  # noqa: ABS101
 
 
-def main():
+def main(args):
     """Run entry point."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('database')
-    parser.add_argument('kraken2_report')
-    parser.add_argument('bracken_length')
-    parser.add_argument('bracken_level')
-    parser.add_argument('output')
-    args = parser.parse_args()
-
     df_kraken2_report = pd.read_csv(
         args.kraken2_report, sep='\t',
         names=["Perc", "Count_Children", "Count_Exact", "Rank", "ID", "Name"])
@@ -55,5 +47,17 @@ def main():
     sys.exit(ret.returncode)
 
 
-if __name__ == '__main__':
-    main()
+def argparser():
+    """Argument parser for entrypoint."""
+    parser = wf_parser("run_bracken")
+    parser.add_argument('database')
+    parser.add_argument('kraken2_report')
+    parser.add_argument('bracken_length')
+    parser.add_argument('bracken_level')
+    parser.add_argument('output')
+    return parser
+
+
+if __name__ == "__main__":
+    args = argparser().parse_args()
+    main(args)

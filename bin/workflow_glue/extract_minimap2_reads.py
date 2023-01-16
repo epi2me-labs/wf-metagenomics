@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """Filter alignments by target reference taxid and write fastq."""
-import argparse
 import sys
 
 import pandas as pd
 from pysam import AlignmentFile
+from .util import wf_parser  # noqa: ABS101
 
 
 def write_fastq_record(outfile, name, seq, qual):
@@ -19,14 +19,13 @@ def write_fastq_record(outfile, name, seq, qual):
     ]))
 
 
-def main(
-    sam,
-    output,
-    taxids,
-    reference2taxid,
-    exclude,
-):
+def main(args):
     """Run alignment taxonomic filtering."""
+    sam = args.sam
+    output = args.output
+    taxids = args.taxids
+    reference2taxid = args.ref2taxid
+    exclude = args.exclude
     alignments = AlignmentFile(sam, "r")
     tax_ids = set(line.strip() for line in open(taxids))
     ref2taxid_df = pd.read_csv(
@@ -56,12 +55,9 @@ def main(
     outfile.close()
 
 
-def execute(argv):
-    """Parse command line arguments and run main."""
-    parser = argparse.ArgumentParser(
-        description="Outputs assignments in a kraken2-like format",
-    )
-
+def argparser():
+    """Argument parser for entrypoint."""
+    parser = wf_parser("extract_minimap2_reads")
     parser.add_argument(
         help=(
             "Input alignments in SAM format. (Default: [stdin])."
@@ -104,16 +100,9 @@ def execute(argv):
         default=False,
     )
 
-    args = parser.parse_args(argv)
-
-    main(
-        sam=args.sam,
-        output=args.output,
-        taxids=args.taxids,
-        reference2taxid=args.ref2taxid,
-        exclude=args.exclude,
-    )
+    return parser
 
 
 if __name__ == "__main__":
-    execute(sys.argv[1:])
+    args = argparser().parse_args()
+    main(args)

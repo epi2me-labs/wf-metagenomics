@@ -1,18 +1,17 @@
 #!/usr/bin/env python
 """Parse alignments and write out a taxonomic assignment for each."""
-import argparse
 import sys
 
 import pandas as pd
 from pysam import AlignmentFile
+from .util import wf_parser  # noqa: ABS101
 
 
-def main(
-    sam,
-    output,
-    reference2taxid
-):
+def main(args):
     """Write row with taxid and classification status for each alignment."""
+    sam = args.sam
+    output = args.output
+    reference2taxid = args.ref2taxid
     aln_infile = AlignmentFile(sam, "r")
     aln_outfile = AlignmentFile('-', "w", template=aln_infile)
     ref2taxid_df = pd.read_csv(
@@ -38,12 +37,9 @@ def main(
         aln_outfile.write(aln)
 
 
-def execute(argv):
-    """Parse command line arguments and run main."""
-    parser = argparse.ArgumentParser(
-        description="Outputs assignments in a kraken2-like format",
-    )
-
+def argparser():
+    """Argument parser for entrypoint."""
+    parser = wf_parser("format_minimap2")
     parser.add_argument(
         help=(
             "Input alignments in SAM format. (Default: [stdin])."
@@ -68,15 +64,9 @@ def execute(argv):
         required=True,
         metavar='',
     )
-
-    args = parser.parse_args(argv)
-
-    main(
-        sam=args.sam,
-        output=args.output,
-        reference2taxid=args.ref2taxid,
-    )
+    return parser
 
 
 if __name__ == "__main__":
-    execute(sys.argv[1:])
+    args = argparser().parse_args()
+    main(args)

@@ -58,8 +58,8 @@
 #   - process_kraken_report
 ####################################################################
 """Script from kraken_tools modified to allow unclassified to be merged."""
-import argparse
 import sys
+from .util import wf_parser  # noqa: ABS101
 
 
 # Tree Class
@@ -156,36 +156,8 @@ def process_kraken_report(curr_str):
 # Main method
 
 
-def main():
+def main(args):
     """Run main."""
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-r', '--report-file', '--report-files',
-        '--report', '--reports', required=True, dest='r_files', nargs='+',
-        help='Input kraken report files to combine (separate by spaces)')
-    parser.add_argument(
-        '-o', '--output', required=True, dest='output',
-        help='Output kraken report file with combined information')
-    parser.add_argument(
-        '--display-headers', required=False, dest='headers',
-        action='store_true', default=True,
-        help='Include header lines')
-    parser.add_argument(
-        '--no-headers', required=False, dest='headers',
-        action='store_false', default=True,
-        help='Do not include header lines')
-    parser.add_argument(
-        '--sample-names', required=False, nargs='+',
-        dest='s_names',
-        default=[], help='Sample names to use as headers in the new report')
-    parser.add_argument(
-        '--only-combined', required=False, dest='c_only',
-        action='store_true', default=False,
-        help='Include only the total combined reads column,'
-        'not the individual sample cols')
-    args = parser.parse_args()
-
     # Initialize combined values
     main_lvls = ['U', 'R', 'D', 'K', 'P', 'C', 'O', 'F', 'G', 'S']
     map_lvls = {
@@ -350,5 +322,37 @@ def main():
 ####################################################################
 
 
+def argparser():
+    """Argument parser for entrypoint."""
+    parser = wf_parser("combine_kreports_modified")
+    # Parse arguments
+    parser.add_argument(
+        '-r', '--report-file', '--report-files',
+        '--report', '--reports', required=True, dest='r_files', nargs='+',
+        help='Input kraken report files to combine (separate by spaces)')
+    parser.add_argument(
+        '-o', '--output', required=True, dest='output',
+        help='Output kraken report file with combined information')
+    parser.add_argument(
+        '--display-headers', required=False, dest='headers',
+        action='store_true', default=True,
+        help='Include header lines')
+    parser.add_argument(
+        '--no-headers', required=False, dest='headers',
+        action='store_false', default=True,
+        help='Do not include header lines')
+    parser.add_argument(
+        '--sample-names', required=False, nargs='+',
+        dest='s_names',
+        default=[], help='Sample names to use as headers in the new report')
+    parser.add_argument(
+        '--only-combined', required=False, dest='c_only',
+        action='store_true', default=False,
+        help='Include only the total combined reads column,'
+        'not the individual sample cols')
+    return parser
+
+
 if __name__ == "__main__":
-    main()
+    args = argparser().parse_args()
+    main(args)

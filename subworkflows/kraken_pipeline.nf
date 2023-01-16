@@ -212,7 +212,7 @@ process kraken2_client {
         -s "${sample_id}" \
         -r "${sample_id}.${task.index}.stats" \
         "${fastq}" > filtered.fastq
-    fastcat_histogram.py \
+    workflow-glue fastcat_histogram \
         --sample_id "${sample_id}" \
         "${sample_id}.${task.index}.stats" "${sample_id}.${task.index}.json"
 
@@ -255,7 +255,7 @@ process progressive_stats {
         output = "all_stats.${task.index}"
     """
     touch "${state}"
-    add_jsons.py "${new_input}" "${state}" "${output}"
+    workflow-glue add_jsons "${new_input}" "${state}" "${output}"
     """
 }
 
@@ -299,7 +299,7 @@ process progressive_kraken_reports {
     cp -r "${state}" "${new_state}" 
     touch "${old_input}"
 
-    combine_kreports_modified.py \
+    workflow-glue combine_kreports_modified \
         -r "${new_input}" "${old_input}" \
         -o "${sample_id}.kreport.txt" --only-combined --no-headers
     mv "${sample_id}.kreport.txt" "${new_state}/${sample_id}.kreport.txt"
@@ -336,7 +336,7 @@ process progressive_bracken {
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
     # is written alongside the input
-    run_bracken.py \\
+    workflow-glue run_bracken \\
         "${database}" \\
         "${kreports}/${sample_id}.kreport.txt" \\
         "${bracken_length}" \\
@@ -352,7 +352,7 @@ process progressive_bracken {
         -j ${task.cpus} \\
         --data-dir $taxonomy \\
         -R taxa.txt  > lineages.txt
-    aggregate_lineages_bracken.py \\
+    workflow-glue aggregate_lineages_bracken \\
         -i "lineages.txt" -b "taxacounts.txt" \\
         -u "${kreports}/${sample_id}.kreport.txt" \\
         -p "${sample_id}.kraken2"
@@ -387,7 +387,7 @@ process makeReport {
     script:
         report_name = "wf-metagenomics-report.html"
     """
-    report.py \
+    workflow-glue report \
         "${report_name}" \
         --versions versions \
         --params params.json \

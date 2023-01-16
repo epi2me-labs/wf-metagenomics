@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 """Produce the ref2taxid file needed by wf-ribosomal-survey."""
-import argparse
 import sys
 
 import pandas as pd
 from pysam import FastxFile
+from .util import wf_parser  # noqa: ABS101
 
 
-def main(
-    references,
-    accession2taxid,
-    output_tsv,
-    output_ref
-):
+def main(args):
     """Write out a tsv file mapping reference names to taxids."""
+    references = args.references,
+    accession2taxid = args.accession2taxid,
+    output_tsv = args.output_tsv,
+    output_ref = args.output_ref
     output_tsv_file = open(output_tsv, 'w')
     output_ref_file = open(output_ref, 'w')
     accession2taxid_df = pd.read_csv(
@@ -38,12 +37,9 @@ def main(
     output_ref_file.close()
 
 
-def execute(argv):
-    """Parse command line arguments and run main."""
-    parser = argparse.ArgumentParser(
-        description="Build a mapping of targ loci ref to taxid in .tsv format",
-    )
-
+def argparser():
+    """Create argument parser."""
+    parser = wf_parser("build_minimap2_files")
     parser.add_argument(
         '--output_tsv',
         help=(
@@ -84,16 +80,9 @@ def execute(argv):
         required=True,
         metavar=''
     )
-
-    args = parser.parse_args(argv)
-
-    main(
-        references=args.references,
-        accession2taxid=args.accession2taxid,
-        output_tsv=args.output_tsv,
-        output_ref=args.output_ref
-    )
+    return parser
 
 
 if __name__ == "__main__":
-    execute(sys.argv[1:])
+    args = argparser().parse_args()
+    main(args)
