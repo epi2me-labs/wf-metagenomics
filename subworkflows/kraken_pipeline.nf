@@ -91,11 +91,15 @@ process unpackTaxonomy {
     then
         mkdir taxonomy_dir
         tar xf "${taxonomy}" -C taxonomy_dir
+    elif [[ "${taxonomy}" == *.zip ]]
+    then
+        mkdir taxonomy_dir
+        unzip  "${taxonomy}" -d taxonomy_dir
     elif [ -d "${taxonomy}" ]
     then
         mv "${taxonomy}" taxonomy_dir
     else
-        echo "Error: taxonomy is neither .tar.gz nor a dir"
+        echo "Error: taxonomy is neither .tar.gz, .zip nor a dir"
         echo "Exiting".
         exit 1
     fi

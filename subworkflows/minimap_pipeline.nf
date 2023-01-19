@@ -12,6 +12,10 @@ process unpackTaxonomy {
     then
         mkdir taxonomy_dir
         tar xf "${taxonomy}" -C taxonomy_dir
+    elif [[ "${taxonomy}" == *.zip ]]
+    then
+        mkdir taxonomy_dir
+        unzip "${taxonomy}" -d taxonomy_dir
     elif [ -d "${taxonomy}" ]
     then
         mv "${taxonomy}" taxonomy_dir
