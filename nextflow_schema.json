@@ -259,12 +259,6 @@
                     "fa_icon": "fas fa-question-circle",
                     "hidden": true
                 },
-                "wfversion": {
-                    "type": "string",
-                    "description": "Workflow version.",
-                    "default": "v2.0.8",
-                    "hidden": true
-                },
                 "version": {
                     "type": "boolean",
                     "description": "Display version and exit.",
