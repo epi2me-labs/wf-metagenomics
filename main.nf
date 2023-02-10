@@ -43,6 +43,9 @@ workflow {
         keys = sources.keySet()
         throw new Exception("Source $params.source is invalid, must be one of $keys")
     }
+    if (sources == "PlusPF-8" || params.database){
+        log.info("Note: Memory available to the workflow must be slightly higher than size of the database index")
+    }
 
     // Grab taxonomy files
     taxonomy = file(sources[source_name]["taxonomy"], type: "file")

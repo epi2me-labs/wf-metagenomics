@@ -91,7 +91,7 @@
                 "database_set": {
                     "type": "string",
                     "default": "ncbi_16s_18s",
-                    "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s',ncbi_16s_18s_28s_ITS','PlusPF-8']",
+                    "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s',ncbi_16s_18s_28s_ITS','PlusPF-8']. Workflow will require memory available to be slightly higher than the size of the database. PlusPF-8 database requires more than 8Gb.",
                     "enum": [
                         "ncbi_16s_18s",
                         "ncbi_16s_18s_28s_ITS",
@@ -102,7 +102,7 @@
                 "database": {
                     "type": "string",
                     "format": "path",
-                    "description": "Not required but can be used to specifically override kraken2 database [.tar.gz or Directory]",
+                    "description": "Not required but can be used to specifically override kraken2 database [.tar.gz or Directory].",
                     "help_text": "By default uses database chosen in database_set parameter"
                 },
                 "taxonomy": {
