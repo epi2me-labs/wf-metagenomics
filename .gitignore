@@ -3,4 +3,5 @@ nextflow
 template-workflow
 .*.swp
 .*.swo
-*.ipynb
+*.pyc
+*.pyo

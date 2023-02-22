@@ -75,4 +75,42 @@ The primary outputs of the workflow include:
 * classified and unclassified reads,
 * text files detailing lineages found,
 * an HTML report document detailing the primary findings of the workflow.
+* tsv files containing for a specific rank, the counts per taxa in each sample.
+
+***Diversity***
+
+Species diversity refers to the taxonomic composition in a specific microbial community. There are three main concepts:
+
+* Richness: number of unique taxonomic groups  present in the community,
+* Taxonomic group abundance: number of individuals of a particular taxonomic group present in the community,
+* Evennes: refers to the equitability of the different taxonomic groups in terms of their abundances.
+
+Two different communities can host the same number of different taxonomic groups (i.e. they have the same richness), but they can have different eveness if, for instance, in one of the communities there is one taxon whose abundance is much larger than the other' abundances.
+
+To provide a quick overview of the diversity of the microbial community, we provide some of the most common indices calculated by a specific taxonomic rank <sup>[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4224527/)</sup>. This rank can be chosen by the user providind the flag *--bracken_level* and the desired rank: 'D'=Domain,'P'=Phylum, 'C'=Class, 'O'=Order, 'F'=Family, 'G'=Genus, 'S'=Species. By default, the rank is 'S' (species level). Some of these indices are:
+
+* Shannon-Wiener Diversity Index (H): Shannon entropy approaches zero when one of the taxa is much more abundant than the others.    
+```math
+H = -\sum_{i=1}^{S}p_i*ln(p_i)
+```
+
+* Simpson's Diversity Index (D): The range is from 0 (low diversity) to 1 (high diversity).    
+
+```math
+D = \sum_{i=1}^{S}p_i^2
+```
+
+* Pielou Index (J): The values range from 0 (presence of a dominant species) and 1 (maximum evennes).    
+
+```math
+J = H/ln(S)
+```
+
+
+These indices are calculated by default using the original abundance table (see McMurdie and Holmes<sup>[2](https://pubmed.ncbi.nlm.nih.gov/24699258/)</sup>, 2014 and Willis<sup>[3](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full)</sup>, 2019). If you want to calculate them from a rarefied abundance table (i.e. all the samples have been subsampled to contain the same number of counts per sample, which is the 95% of the minimum number of total counts), you can use the *wf-metagenomics-rarefied.tsv* within the output directory.
+
+The report also includes the rarefaction curve per sample which displays the mean of species richness for a subsample of reads (sample size). Generally, this curve initially grows rapidly, as most abundant species are sequenced and they add new taxa in the community, then slightly flattens due to the fact that 'rare' species are more difficult of being sampled, and because of that is more difficult to report an increase in the number of observed species.
+
+*Note: Within each rank, each named taxon is considered to be an unique unit. The counts are the number of reads assigned to that taxon. All 'Unknown' sequences are considered as an unique taxon.*
+
 

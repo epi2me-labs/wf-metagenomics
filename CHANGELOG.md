@@ -5,11 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
-### Updated
+### Changed
 - Update kraken databases to latest and ensure relevant taxdump is used.
 ### Added
+- Plot species richness curves.
+- Provide abundance tables per taxa (original and rarefied).
+- Add diversity indeces.
 - Memory requirement help text.
-  
 
 ## [v2.0.8]
 ### Fixed
