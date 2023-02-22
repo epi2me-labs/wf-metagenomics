@@ -177,6 +177,8 @@ process makeReport {
         path template
     output:
         path "wf-metagenomics-*.html", emit: report_html
+        path "wf-metagenomics-counts.tsv", emit: counts_tsv
+        path "wf-metagenomics-rarefied.tsv", emit: rarefied_tsv
     script:
         report_name = "wf-metagenomics-report.html"
     """
@@ -262,7 +264,7 @@ workflow minimap_pipeline {
         )
 
         output(report.report_html.mix(
-            software_versions, workflow_params))
+            software_versions, workflow_params, report.counts_tsv, report.rarefied_tsv))
     emit:
         report.report_html  // just emit something
 }

@@ -340,25 +340,25 @@ process progressive_bracken {
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
     # is written alongside the input
-    workflow-glue run_bracken \\
-        "${database}" \\
-        "${kreports}/${sample_id}.kreport.txt" \\
-        "${bracken_length}" \\
-        "${params.bracken_level}" \\
+    workflow-glue run_bracken \
+        "${database}" \
+        "${kreports}/${sample_id}.kreport.txt" \
+        "${bracken_length}" \
+        "${params.bracken_level}" \
         "${sample_id}.bracken_report.txt"
 
     # do some stuff...
-    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \\
-        | ${awktab} 'NR!=1 {print}' \\
-        | tee taxacounts.txt \\
+    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \
+        | ${awktab} 'NR!=1 {print}' \
+        | tee taxacounts.txt \
         | ${awktab} '{ print \$1 }' > taxa.txt
     taxonkit lineage \
-        -j ${task.cpus} \\
-        --data-dir $taxonomy \\
+        -j ${task.cpus} \
+        --data-dir $taxonomy \
         -R taxa.txt  > lineages.txt
-    workflow-glue aggregate_lineages_bracken \\
-        -i "lineages.txt" -b "taxacounts.txt" \\
-        -u "${kreports}/${sample_id}.kreport.txt" \\
+    workflow-glue aggregate_lineages_bracken \
+        -i "lineages.txt" -b "taxacounts.txt" \
+        -u "${kreports}/${sample_id}.kreport.txt" \
         -p "${sample_id}.kraken2"
 
     file1=`cat *.json`
@@ -388,6 +388,8 @@ process makeReport {
         tuple(path(stats), path("versions/*"), path("params.json"), path("template.html"))
     output:
         path "wf-metagenomics-*.html", emit: report_html
+        path "wf-metagenomics-counts.tsv", emit: counts_tsv
+        path "wf-metagenomics-rarefied.tsv", emit: rarefied_tsv
     script:
         report_name = "wf-metagenomics-report.html"
     """
@@ -398,6 +400,7 @@ process makeReport {
         --summaries ${stats} \
         --lineages "${lineages}" \
         --vistempl template.html \
+        --rank "${params.bracken_level}"
     """
 }
 
@@ -512,11 +515,12 @@ workflow kraken_pipeline {
             .combine(versions)
             .combine(parameters)
             .combine(Channel.of(template))
+        
         report = makeReport(progressive_bracken.out.reports, stuff)
-
+        
         // output updating files as part of this pipeline
         output(report.report_html.mix(
-            versions, parameters),
+            versions, parameters, report.counts_tsv, report.rarefied_tsv),
         )
 
         // Stop server when all are processed
@@ -529,4 +533,6 @@ workflow kraken_pipeline {
 
     emit:
         report.report_html  // just emit something
+        report.rarefied_tsv
+        report.counts_tsv
 }
