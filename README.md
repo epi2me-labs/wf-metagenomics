@@ -4,6 +4,10 @@ wf-metagenomics is a Nextflow workflow for identification of the origin of singl
 
 The kraken2 mode can be used in real-time, allowing the workflow to run continuously alongside an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies' sequencing instrument. The user can visualise the classification of reads and species abundances in a real-time updating report.
 
+
+
+
+
 ## Introduction
 
 wf-metagenomics offers two different approaches to assigning sequence reads to a species:
@@ -17,6 +21,10 @@ wf-metagenomics offers two different approaches to assigning sequence reads to a
 [Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.
 
 The wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.
+
+
+
+
 
 ## Quickstart
 
@@ -132,6 +140,10 @@ These indices are calculated by default using the original abundance table (see 
 The report also includes the rarefaction curve per sample which displays the mean of species richness for a subsample of reads (sample size). Generally, this curve initially grows rapidly, as most abundant species are sequenced and they add new taxa in the community, then slightly flattens due to the fact that 'rare' species are more difficult of being sampled, and because of that is more difficult to report an increase in the number of observed species.
 
 *Note: Within each rank, each named taxon is considered to be an unique unit. The counts are the number of reads assigned to that taxon. All 'Unknown' sequences are considered as an unique taxon.*
+
+
+
+
 
 
 ## Useful links
