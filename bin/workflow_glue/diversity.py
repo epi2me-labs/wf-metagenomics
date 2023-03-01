@@ -61,6 +61,12 @@ def random_choice(arr, sample_size):
     # Take sample_size elements and count frequencies
     rarefied_vector = np.bincount(
         np.random.choice(long_arr, sample_size, replace=False))
+    # If the last element of arr has not been subseted,
+    # the bin count has one element less length.
+    # Add a 0 counts for it
+    if len(arr) > len(rarefied_vector):
+        rarefied_vector = np.append(rarefied_vector, np.repeat(
+            0, len(arr)-len(rarefied_vector)))
     return rarefied_vector
 
 
