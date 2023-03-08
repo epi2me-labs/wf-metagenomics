@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update kraken databases to latest and ensure relevant taxdump is used.
 ### Added
 - Plot species richness curves.
-- Provide (original and rarefied) abundance tables per taxa and sample for a given taxonomic rank.
-- Add diversity indexes.
+- Provide (original and rarefied, i.e. all the samples have the same number of reads) abundance tables listing taxa per sample for a given taxonomic rank.
+- Add diversity indices.
 - Memory requirement help text.
 
 ## [v2.0.8]

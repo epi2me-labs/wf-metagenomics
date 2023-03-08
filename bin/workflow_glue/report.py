@@ -213,15 +213,15 @@ def main(args):
     div = diversity.alpha_diversity(df).round(2).sort_index().reset_index(
         level=0)
     div.fillna('None', inplace=True)
-    div.rename(columns={'index': 'Sample'}, inplace=True)
+    div.rename(columns={
+        'index': 'Sample', 'S': 'Richness', 'H': 'Shannon Diversity Index (H)'
+        }, inplace=True)
     # div.to_csv('wf-metagenomics-alpha.tsv', sep="\t")
     section = report.add_section()
     section.markdown(" # Alpha diversity ")
     section.markdown('''
-        Indexes are calculated from \
-    the abundance table \
-    (see description in:\
-    Provided outputs)
+        Indices are calculated from the original abundance table \
+    (see description in: Provided outputs)
     ''')
     section.table(div)
     section = report.add_section()
@@ -229,11 +229,11 @@ def main(args):
     d_output = {
         'wf-metagenomics-report.html': ['this report', 'html', ''],
         'wf-metagenomics-counts.tsv': [
-            'counts per taxa', 'tsv',
+            'counts per taxon and sample', 'tsv',
             'cols: samples, rows: taxa at a specific rank'
         ],
         'wf-metagenomics-rarefied.tsv': [
-            'rarefied counts per sample', 'tsv',
+            'rarefied counts per taxon and sample', 'tsv',
             'cols: samples, rows: taxa at a specific rank'
         ]
     }
@@ -241,7 +241,7 @@ def main(args):
     df_output.columns = ['Description', 'Format', 'Notes']
     df_output.reset_index(level=0, inplace=True)
     df_output.rename(columns={'index': 'Output'}, inplace=True)
-    section.markdown("This is a description of the output directory")
+    section.markdown("This is a description of the output directory.")
     section.table(df_output)
     #
     # Standard wf reporting
@@ -266,7 +266,7 @@ def argparser():
         help="Read lineage file.")
     parser.add_argument(
         "--rank", default='S',
-        help="Taxonomic rank to run divresity.")
+        help="Taxonomic rank to run diversity.")
     parser.add_argument(
         "--vistempl", required=True)
     parser.add_argument(
