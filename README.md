@@ -109,15 +109,15 @@ The primary outputs of the workflow include:
 
 Species diversity refers to the taxonomic composition in a specific microbial community. There are three main concepts:
 
-* Richness: number of unique taxonomic groups  present in the community,
+* Richness: number of unique taxonomic groups present in the community,
 * Taxonomic group abundance: number of individuals of a particular taxonomic group present in the community,
-* Evennes: refers to the equitability of the different taxonomic groups in terms of their abundances.
+* Evenness: refers to the equitability of the different taxonomic groups in terms of their abundances.
 
-Two different communities can host the same number of different taxonomic groups (i.e. they have the same richness), but they can have different eveness if, for instance, in one of the communities there is one taxon whose abundance is much larger than the other' abundances.
+Two different communities can host the same number of different taxonomic groups (i.e. they have the same richness), but they can have different evenness. For instance, if there is one taxon whose abundance is much larger in one community compared to the other.
 
 To provide a quick overview of the diversity of the microbial community, we provide some of the most common indices calculated by a specific taxonomic rank <sup>[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4224527/)</sup>. This rank can be chosen by the user providind the flag *--bracken_level* and the desired rank: 'D'=Domain,'P'=Phylum, 'C'=Class, 'O'=Order, 'F'=Family, 'G'=Genus, 'S'=Species. By default, the rank is 'S' (species level). Some of these indices are:
 
-* Shannon-Wiener Diversity Index (H): Shannon entropy approaches zero when one of the taxa is much more abundant than the others.    
+* Shannon Diversity Index (H): Shannon entropy approaches zero when one of the taxa is much more abundant than the others.    
 ```math
 H = -\sum_{i=1}^{S}p_i*ln(p_i)
 ```
