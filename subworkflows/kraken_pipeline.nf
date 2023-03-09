@@ -56,7 +56,7 @@ process unpackDatabase {
         echo "Exiting".
         exit 1
     fi
-    mv "${kmer_distribution}" database_dir
+    cp "${kmer_distribution}" database_dir
     """
 }
 
