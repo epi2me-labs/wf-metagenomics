@@ -13,6 +13,12 @@ def histogram_counts(data, dmin=0, bin_width=100):
     """Histogram bins and counts."""
     bins = np.arange(dmin, max(data) + bin_width, bin_width)
     counts, _ = np.histogram(data, bins=bins)
+    # Note that there can be small differences with/without batch_size=1.
+    # https://numpy.org/doc/stable/reference/generated/numpy.histogram.html
+    # bins from =[1, 2, 3, 4] => First bin=[1, 2), last bin=[3, 4].
+    # i.e. in batch_size=1, the count will be in the last interval (both edges included)
+    # With more sequences, there can be different intervals and edge value can be moved
+    # to the next consecutive interval.
     return bins.tolist(), counts.tolist()
 
 
@@ -20,7 +26,7 @@ def get_stats(seq_summary):
     """Get Stats Json."""
     stats_json = {
         "total_reads": len(seq_summary)}
-    if len(seq_summary) > 1:
+    if len(seq_summary) >= 1:
         len_data = seq_summary['read_length']
         len_bins, len_counts = histogram_counts(
             len_data, dmin=0, bin_width=50)

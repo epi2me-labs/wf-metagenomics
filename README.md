@@ -67,7 +67,7 @@ You can run the workflow with test_data available in the github repository.
 
 You can also run the workflow in real-time, meaning the workflow will watch the input directory(s) and process inputs at they become available in the batch sizes specified.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --batch_size 1``` 
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --batch_size 100```
 
 **Important Note**
 
