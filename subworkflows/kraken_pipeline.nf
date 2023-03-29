@@ -108,22 +108,33 @@ process unpackTaxonomy {
 
 
 // Rebundle fastqs (this is mostly in case we're given one big file)
+// This will dissapear with the new kraken2
 process rebatchFastq {
     label "wfmetagenomics"
     maxForks params.threads  // no point having more inputs than processing threads
     cpus 3
     input:
-        tuple val(sample_id), path(fastq)
+        tuple val(meta), path(fastq), path(stats)
     output:
         tuple(
-            val(sample_id),
-            path("fastq/${sample_id}.part_*.fastq.gz"))
-    shell:
+            val(meta),
+            path("fastq/${meta.alias}.part_*.fastq.gz"),
+            path("fastcat_stats/${meta.alias}_part_*.tsv")
+            )
+    script:
+    def sample_id = "${meta.alias}"
     """
+    # Batch fasta file
     seqkit split2 ${fastq} \
         -j ${task.cpus - 1} -s ${params.batch_size} \
         -e .gz -o "${sample_id}" \
         -O fastq
+    # Batch stats file
+    mkdir -p fastcat_stats
+    tail -n +2 ${stats}/per-read-stats.tsv | split -l "${params.batch_size}" \
+    -d --additional-suffix=.tsv \
+    --filter='sh -c "{ head -n1 ${stats}/per-read-stats.tsv; cat; } > fastcat_stats/\$FILE"' - "${sample_id}"_part_
+
     """
 }
 
@@ -132,7 +143,7 @@ process rebatchFastq {
 process stopCondition { 
     label "wfmetagenomics"
     cpus 1 
-    publishDir "${params.fastq}/STOP/", mode: 'copy', pattern: "*"
+    publishDir params.fastq, mode: 'copy', pattern: "*"
     input:
         path json
     output:
@@ -203,26 +214,26 @@ process kraken2_client {
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
     maxForks kraken_compute
     input:
-        tuple val(sample_id), path(fastq)
+        tuple val(meta), path(fastq), path(stats)
     output:
-        tuple val(sample_id), path("${sample_id}.kraken2.report.txt"), path("${sample_id}.${task.index}.json")
+        tuple val("${meta.alias}"), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.${task.index}.json")
     script:
         def max_length = "${params.max_len}"== null ? "-b ${params.max_len}" : ""
+        def sample_id = "${meta.alias}"
     """
-
-    fastcat \
-        -a "${params.min_len}" \
-        ${max_length} \
-        -s "${sample_id}" \
-        -r "${sample_id}.${task.index}.stats" \
-        "${fastq}" > filtered.fastq
+    if [[ -f $stats ]]
+    then
+        stats_file=${stats}
+    else
+        stats_file=${stats}/per-read-stats.tsv
+    fi
     workflow-glue fastcat_histogram \
         --sample_id "${sample_id}" \
-        "${sample_id}.${task.index}.stats" "${sample_id}.${task.index}.json"
+        \$stats_file "${sample_id}.${task.index}.json"
 
     kraken2_client \
         --port $params.port --report report.txt \
-        --sequence filtered.fastq > "${sample_id}.kraken2.assignments.tsv"
+        --sequence $fastq > "${sample_id}.kraken2.assignments.tsv"
     tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
 }
@@ -397,7 +408,7 @@ process makeReport {
         "${report_name}" \
         --versions versions \
         --params params.json \
-        --summaries ${stats} \
+        --stats ${stats} \
         --lineages "${lineages}" \
         --vistempl template.html \
         --rank "${params.bracken_level}"
@@ -424,51 +435,20 @@ process output {
 
 workflow kraken_pipeline {
     take:
+        samples
         taxonomy
         database
         kmer_distribution
         template
     main:
- 
+        opt_file = file("$projectDir/data/OPTIONAL_FILE")
         taxonomy = unpackTaxonomy(taxonomy)
         
         database = unpackDatabase(database, kmer_distribution)
         bracken_length = determine_bracken_length(database)
         kraken_server(database)
-        input = file("${params.fastq}")
-        if (input.isFile()){
-            if (params.watch_path) {
-                throw new Exception("Watch path can only be used with input directories")
-            }
-            initial_items = channel.fromPath("${params.fastq}")
-            batch_items = initial_items
-                .map{ it -> tuple(it.simpleName, it) }
-        }
-        else if (input.isDirectory()) {
-            log.info("")
-            log.info("Input directory assumed to be containing one or more directories containing fastq files.")
-            initial_items = Channel.fromPath("${params.fastq}/**/*f*q*")
-            all_items = initial_items
-            if (params.watch_path){
-                added_items = Channel
-                    .watchPath("${params.fastq}/**/*f*q*")
-                    .until{ it -> it.name == 'STOP.fastq.gz' }
-                all_items = initial_items.concat(added_items)
-            }
-            named = all_items
-                .map{ it -> tuple("$it".split(/\//)[-2], it) }
-            batch_items = named
-            if (params.sample_sheet){
-                // Use sample sheet to name samples and batch
-                sample_sheet = get_sample_sheet(params.sample_sheet)
-                batch_items = named
-                    .combine(sample_sheet, by: [0])
-                    .map { it -> tuple(it[2], it[1]) }
-            }
-        }
-        else {
-            throw new Exception("--fastq should be a file or directory.")
-        }
+
+        batch_items = samples
 
         // maybe split up large files
         if (params.batch_size != 0) {
@@ -528,11 +508,22 @@ workflow kraken_pipeline {
 
         //  Stop file to input folder when read_limit stop condition is met.
         if (params.watch_path && params.read_limit){
-            stopCondition(stats)
+            stopCondition(stats).first().subscribe {
+            def stop = file(params.fastq).resolve("STOP.fastq.gz")
+                log.info "Creating STOP file: '$stop'"
+            }
         }
 
     emit:
         report.report_html  // just emit something
         report.rarefied_tsv
         report.counts_tsv
+}
+
+workflow.onComplete {
+    def stop = file(params.fastq).resolve("STOP.fastq.gz")
+    if (stop.exists()) {
+        stop.delete()
+        log.info "Deleted STOP file: '$stop'"
+    }
 }

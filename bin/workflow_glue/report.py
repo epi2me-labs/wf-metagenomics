@@ -181,10 +181,11 @@ def main(args):
     # Standard read metrics
     #
     section = report.add_section()
-    if args.pipeline == "minimap":
-        minimap(args.summaries, report)
-    else:
-        kraken(args.summaries[0], section)
+    if args.stats:
+        if args.pipeline == "minimap":
+            minimap(args.stats, report)
+        else:
+            kraken(args.stats[0], section)
     #
     # Plot richness with different sample sizes.
     #
@@ -259,7 +260,7 @@ def argparser():
     parser = wf_parser("report")
     parser.add_argument("report", help="Report output file")
     parser.add_argument(
-        "--summaries", nargs='+', required=True,
+        "--stats", nargs='+', required=False,
         help="Read summary file.")
     parser.add_argument(
         "--lineages", nargs='+', required=True,

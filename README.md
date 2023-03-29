@@ -71,23 +71,23 @@ You can also run the workflow in real-time, meaning the workflow will watch the 
 
 **Important Note**
 
-When using the real-time functionality of the workflow, the input directory must contain sub-directories which themselves contain sequencing reads in fastq files. The is in contrast to the standard workflow which will accept reads provided as a single file or fastq files directly under the provided input directory.
+When using the real-time functionality of the workflow, the input directory must contain sequencing reads in fastq files or sub-directories which themselves contain sequencing reads in fastq files. This is in contrast to the standard workflow which can additionally accept reads provided as a single file directly.
 
 The below is therefore the only input layout supported by the real-time functionality (the names of the child directories are unrestricted):
 
 eg.
 
 ```
-─── input_directory
-    ├── barcode01
-    │   ├── reads0.fastq
-    │   └── reads1.fastq
-    ├── barcode02
-    │   ├── reads0.fastq
-    │   ├── reads1.fastq
-    │   └── reads2.fastq
-    └── barcode03
-        └── reads0.fastq
+ ─── input_directory        ─── input_directory
+    ├── reads0.fastq            ├── barcode01
+    └── reads1.fastq            │   ├── reads0.fastq
+                                │   └── reads1.fastq
+                                ├── barcode02
+                                │   ├── reads0.fastq
+                                │   ├── reads1.fastq
+                                │   └── reads2.fastq
+                                └── barcode03
+                                    └── reads0.fastq
 ```
 
 ***Minimap2***

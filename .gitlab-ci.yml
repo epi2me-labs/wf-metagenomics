@@ -37,7 +37,7 @@ docker-run:
     parallel:
         matrix:
             - MATRIX_NAME: [
-                "kraken2", "minimap2", "kraken2-single-file", "batch"
+                "kraken2", "minimap2", "kraken2-single-file", "batch", "kraken2-watch-path", "minimap2-sample-sheet"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -57,10 +57,23 @@ docker-run:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/barcode01/reads.fastq.gz"
           NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
+     # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
+     # With the read limit we can stop the wf if the limit is reached.
+     # It creates a STOP.fastq.gz that will be a new input in the wf and make it stop.
+     # Use the creation of this file to test if watch_path is able to detect new input files.
+     - if: $MATRIX_NAME == "kraken2-watch-path"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data --watch_path --read_limit 1000"
+          NF_IGNORE_PROCESSES: "rebatchFastq"
      - if: $MATRIX_NAME == "minimap2"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data --minimap2filter '9606,1404' --classifier minimap2"
           NF_IGNORE_PROCESSES: ""
-
+     - if: $MATRIX_NAME == "minimap2-sample-sheet"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data --minimap2filter '9606,1404' --classifier minimap2 --sample_sheet test_data/sample_sheet.csv"
+          NF_IGNORE_PROCESSES: ""
 

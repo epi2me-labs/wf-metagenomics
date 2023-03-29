@@ -3,7 +3,7 @@
 import groovy.json.JsonBuilder
 nextflow.enable.dsl = 2
 
-include { fastq_ingress } from './lib/fastqingress' 
+include { fastq_ingress } from './lib/fastqingress'
 include { minimap_pipeline } from './subworkflows/minimap_pipeline'
 include { kraken_pipeline } from './subworkflows/kraken_pipeline'
 
@@ -29,11 +29,7 @@ workflow {
     // Checking user parameters
     log.info("Checking inputs.")
 
-    // check input fastq exists
-    input_fastq = file("${params.fastq}")
-    if (!input_fastq.exists()) {
-            throw new Exception("--fastq: File doesn't exist, check path.")
-        }
+
 
     // Check source param is valid
     sources = params.database_sets
@@ -93,7 +89,9 @@ workflow {
         "input":params.fastq,
         "sample":params.sample,
         "sample_sheet":params.sample_sheet,
-        "unclassified":params.analyse_unclassified])
+        "analyse_unclassified":params.analyse_unclassified,
+        "fastcat_stats": params.wf.fastcat_stats,
+        "fastcat_extra_args": ""])
 
         results = minimap_pipeline(
             samples, reference, refindex, ref2taxid, taxonomy,
@@ -144,10 +142,18 @@ workflow {
             if (!params.read_limit){
                 log.info("Workflow will run indefinitely as no read_limit is set.")
             }
-            log.info("Workflow will stop processing files after ${params.read_limit} reads.")  
+            log.info("Workflow will stop processing files after ${params.read_limit} reads.")
         }
+        samples = fastq_ingress([
+        "input":params.fastq,
+        "sample":null,
+        "sample_sheet":null,
+        "analyse_unclassified":params.analyse_unclassified,
+        "fastcat_stats": params.wf.fastcat_stats,
+        "fastcat_extra_args": "",
+        "watch_path": params.watch_path])
         results = kraken_pipeline(
-            taxonomy, database, kmer_distribution, template)
+            samples, taxonomy, database, kmer_distribution, template)
     }
 }
 

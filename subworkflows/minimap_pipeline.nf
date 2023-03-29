@@ -1,5 +1,7 @@
 import groovy.json.JsonBuilder
 
+OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
+
 process unpackTaxonomy {
     label "wfmetagenomics"
     cpus 1
@@ -28,65 +30,38 @@ process unpackTaxonomy {
 }
 
 
-process combineFilterFastq {
-    label "wfmetagenomics"
-    cpus 1
-    input:
-        tuple path(directory), val(meta)
-    output:
-        tuple(
-            val(meta.sample_id),
-            path("${meta.sample_id}.fastq"),
-            emit: filtered)
-        tuple(
-            val(meta.sample_id),
-            path("${meta.sample_id}.stats"),
-            emit: stats)
-    script:
-        def max_length = "${params.max_len}"== null ? "-b ${params.max_len}" : ""
-    shell:
-    """
-    fastcat \
-        -a "${params.min_len}" \
-        ${max_length} \
-        -s "${meta.sample_id}" \
-        -r "${meta.sample_id}.stats" \
-        -x "${directory}" > "${meta.sample_id}.fastq"
-    """
-}
-
-
 process minimap {
     label "wfmetagenomics"
     cpus params.threads
     input:
-        tuple val(sample_id), path(reads)
+        tuple val(meta), path(concat_seqs), path(fastcat_stats)
         path reference
         path refindex
         path ref2taxid
         path taxonomy
     output:
         tuple(
-            val(sample_id),
+            val(meta),
             path("*.bam"),
             path("*.bam.bai"),
             emit: bam)
         tuple(
-            val(sample_id),
+            val(meta),
             path("*assignments.tsv"),
             emit: assignments)
         tuple(
-            val(sample_id),
+            val(meta),
             path("*lineages.txt"),
             emit: lineage_txt)
         tuple(
-            val(sample_id),
-            path("${sample_id}.json"),
+            val(meta),
+            path("${meta.alias}.json"),
             emit: lineage_json)
     script:
+        def sample_id = "${meta.alias}"
         def split = params.split_prefix ? '--split-prefix tmp' : ''
     """
-    minimap2 -t "${task.cpus}" ${split} -ax map-ont "${reference}" "${reads}" \
+    minimap2 -t "${task.cpus}" ${split} -ax map-ont "${reference}" "${concat_seqs}" \
     | samtools view -h -F 2304 - \
     | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
     | samtools sort -o "${sample_id}.bam" -
@@ -109,15 +84,16 @@ process extractMinimap2Reads {
     label "wfmetagenomics"
     cpus 1
     input:
-        tuple val(sample_id), path("alignment.bam"), path("alignment.bai")
+        tuple val(meta), path("alignment.bam"), path("alignment.bai")
         path ref2taxid
         path taxonomy
     output:
         tuple(
-            val(sample_id),
-            path("${sample_id}.minimap2.extracted.fastq"),
+            val(meta),
+            path("${meta.alias}.minimap2.extracted.fastq"),
             emit: extracted)
     script:
+        def sample_id = "${meta.alias}"
         def policy = params.minimap2exclude ? '--exclude' : ""
     """
     taxonkit \
@@ -170,7 +146,7 @@ process getParams {
 process makeReport {
     label "wfmetagenomics"
     input:
-        path stats
+        path per_read_stats
         path "lineages/*"
         path "versions/*"
         path "params.json"
@@ -180,13 +156,14 @@ process makeReport {
         path "wf-metagenomics-counts.tsv", emit: counts_tsv
         path "wf-metagenomics-rarefied.tsv", emit: rarefied_tsv
     script:
-        report_name = "wf-metagenomics-report.html"
-    """
+        String report_name = "wf-metagenomics-report.html"
+        def stats_args = (per_read_stats.name == OPTIONAL_FILE.name) ? "" : "--stats $per_read_stats"
+    """   
     workflow-glue report \
-        "${report_name}" \
+        $report_name \
         --versions versions \
         --params params.json \
-        --summaries ${stats} \
+        $stats_args \
         --lineages lineages \
         --vistempl "${template}" \
         --pipeline "minimap"
@@ -224,14 +201,19 @@ workflow minimap_pipeline {
         outputs = []
         lineages = Channel.empty()
         taxonomy = unpackTaxonomy(taxonomy)
-    
         // Initial reads QC
-        reads = combineFilterFastq(samples)
+        per_read_stats = samples.map {
+            it[2] ? it[2].resolve('per-read-stats.tsv') : null
+        }
+        | collectFile ( keepHeader: true )
+        | ifEmpty ( OPTIONAL_FILE )
+        metadata = samples.map { it[0] }.toList()
 
         // Run Minimap2
   
         mm2 = minimap(
-                reads.filtered,
+                samples
+                | map { [it[0], it[1], it[2] ?: OPTIONAL_FILE ] },
                 reference,
                 refindex,
                 ref2taxid,
@@ -256,7 +238,7 @@ workflow minimap_pipeline {
         software_versions = getVersions()
         workflow_params = getParams()
         report = makeReport(
-            reads.stats.flatMap { it -> [ it[1] ] }.collect(),
+            per_read_stats,
             lineages.flatMap { it -> [ it[1] ] }.collect(),
             software_versions.collect(),
             workflow_params,
@@ -264,7 +246,10 @@ workflow minimap_pipeline {
         )
 
         output(report.report_html.mix(
-            software_versions, workflow_params, report.counts_tsv, report.rarefied_tsv))
+            software_versions,
+            workflow_params,
+            report.counts_tsv,
+            report.rarefied_tsv))
     emit:
         report.report_html  // just emit something
 }
