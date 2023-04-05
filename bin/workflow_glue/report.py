@@ -1,258 +1,225 @@
 #!/usr/bin/env python
 """Create workflow report."""
 import json
-import os
 
-from aplanat import bars, lines
-from aplanat.components import fastcat
-from aplanat.components import simple as scomponents
-from aplanat.report import WFReport
-from aplanat.util import Colors
-from bokeh.layouts import layout
-from bokeh.plotting import figure
-from bokeh.resources import INLINE
-from jinja2 import Template
+from dominate.tags import em, p
+import ezcharts as ezc
+from ezcharts.components.ezchart import EZChart
+from ezcharts.components.fastcat import SeqSummary
+from ezcharts.components.reports.labs import LabsReport
+from ezcharts.layout.snippets import DataTable
+from ezcharts.layout.snippets import Grid
+from ezcharts.layout.snippets import Tabs
+from ezcharts.plots import util
 import pandas as pd
 import workflow_glue.diversity as diversity
+import workflow_glue.report_utils.report_utils as report_utils
+from workflow_glue.report_utils.sankey import sankey_plot
 
-from .util import wf_parser  # noqa: ABS101
+from .util import get_named_logger, wf_parser  # noqa: ABS101
 
-
-def read_files(summaries, sep='\t'):
-    """Read a set of files and join to single dataframe."""
-    dfs = list()
-    for fname in sorted(summaries):
-        dfs.append(pd.read_csv(fname, sep=sep))
-    return pd.concat(dfs)
-
-
-def plot_hist_data(counts, edges, **kwargs):
-    """Create histogram from json."""
-    defaults = {
-        "output_backend": "webgl",
-        "height": 300, "width": 600}
-    defaults.update(**kwargs)
-    p = figure(**defaults)
-    p.quad(
-            top=counts, bottom=0, left=edges[:-1], right=edges[1:],
-            alpha=0.6)
-    return p
-
-
-def kraken(summaries, section):
-    """Kraken quality report section."""
-    with open(summaries) as f:
-        datas = json.load(f)
-    bc_counts = {}
-    for sample_id, data in sorted(datas.items()):
-        len_hist = list(data["len"].items())
-        lbins, lcounts = list(zip(*len_hist))
-        len_plot = plot_hist_data(
-            lcounts, lbins, title="Read length distribution.",
-            x_axis_label='Read Length / bases',
-            y_axis_label='Number of reads'
-        )
-        qual_hist = list(data["qual"].items())
-        edges, counts = list(zip(*qual_hist))
-        total_reads = data["total_reads"]
-        qual_plot = plot_hist_data(
-            counts, edges, title="Read quality score.",
-            x_axis_label="Quality score",
-            y_axis_label="Number of reads")
-
-        section.markdown("###"+sample_id)
-        section.plot(
-            layout([[len_plot, qual_plot]], sizing_mode="stretch_width"))
-        bc_counts[sample_id] = total_reads
-
-    bc_counts_plot = bars.simple_bar(
-        list(bc_counts.keys()),
-        list(bc_counts.values()),
-        colors=[Colors.cerulean]*len(bc_counts),
-        title='Number of reads per sample.',
-        plot_width=800)
-    bc_counts_plot.xaxis.major_label_orientation = 3.14/2
-    section.markdown("### Samples")
-    section.plot(layout([[bc_counts_plot]], sizing_mode="stretch_width"))
-
-
-def minimap(summary, report):
-    """Create minimap quality section."""
-    seq_summary = read_files(summary)
-    bc_counts = (
-        pd.DataFrame(
-            seq_summary['sample_name'].value_counts()
-        ).sort_index().reset_index().rename(
-            columns={'index': 'sample', 'sample_name': 'count'})
-    )
-
-    bc_counts_plot = bars.simple_bar(
-        bc_counts['sample'].astype(str),
-        bc_counts['count'],
-        colors=[Colors.cerulean]*len(bc_counts),
-        title='Number of reads per sample.',
-        plot_width=800)
-    bc_counts_plot.xaxis.major_label_orientation = 3.14/2
-    section = report.add_section()
-    section.markdown("### Samples")
-    section.plot(layout([[bc_counts_plot]], sizing_mode="stretch_width"))
-    #
-    # Standard read metrics
-    #
-    stats_summaries = dict(tuple(seq_summary.groupby(['sample_name'])))
-
-    for key, summ in stats_summaries.items():
-        summ.to_csv(
-            'file_name.csv', mode='w+', index=False, header=True, sep="\t")
-        section = report.add_section(
-            section=fastcat.full_report(
-                'file_name.csv',
-                header='#### Read stats: {}'.format(str(key))
-            ))
-
-
-def collector_curves(rarefaction, section):
-    """Plot observed species richness curves.
-
-    :param rarefaction: dictionary with richness
-        per number of sampled reads.
-    :type rarefaction: dict.
-    :param section: new section to add the plots.
-    """
-    # Also called Species accumulation curves
-    for sample_id, data in sorted(rarefaction.items()):
-        rarefaction_curve = lines.line(
-            x_datas=[list(map(float, data.keys()))],
-            y_datas=[list(map(float, data.values()))],
-            names=[sample_id],
-            title="Observed Taxa Richness.",
-            x_axis_label='Sample size',
-            y_axis_label='S (Number of unique taxa)'
-        )
-        section.markdown("### " + sample_id)
-        section.plot(
-            layout([[rarefaction_curve]], sizing_mode="stretch_width"))
+# Setup simple globals
+WORKFLOW_NAME = 'wf-metagenomics'
+REPORT_TITLE = f'{WORKFLOW_NAME}-report'
+THEME = 'epi2melabs'
+N_BARPLOT = 8  # number of taxa to plot in the barplot
 
 
 def main(args):
     """Run the entry point."""
-    report = WFReport(
-        "Workflow Metagenomics Report", "wf-metagenomics",
-        revision=args.revision, commit=args.commit)
-
-    templ = None
-    with open(args.vistempl, "r") as vistempl:
-        templ = vistempl.read()
+    logger = get_named_logger("Report")
+    report = LabsReport(
+        "Workflow Metagenomics Sequencing Report", "wf-metagenomics",
+        args.params, args.versions)
 
     #
-    # Sankey plot
+    # 1. READ SUMMARY
     #
-    path_to_json = args.lineages[0]
-    json_files = [
-        pos_json for pos_json in os.listdir(
-            path_to_json) if pos_json.endswith('.json')]
-    all_json = {}
-    all_json_rank = {}
-    all_rarefied_counts = {}
-    for i in json_files:
-        with open(os.path.join(args.lineages[0], i)) as json_file:
-            # process sankey and table counts
-            sample_lineages = json.load(json_file)
-            sample_name = list(sample_lineages.keys())[0]
-            all_json.update(sample_lineages)
-            # process counts per specific taxa rank to rarefy it
-            rank_counts = diversity.extract_rank(
-                list(sample_lineages.values())[0],
-                rank_dict={}, rank=args.rank)
-            # rarefy step by step
-            species_richness = {sample_name: diversity.rarefaction_curve(
-                list(rank_counts.values()))}
-            all_rarefied_counts.update(species_richness)
-            # join all count data in a dict to then do the final rarefaction
-            all_json_rank[sample_name] = rank_counts
+    if args.pipeline == 'minimap':
+        if args.stats:
+            stats_files = util.read_files(args.stats)
+            with report.add_section("Read summary", "Read summary"):
+                SeqSummary(stats_files)
+                # Add metadata section
+            with report.add_section("Samples summary", "Samples summary"):
+                tabs = Tabs()
+                with tabs.add_tab('Reads'):
+                    with Grid(columns=1):
+                        # Add barplot with reads per sample
+                        sample_reads = ezc.barplot(data=report_utils.per_sample_stats(
+                            stats_files), x='sample_name', y='count')
+                        sample_reads.title = {"text": "Number of reads per sample."}
+                        EZChart(sample_reads, THEME)
+    # kraken stats are not in tsv, they came from json files with binned counts
+    # to be plotted directly as an histogram
+    else:
+        with report.add_section("Read summary", "Read summary"):
+            with open(args.stats[0]) as f:
+                datas = json.load(f)
+                tabs = Tabs()
+                total_reads = {}
+                for sample_id, data in sorted(datas.items()):
+                    with tabs.add_tab(sample_id):
+                        with Grid(columns=2):
+                            EZChart(report_utils.read_quality_plot(data), THEME)
+                            EZChart(report_utils.read_length_plot(data), THEME)
+                            total_reads[sample_id] = data['total_reads']
+                with tabs.add_tab('total'):
+                    with Grid(columns=1):  # total read counts per sample
+                        df_stats = pd.DataFrame.from_dict(total_reads.items())
+                        df_stats.columns = ['Sample_name', 'Number of reads']
+                        plt = ezc.barplot(
+                            data=df_stats, x='Sample_name', y='Number of reads')
+                        plt.title = {"text": "Number of reads per sample."}
+                        plt.tooltip = {'trigger': 'axis'}
+                        EZChart(plt, THEME)
 
-    templ = templ.replace(
-        "replace_me",
-        json.dumps(all_json).replace('"', '\\"'))
-    report.template = Template(templ)
-    bokeh_resources = INLINE.render()
-    report.template.render(bokeh_resources=bokeh_resources)
     #
-    # Standard read metrics
-    #
-    section = report.add_section()
-    if args.stats:
-        if args.pipeline == "minimap":
-            minimap(args.stats, report)
-        else:
-            kraken(args.stats[0], section)
-    #
-    # Plot richness with different sample sizes.
-    #
-    section = report.add_section()
-    section.markdown(" # Diversity ")
-    section.markdown(" Sample-based rarefaction curves to \
-                    display observed taxa richness. ")
-    section.markdown(" Sample size shows the number of reads \
-                        sampled from the total amount of reads analyzed \
-                        during the real time analysis. \
-                        Y-axis indicates the number of \
-                        unique taxa (S) found in those subsampled reads. ")
-    section.markdown(" *Note that Unknown taxon is \
-                    considered as an unique taxon.* ")
-    collector_curves(all_rarefied_counts, section)
-    #
-    # Provide alpha-diversity indexes
-    #
-    # Global rarefaction
-    df = pd.DataFrame.from_dict(all_json_rank, orient='columns').sort_index(axis=1)
-    df = df.fillna(0)
-    df.to_csv('wf-metagenomics-counts.tsv', sep="\t")
-    rarefied_df = diversity.global_rarefaction(df)
-    # rarefied_df = rarefied_df.sort_index(axis=1)
-    rarefied_df.to_csv('wf-metagenomics-rarefied.tsv', sep="\t")
-    div = diversity.alpha_diversity(df).round(2).sort_index().reset_index(
-        level=0)
-    div.fillna('None', inplace=True)
-    div.rename(columns={
-        'index': 'Sample', 'S': 'Richness', 'H': 'Shannon Diversity Index (H)'
-        }, inplace=True)
-    # div.to_csv('wf-metagenomics-alpha.tsv', sep="\t")
-    section = report.add_section()
-    section.markdown(" # Alpha diversity ")
-    section.markdown('''
-        Indices are calculated from the original abundance table \
-    (see description in: Provided outputs)
-    ''')
-    section.table(div)
-    section = report.add_section()
-    section.markdown(" ### Provided outputs ")
-    d_output = {
-        'wf-metagenomics-report.html': ['this report', 'html', ''],
-        'wf-metagenomics-counts.tsv': [
-            'counts per taxon and sample', 'tsv',
-            'cols: samples, rows: taxa at a specific rank'
-        ],
-        'wf-metagenomics-rarefied.tsv': [
-            'rarefied counts per taxon and sample', 'tsv',
-            'cols: samples, rows: taxa at a specific rank'
-        ]
-    }
-    df_output = pd.DataFrame.from_dict(d_output).T
-    df_output.columns = ['Description', 'Format', 'Notes']
-    df_output.reset_index(level=0, inplace=True)
-    df_output.rename(columns={'index': 'Output'}, inplace=True)
-    section.markdown("This is a description of the output directory.")
-    section.table(df_output)
-    #
-    # Standard wf reporting
+    # 2. TAXONOMY RESULTS
     #
 
-    report.add_section(
-        section=scomponents.version_table(args.versions))
-    report.add_section(
-        section=scomponents.params_table(args.params))
+    # Join taxonomy data
+    all_json = report_utils.parse_lineages(args.lineages[0])
+    # Extract all possible lineages
+    allranks_tree = report_utils.tax_tree(all_json)
+    samples = list(allranks_tree.keys())
+    # Save all ranks info
+    ranks_counts = []
+    # 2.1. SANKEY
+    sankey_plot(all_json, report)
+
+    for rank in report_utils.RANKS[1:]:  # avoid superkingdom (SK)
+        counts_per_taxa_df = report_utils.join_abundance_tables(allranks_tree, rank)
+        if not counts_per_taxa_df.empty:
+            ranks_counts.append(counts_per_taxa_df)
+    # Write report
+    with report.add_section('Taxonomy', 'Taxonomy'):
+        tabs = Tabs()
+        # 2.2. BARPLOT
+        with tabs.add_dropdown_menu('Rank', change_header=False):
+            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
+                # RANKS i+1 because there is no SK
+                with tabs.add_dropdown_tab(report_utils.RANKS[i+1]):
+                    most_abundant = report_utils.most_abundant_table(
+                        counts_per_taxa_per_rank_df, samples, n=N_BARPLOT, percent=True)
+                    d2plot = report_utils.split_taxonomy_string(most_abundant)
+                    # Long wide format
+                    d2plot_melt = d2plot.melt(
+                        id_vars=[report_utils.RANKS[i+1]], value_vars=samples,
+                        var_name='samples', value_name='counts')
+                    # Plot
+                    p(f"Barplot of the {N_BARPLOT} most abundant taxa\
+                    at the {report_utils.RANKS[i+1]} rank.\
+                    Any remaining taxa have been collapsed under the \'Other\' category\
+                    to facilitate the visualization.\
+                    The y-axis indicates the relative abundance of each taxon\
+                    in percentages\
+                    for each sample.")
+                    plt = ezc.barplot(
+                        d2plot_melt, x='samples', y='counts',
+                        hue=report_utils.RANKS[i+1], dodge=False)
+                    plt.yAxis = dict(name='Relative abundance')
+                    plt.legend = {
+                        'orient': 'horizontal', 'left': 'center', 'top': 'bottom'}
+                    plt.tooltip = {'trigger': 'axis', 'axisPointer': {'type': 'shadow'}}
+                    # Not best option to avoid overlap, but echarts hasn't solved it yet
+                    # https://github.com/apache/echarts/issues/15654
+                    # https://github.com/apache/echarts/issues/14252
+                    plt.grid = {'bottom': '18%'}
+                    plt.title = {
+                        "text": f"{report_utils.RANKS[i+1].capitalize()} rank"}
+                    EZChart(plt, THEME)
+        # 2.3. ABUNDANCE TABLE
+    with report.add_section('Abundances', 'Abundances'):
+        tabs = Tabs()
+        with tabs.add_dropdown_menu('Abundance tables', change_header=False):
+            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
+                with tabs.add_dropdown_tab(report_utils.RANKS[i+1]):
+                    p(f"Abundance table for the {report_utils.RANKS[i+1]} rank.")
+                    export_table = report_utils.split_taxonomy_string(
+                        counts_per_taxa_per_rank_df, set_index=True)
+                    # Move tax column to end to not spoil visualization
+                    temp_cols = export_table.columns.tolist()
+                    new_cols = temp_cols[1:] + temp_cols[0:1]
+                    export_table = export_table[new_cols]
+                    # Table to report with the export option
+                    DataTable.from_pandas(
+                        export_table,
+                        export=True, file_name=f'wf-metagenomics-counts-\
+                            {report_utils.RANKS[i+1]}')
+        # 2.4. RAREFIED ABUNDANCE TABLE
+        with tabs.add_dropdown_menu('Rarefied Abundance tables', change_header=False):
+            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
+                with tabs.add_dropdown_tab(report_utils.RANKS[i+1]):
+                    p(f"Rarefied abundance table for the \
+                      {report_utils.RANKS[i+1]} rank.")
+                    p("All samples have been randomly subsetted to have the same number\
+                       of reads.")
+                    # Table to report with the export option
+                    rarefied_df = diversity.global_rarefaction(
+                        counts_per_taxa_per_rank_df.set_index('tax')).sort_index(
+                        axis=1).reset_index()
+                    export_table = report_utils.split_taxonomy_string(
+                        rarefied_df, set_index=True)
+                    # Move tax column to end to not spoil visualization
+                    temp_cols = export_table.columns.tolist()
+                    new_cols = temp_cols[1:] + temp_cols[0:1]
+                    export_table = export_table[new_cols]
+                    DataTable.from_pandas(
+                        export_table,
+                        export=True, file_name=f'wf-metagenomics-rarefied-\
+                        {report_utils.RANKS[i+1]}')
+
+    #
+    # 3. DIVERSITY
+    #
+
+    # Return counts for the last analyzed rank to calculate diversity
+    last_analyzed_rank = ranks_counts[-1].set_index('tax')
+    # Rarefy step by step
+    rarefied_counts = last_analyzed_rank.apply(
+        lambda x: diversity.rarefaction_curve(x), axis=0)
+    richness_curve = {
+        rarefied_counts.index[i]: rarefied_counts[i]
+        for i in range(len(rarefied_counts.index))}
+
+    with report.add_section("Alpha Diversity", "Diversity"):
+        tabs = Tabs()
+        #
+        # 3.1. ALPHA DIVERSITY METRICS for the last analyzed level
+        #
+        with tabs.add_tab('Diversity indices'):
+            p("Sample diversity indices. Indices are calculated from the original\
+               abundance table.")
+            DataTable.from_pandas(report_utils.calculate_diversity_metrics(
+                last_analyzed_rank).set_index('Sample'))
+            em("Note that the taxon 'Unkown' is considered as a unique taxon.")
+        #
+        # 3.2. SPECIES RICHNESS CURVES
+        #
+        with tabs.add_tab('Species richness curves'):
+            p("Sample-based rarefaction curves to display observed taxa richness.\
+                Sample size shows the number of reads sampled from the total amount\
+              of reads analyzed during the real time analysis.\
+              The Y-axis indicates the number of unique taxa at the last analyzed\
+              taxonomic rank in those subsampled reads.\
+            ")
+            with Grid(columns=1):
+                df_richness = pd.DataFrame.from_dict(
+                    richness_curve, orient='index')
+                df_richness['Sample'] = list(df_richness.index)
+                df_richness_melt = df_richness.melt(
+                    id_vars='Sample', value_vars=list(df_richness.columns),
+                    var_name='Sample size', value_name='Richness')
+                df_richness_melt_sort = df_richness_melt.sort_values(by=['Sample size'])
+                plot = ezc.lineplot(
+                    data=df_richness_melt_sort,
+                    x='Sample size', y='Richness', hue='Sample')
+                EZChart(plot, 'epi2melabs')
+            em("Note that Unknown taxon is considered as a unique taxon.")
+
     report.write(args.report)
+    logger.info(f"Report written to {args.report}.")
 
 
 def argparser():
@@ -265,11 +232,6 @@ def argparser():
     parser.add_argument(
         "--lineages", nargs='+', required=True,
         help="Read lineage file.")
-    parser.add_argument(
-        "--rank", default='S',
-        help="Taxonomic rank to run diversity.")
-    parser.add_argument(
-        "--vistempl", required=True)
     parser.add_argument(
         "--versions", required=True,
         help="directory containing CSVs containing name,version.")

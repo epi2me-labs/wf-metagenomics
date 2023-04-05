@@ -5,45 +5,9 @@
 
 import numpy as np
 
-# General
-#
-
-BRACKEN_TO_RANK = {
-    'S': 'species',
-    'G': 'genus',
-    'F': 'family',
-    'O': 'order',
-    'C': 'class',
-    'P': 'phylum'
-}
-
-
-def extract_rank(d, rank_dict, rank):
-    """Extract count for a rank level. Return {tx:count}.
-
-    :param d: nested dictionary coming from bracken json:
-        {"Sample": {"Taxon name":{"rank":str, "count":int, "children": dict},}}.
-    :param rank_dict: dictionary {taxa:counts}.
-    :param rank: String indicating the taxonomic rank at
-        which perform the counts extraction.
-    :return: dictionary {taxa:counts}.
-    :rtype: dict.
-    """
-    if BRACKEN_TO_RANK.get(rank):
-        parsed_rank = BRACKEN_TO_RANK[rank]
-    else:
-        parsed_rank = rank
-
-    for tx, v in d.items():
-        if d[tx]['rank'] == parsed_rank:
-            rank_dict[tx] = d[tx]['count']
-        else:
-            extract_rank(d[tx]['children'], rank_dict, rank=parsed_rank)
-    return rank_dict
-
-
 # Rarefy
 #
+
 
 def random_choice(arr, sample_size):
     """Random sample n elements from the total of inviduals.
