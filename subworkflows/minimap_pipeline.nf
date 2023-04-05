@@ -150,11 +150,8 @@ process makeReport {
         path "lineages/*"
         path "versions/*"
         path "params.json"
-        path template
     output:
         path "wf-metagenomics-*.html", emit: report_html
-        path "wf-metagenomics-counts.tsv", emit: counts_tsv
-        path "wf-metagenomics-rarefied.tsv", emit: rarefied_tsv
     script:
         String report_name = "wf-metagenomics-report.html"
         def stats_args = (per_read_stats.name == OPTIONAL_FILE.name) ? "" : "--stats $per_read_stats"
@@ -165,7 +162,6 @@ process makeReport {
         --params params.json \
         $stats_args \
         --lineages lineages \
-        --vistempl "${template}" \
         --pipeline "minimap"
     """
 }
@@ -196,7 +192,6 @@ workflow minimap_pipeline {
         refindex
         ref2taxid
         taxonomy
-        template
     main:
         outputs = []
         lineages = Channel.empty()
@@ -241,15 +236,11 @@ workflow minimap_pipeline {
             per_read_stats,
             lineages.flatMap { it -> [ it[1] ] }.collect(),
             software_versions.collect(),
-            workflow_params,
-            template
+            workflow_params
         )
 
         output(report.report_html.mix(
-            software_versions,
-            workflow_params,
-            report.counts_tsv,
-            report.rarefied_tsv))
+            software_versions, workflow_params))
     emit:
         report.report_html  // just emit something
 }

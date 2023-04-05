@@ -396,11 +396,9 @@ process makeReport {
     cpus 1
     input:
         path lineages
-        tuple(path(stats), path("versions/*"), path("params.json"), path("template.html"))
+        tuple(path(stats), path("versions/*"), path("params.json"))
     output:
         path "wf-metagenomics-*.html", emit: report_html
-        path "wf-metagenomics-counts.tsv", emit: counts_tsv
-        path "wf-metagenomics-rarefied.tsv", emit: rarefied_tsv
     script:
         report_name = "wf-metagenomics-report.html"
     """
@@ -409,9 +407,7 @@ process makeReport {
         --versions versions \
         --params params.json \
         --stats ${stats} \
-        --lineages "${lineages}" \
-        --vistempl template.html \
-        --rank "${params.bracken_level}"
+        --lineages "${lineages}"
     """
 }
 
@@ -439,7 +435,6 @@ workflow kraken_pipeline {
         taxonomy
         database
         kmer_distribution
-        template
     main:
         opt_file = file("$projectDir/data/OPTIONAL_FILE")
         taxonomy = unpackTaxonomy(taxonomy)
@@ -494,13 +489,12 @@ workflow kraken_pipeline {
         stuff = stats
             .combine(versions)
             .combine(parameters)
-            .combine(Channel.of(template))
         
         report = makeReport(progressive_bracken.out.reports, stuff)
         
         // output updating files as part of this pipeline
         output(report.report_html.mix(
-            versions, parameters, report.counts_tsv, report.rarefied_tsv),
+            versions, parameters),
         )
 
         // Stop server when all are processed
@@ -516,8 +510,6 @@ workflow kraken_pipeline {
 
     emit:
         report.report_html  // just emit something
-        report.rarefied_tsv
-        report.counts_tsv
 }
 
 workflow.onComplete {

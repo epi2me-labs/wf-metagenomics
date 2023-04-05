@@ -23,8 +23,6 @@ workflow {
     // Ready the optional file
     OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
 
-    // Acquire report template
-    template = file("$projectDir/bin/report-visualisation.html")
 
     // Checking user parameters
     log.info("Checking inputs.")
@@ -94,8 +92,8 @@ workflow {
         "fastcat_extra_args": ""])
 
         results = minimap_pipeline(
-            samples, reference, refindex, ref2taxid, taxonomy,
-            template)
+            samples, reference, refindex, ref2taxid, taxonomy
+            )
     }
 
     // Handle getting kraken2 database files if kraken2 classifier selected
@@ -131,9 +129,6 @@ workflow {
                 params.bracken_dist, type: "file", checkIfExists:true)
         } else if (!kmer_dist_path) {
             kmer_distribution = file(OPTIONAL, type: "file")
-            if (params.kraken2bracken) {
-                log.info("Kmer distribution not found, bracken2 disabled.")
-            }
         } else {
             kmer_distribution = file(sources[source_name]["kmer_dist"], type: "file")
         }
@@ -153,7 +148,7 @@ workflow {
         "fastcat_extra_args": "",
         "watch_path": params.watch_path])
         results = kraken_pipeline(
-            samples, taxonomy, database, kmer_distribution, template)
+            samples, taxonomy, database, kmer_distribution)
     }
 }
 

@@ -39,7 +39,7 @@ You can run the workflow with test_data available in the github repository.
 
 You can also run the workflow in real-time, meaning the workflow will watch the input directory(s) and process inputs at they become available in the batch sizes specified.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --batch_size 100```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --batch_size 1000```
 
 **Important Note**
 
@@ -67,15 +67,6 @@ eg.
 Alternatively you can run using minimap2 instead. Currently this mode does not support real-time.
 
 ```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --classifier minimap2```
-
-**Workflow outputs**
-
-The primary outputs of the workflow include:
-
-* classified and unclassified reads,
-* text files detailing lineages found,
-* an HTML report document detailing the primary findings of the workflow.
-* tsv files containing for a specific rank, the counts per taxa in each sample.
 
 ***Diversity***
 
@@ -107,10 +98,10 @@ J = H/ln(S)
 ```
 
 
-These indices are calculated by default using the original abundance table (see McMurdie and Holmes<sup>[2](https://pubmed.ncbi.nlm.nih.gov/24699258/)</sup>, 2014 and Willis<sup>[3](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full)</sup>, 2019). If you want to calculate them from a rarefied abundance table (i.e. all the samples have been subsampled to contain the same number of counts per sample, which is the 95% of the minimum number of total counts), you can use the *wf-metagenomics-rarefied.tsv* within the output directory.
+These indices are calculated by default using the original abundance table (see McMurdie and Holmes<sup>[2](https://pubmed.ncbi.nlm.nih.gov/24699258/)</sup>, 2014 and Willis<sup>[3](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full)</sup>, 2019). If you want to calculate them from a rarefied abundance table (i.e. all the samples have been subsampled to contain the same number of counts per sample, which is the 95% of the minimum number of total counts), you can use download the rarefied table from the report.
 
 The report also includes the rarefaction curve per sample which displays the mean of species richness for a subsample of reads (sample size). Generally, this curve initially grows rapidly, as most abundant species are sequenced and they add new taxa in the community, then slightly flattens due to the fact that 'rare' species are more difficult of being sampled, and because of that is more difficult to report an increase in the number of observed species.
 
-*Note: Within each rank, each named taxon is considered to be an unique unit. The counts are the number of reads assigned to that taxon. All 'Unknown' sequences are considered as an unique taxon.*
+*Note: Within each rank, each named taxon is considered to be a unique unit. The counts are the number of reads assigned to that taxon. All 'Unknown' sequences are considered as a unique taxon.*
 
 
