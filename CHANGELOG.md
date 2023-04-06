@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show rank information in abundance tables.
 - Export function from tables.
 ### Fixed
-- Fix crash in the report with the option --batch_size 1.
+- Fix crash in the report with one sequence in the fastq.
+- Use kraken2 with parallelization in single client.
 
 ## [v2.0.10]
 ### Fixed

@@ -108,7 +108,6 @@ process unpackTaxonomy {
 
 
 // Rebundle fastqs (this is mostly in case we're given one big file)
-// This will dissapear with the new kraken2
 process rebatchFastq {
     label "wfmetagenomics"
     maxForks params.threads  // no point having more inputs than processing threads
@@ -134,7 +133,6 @@ process rebatchFastq {
     tail -n +2 ${stats}/per-read-stats.tsv | split -l "${params.batch_size}" \
     -d --additional-suffix=.tsv \
     --filter='sh -c "{ head -n1 ${stats}/per-read-stats.tsv; cat; } > fastcat_stats/\$FILE"' - "${sample_id}"_part_
-
     """
 }
 
@@ -168,7 +166,7 @@ process stopCondition {
 // Notes on CPU resource of kraken server and client:
 //
 // - server will use as much resource as number of clients running,
-//   plus one extra thread => set maxForks of clients to threads - 1.
+//   plus one extra thread => set maxForks of clients to kraken_clients - 1.
 //   (not doing so gives gRPC server: "Server Threadpool Exhausted")
 // - we need potentially one extra request thread to allow stop request
 //   to be handled
@@ -180,7 +178,7 @@ process stopCondition {
 //   up for real-time dynamism not speed
 //
 
-kraken_compute = params.threads == 1 ? 1 : params.threads - 1
+kraken_compute = params.kraken_clients == 1 ? 1 : params.kraken_clients - 1
 
 process kraken_server {
     errorStrategy 'ignore'
@@ -195,8 +193,8 @@ process kraken_server {
     """
     # we add one to requests to allow for stop signal
     kraken2_server \
-        --max-requests ${kraken_compute + 1} --port ${params.port} \
-        --db ./${database}/
+        --max-requests ${kraken_compute + 1} --port ${params.port} --thread-pool ${params.server_threads}\
+        --db ./${database}
     """
 }
 
@@ -227,6 +225,7 @@ process kraken2_client {
     else
         stats_file=${stats}/per-read-stats.tsv
     fi
+
     workflow-glue fastcat_histogram \
         --sample_id "${sample_id}" \
         \$stats_file "${sample_id}.${task.index}.json"
@@ -450,6 +449,7 @@ workflow kraken_pipeline {
             batch_items = rebatchFastq(batch_items.transpose())
                 .transpose()
         }
+
 
         // Run Kraken2
         kraken2_client(batch_items)

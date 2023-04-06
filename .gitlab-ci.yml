@@ -27,7 +27,8 @@ aws-run:
 docker-run:
 
     # Remove this directive in downstream templates
-    tags: [] # no need for big ram
+    tags:
+        - large_ram
 
     # Define a 1D job matrix to inject a variable named MATRIX_NAME into
     #   the CI environment, we can use the value of MATRIX_NAME to determine
