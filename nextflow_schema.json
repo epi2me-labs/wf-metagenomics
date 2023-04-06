@@ -236,8 +236,20 @@
                 "threads": {
                     "type": "integer",
                     "default": 2,
-                    "description": "Number of CPU threads used for classifying reads.",
-                    "help_text": "For the real-time kraken2 workflow, this is the number of CPU threads used by the kraken2 server (and the number of clients sending reads to the server). For the minimap2 workflow, it is the number of CPU threads used by minimap2. For the real-time kraken2 workflow the `threads` parameter should not be set to no more than 4 fewer than the executor CPU limit."
+                    "description": "Maximum number of CPU threads to use per workflow task.",
+                    "help_text": "Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See server threads parameter for kraken specific threads."
+                },
+                "server_threads": {
+                    "type": "integer",
+                    "default": 2,
+                    "description": "Number of CPU threads used by the kraken2 server for classifying reads.",
+                    "help_text": "For the real-time kraken2 workflow, this is the number of CPU threads used by the kraken2 server for classifying reads."
+                },
+                "kraken_clients": {
+                    "type": "integer",
+                    "default": 2,
+                    "description": "Number of clients that can connect at once to the kraken-server for classifying reads.",
+                    "help_text": "For the real-time kraken2 workflow, this is the number of clients sending reads to the server. It should not be set to more than 4 fewer than the executor CPU limit."
                 }
             }
         },
