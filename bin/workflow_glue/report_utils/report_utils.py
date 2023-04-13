@@ -15,13 +15,15 @@ import pandas as pd
 import workflow_glue.diversity as diversity
 
 RANK_ORDER = {
-    'superkingdom': 1, 'phylum': 2, 'class': 3, 'order': 4, 'family': 5, 'genus': 6,
-    'species': 7}
+    'superkingdom': 1, 'kingdom': 2, 'phylum': 3, 'class': 4, 'order': 5, 'family': 6,
+    'genus': 7, 'species': 8}
 
 RANKS = list(RANK_ORDER.keys())
 
+RANKS_NO_SK_K = list(RANK_ORDER.keys())[2:]
 
 # READ INPUT DATA
+
 
 def parse_lineages(lineages):
     """Join lineage counts into a df for a particular taxonomic rank.
@@ -85,7 +87,17 @@ def tax_tree(lineage_trees_dict):
                             # Fill missing ranks with label: Incertae sedis,
                             # i.e. https://en.wikipedia.org/wiki/Wohlfahrtiimonas
                             label = 'Incertae_sedis'
-                            if 'Unclassified' not in original_parent_node.name:
+                            if (
+                                'Bacteria' in original_parent_node.name or
+                                    'Archaea' in original_parent_node.name):
+                                # Leave in blank
+                                node = anytree.Node(
+                                    'none',
+                                    parent=parent_node,
+                                    count=taxon_data['count'],
+                                    rank=(parent_node.rank + 1)
+                                    )
+                            elif 'Unclassified' not in original_parent_node.name:
                                 node = anytree.Node(
                                     f'{parent_node.name}_{label}',
                                     parent=parent_node,
