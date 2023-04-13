@@ -193,7 +193,8 @@ process kraken_server {
     """
     # we add one to requests to allow for stop signal
     kraken2_server \
-        --max-requests ${kraken_compute + 1} --port ${params.port} --thread-pool ${params.server_threads}\
+        --port ${params.port} --host-ip ${params.host} \
+        --max-requests ${kraken_compute + 1} --thread-pool ${params.server_threads}\
         --db ./${database}
     """
 }
@@ -231,7 +232,8 @@ process kraken2_client {
         \$stats_file "${sample_id}.${task.index}.json"
 
     kraken2_client \
-        --port $params.port --report report.txt \
+        --port ${params.port} --host-ip ${params.host} \
+        --report report.txt \
         --sequence $fastq > "${sample_id}.kraken2.assignments.tsv"
     tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
@@ -440,16 +442,18 @@ workflow kraken_pipeline {
         
         database = unpackDatabase(database, kmer_distribution)
         bracken_length = determine_bracken_length(database)
-        kraken_server(database)
-
-        batch_items = samples
+        
+        // do we want to run a kraken server ourselves? 
+        if (!params.external_kraken2) {
+            kraken_server(database)
+        }
 
         // maybe split up large files
+        batch_items = samples
         if (params.batch_size != 0) {
             batch_items = rebatchFastq(batch_items.transpose())
                 .transpose()
         }
-
 
         // Run Kraken2
         kraken2_client(batch_items)
@@ -498,7 +502,9 @@ workflow kraken_pipeline {
         )
 
         // Stop server when all are processed
-        stop_kraken_server(kraken2_client.out.collect())
+        if (!params.external_kraken2) {
+            stop_kraken_server(kraken2_client.out.collect())
+        }
 
         //  Stop file to input folder when read_limit stop condition is met.
         if (params.watch_path && params.read_limit){

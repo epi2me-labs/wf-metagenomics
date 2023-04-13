@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v2.1.1]
 ### Fixed
 - Include 'kingdom' for Eukarya.
+- Add ability to use an external kraken2 server.
 
 ## [v2.1.0]
 ### Updated
