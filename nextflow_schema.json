@@ -149,12 +149,6 @@
                     "minimum": 1,
                     "help_text": "Should be set to the length used to generate the kmer distribution file supplied in the kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 10000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300"
                 },
-                "port": {
-                    "type": "integer",
-                    "description": "Network port for communication between kraken2 server and clients",
-                    "default": 8080,
-                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate."
-                },
                 "bracken_level": {
                     "type": "string",
                     "default": "S",
@@ -168,6 +162,24 @@
                         "C",
                         "P"
                     ]
+                },
+                "port": {
+                    "type": "integer",
+                    "description": "Network port for communication between kraken2 server and clients",
+                    "default": 8080,
+                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate."
+                },
+                "host": {
+                    "type": "string",
+                    "description": "Network hostname (or IP address) for communication between kraken2 server and clients. (See also 'external_kraken2' parameter).",
+                    "default": "localhost",
+                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network hostname (or IP address) of the kraken server."
+                },
+                "external_kraken2": {
+                    "type": "boolean",
+                    "description": "Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow",
+                    "default": false,
+                    "help_text": "By default the workflow assumes that it is running on a single host computer, and further that it should start its own kraken2 server. It may be desirable to start a kraken2 server outside of the workflow, in which case this option should be enabled. This option may be used in conjuction with the `host` option to specify that the kraken2 server is running on a remote computer. "
                 }
             },
             "description": "Kraken2 classification options. Only relevant if classifier parameter is set to kraken2"
