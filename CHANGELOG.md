@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## ["Unreleased"]
 ### Changed
 - Updated LICENSE
+- Updated existing databases.
+### Added
+- A new PFP-8 database option.
+
 
 ## [v2.1.1]
 ### Fixed

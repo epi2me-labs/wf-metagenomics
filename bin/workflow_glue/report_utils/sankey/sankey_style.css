@@ -2,6 +2,7 @@
     position: relative;
 }
 
+
 .wf-metagenomics-sankey h3 {
     font-size: 24px;
     margin: 0;
@@ -16,7 +17,7 @@
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
 }
 
 .wf-metagenomics-sankey ul {
@@ -36,9 +37,9 @@
     position: relative;
     margin-top: 5px;
     outline: none;
-    background-color: #0084A9;
+    background-color: #0079a4;
     padding: 15px 25px;
-    border: 2px solid #0084A9;
+    border: 2px solid #0079a4;
     color: white;
     text-transform: uppercase;
     font-size: 11px;
@@ -55,17 +56,17 @@
 }
 
 .wf-metagenomics-sankey input {
-    border: 2px solid #0084A9;
+    border: 2px solid #0079a4;
     background-color: white;
-    color: #0084A9;
+    color: #0079a4;
 }
 
 .wf-metagenomics-sankey input::placeholder {
-    color: #0084A9;
+    color: #0079a4;
 }
 
 .wf-metagenomics-sankey select:hover {
-    background-color: #0084A9;
+    background-color: #0079a4;
     color: white
 }
 
@@ -83,8 +84,8 @@
     outline: none;
     background-color: transparent;
     padding: 15px 15px;
-    border: 2px solid #0084A9;
-    color: #0084A9;
+    border: 2px solid #0079a4;
+    color: #0079a4;
     text-transform: uppercase;
     font-size: 11px;
     border-radius: 4px;
@@ -100,7 +101,7 @@
 }
 
 .wf-metagenomics-sankey button:hover {
-    background-color: #0084A9;
+    background-color: #0079a4;
     color: white
 }
 
@@ -110,8 +111,6 @@
     font-size: 11px;
     font-weight: normal;
     letter-spacing: 0.05em;
-    /* font-weight: bold; */
-    font-family: 'Courier New', Courier, monospace;
 }
 
 .wf-metagenomics-sankey main {
@@ -133,32 +132,4 @@
     flex-direction: column;
     margin: 0 15px 0 0;
     justify-content: end;
-}
-
-.wf-metagenomics-sankey #table {
-    font-family: Arial, Helvetica, sans-serif;
-    border-collapse: collapse;
-    width: 100%;
-}
-
-.wf-metagenomics-sankey #table td,
-.wf-metagenomics-sankey #table th {
-    border: 1px solid #ddd;
-    padding: 4px;
-}
-
-.wf-metagenomics-sankey #table tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
-
-.wf-metagenomics-sankey #table tr:hover {
-    background-color: #90C5E7;
-}
-
-.wf-metagenomics-sankey #table th {
-    padding-top: 4px;
-    padding-bottom: 4px;
-    text-align: left;
-    background-color: #0084A9;
-    color: white;
 }

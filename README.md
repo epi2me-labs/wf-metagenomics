@@ -96,6 +96,20 @@ Alternatively you can run using minimap2 instead. Currently this mode does not s
 
 ```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --classifier minimap2```
 
+***Databases***
+
+The wf-metagenomics pipeline has 4 pre-defined databases.
+
+To analyze 16S/18S and ITS data, there are two databases available that we have put together using the data from [NCBI](https://www.ncbi.nlm.nih.gov/refseq/targetedloci/). They can be used in both kraken2 and minimap2 pipelines:
+* ncbi_16s_18s
+* ncbi_16s_18s_28s_ITS    
+
+To analyze metagenomics data (not just 16S/18S rRNA and ITS) with the kraken2 pipeline, there are different databases available [here](https://benlangmead.github.io/aws-indexes/k2). We have selected two of them:
+* PlusPF-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa and fungi. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
+* PlusPFP-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa, fungi and plant. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
+
+If you want to run the workflow using your own database, you can use the parameters: database_set, taxonomy, database (kraken2) and reference and ref2taxid (minimap2). Run `nextflow run main.nf --help` to find out more about them.
+
 ***Diversity***
 
 Species diversity refers to the taxonomic composition in a specific microbial community. There are three main concepts:
