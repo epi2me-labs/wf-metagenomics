@@ -121,7 +121,7 @@ process rebatchFastq {
             path("fastcat_stats/${meta.alias}_part_*.tsv")
             )
     script:
-    def sample_id = "${meta.alias}"
+        def sample_id = "${meta.alias}"
     """
     # Batch fasta file
     seqkit split2 ${fastq} \

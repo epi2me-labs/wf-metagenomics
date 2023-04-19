@@ -40,6 +40,9 @@ workflow {
     if (sources == "PlusPF-8" || params.database){
         log.info("Note: Memory available to the workflow must be slightly higher than size of the database index")
     }
+    if (sources == "PlusPFP-8" || params.database){
+        log.info("Note: Memory available to the workflow must be slightly higher than size of the database index")
+    }
 
     // Grab taxonomy files
     taxonomy = file(sources[source_name]["taxonomy"], type: "file")

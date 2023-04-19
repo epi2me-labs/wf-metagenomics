@@ -95,7 +95,8 @@
                     "enum": [
                         "ncbi_16s_18s",
                         "ncbi_16s_18s_28s_ITS",
-                        "PlusPF-8"
+                        "PlusPF-8",
+                        "PlusPFP-8"
                     ],
                     "help_text": "This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options"
                 },
