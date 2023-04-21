@@ -38,7 +38,8 @@ docker-run:
     parallel:
         matrix:
             - MATRIX_NAME: [
-                "kraken2", "minimap2", "kraken2-single-file", "batch", "kraken2-watch-path", "minimap2-sample-sheet"
+                "kraken2", "minimap2", "batch", "kraken2-watch-path", "minimap2-sample-sheet",
+                "kraken2-baf", "minimap2-baf"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -46,18 +47,13 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data "
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01"
           NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
      - if: $MATRIX_NAME == "batch"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data --batch_size 1000 "
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 "
           NF_IGNORE_PROCESSES: "stopCondition"
-     - if: $MATRIX_NAME == "kraken2-single-file"
-       variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/barcode01/reads.fastq.gz"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
      # It creates a STOP.fastq.gz that will be a new input in the wf and make it stop.
@@ -65,16 +61,27 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2-watch-path"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data --watch_path --read_limit 1000"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --watch_path --read_limit 1000"
           NF_IGNORE_PROCESSES: "rebatchFastq"
      - if: $MATRIX_NAME == "minimap2"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data --minimap2filter '9606,1404' --classifier minimap2"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --minimap2filter '9606,1404' --classifier minimap2"
           NF_IGNORE_PROCESSES: ""
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data --minimap2filter '9606,1404' --classifier minimap2 --sample_sheet test_data/sample_sheet.csv"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case02 --minimap2filter '9606,1404' --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv"
           NF_IGNORE_PROCESSES: ""
-
+     # Add test with data from Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
+     # It also works as a test for single file.
+     - if: $MATRIX_NAME == "kraken2-baf"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz"
+          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
+     - if: $MATRIX_NAME == "minimap2-baf"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads"

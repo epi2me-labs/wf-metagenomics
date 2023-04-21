@@ -6,10 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## ["Unreleased"]
 ### Changed
-- Updated LICENSE
 - Updated existing databases.
 ### Added
 - A new PFP-8 database option.
+- New test_data with Bacteria, Archaea and Fungi.
+### Fixed
+- Fix file names when exporting tables.
 
 
 ## [v2.1.1]
