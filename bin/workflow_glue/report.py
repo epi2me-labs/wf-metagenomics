@@ -107,13 +107,15 @@ def main(args):
                         id_vars=[report_utils.RANKS_NO_SK_K[i]], value_vars=samples,
                         var_name='samples', value_name='counts')
                     # Plot
-                    p(f"Barplot of the {N_BARPLOT} most abundant taxa\
-                    at the {report_utils.RANKS_NO_SK_K[i]} rank.\
-                    Any remaining taxa have been collapsed under the \'Other\' category\
-                    to facilitate the visualization.\
-                    The y-axis indicates the relative abundance of each taxon\
-                    in percentages\
-                    for each sample.")
+                    p(f"""
+                    Barplot of the {N_BARPLOT} most abundant taxa at the
+                    {report_utils.RANKS_NO_SK_K[i]} rank.
+                    Any remaining taxa have been collapsed under the \'Other\' category
+                    to facilitate the visualization.
+                    The y-axis indicates the relative abundance of each taxon
+                    in percentages
+                    for each sample.
+                    """)
                     plt = ezc.barplot(
                         d2plot_melt, x='samples', y='counts',
                         hue=report_utils.RANKS_NO_SK_K[i], dodge=False)
@@ -144,16 +146,21 @@ def main(args):
                     # Table to report with the export option
                     DataTable.from_pandas(
                         export_table,
-                        export=True, file_name=f'wf-metagenomics-counts-\
-                            {report_utils.RANKS_NO_SK_K[i]}')
+                        export=True,
+                        file_name=(
+                            f'wf-metagenomics-counts-{report_utils.RANKS_NO_SK_K[i]}'
+                        )
+                    )
         # 2.4. RAREFIED ABUNDANCE TABLE
         with tabs.add_dropdown_menu('Rarefied Abundance tables', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
                 with tabs.add_dropdown_tab(report_utils.RANKS_NO_SK_K[i]):
                     p(f"Rarefied abundance table for the \
                       {report_utils.RANKS_NO_SK_K[i]} rank.")
-                    p("All samples have been randomly subsetted to have the same number\
-                       of reads.")
+                    p("""
+                        All samples have been randomly subsetted to have the same number
+                        of reads.
+                    """)
                     # Table to report with the export option
                     rarefied_df = diversity.global_rarefaction(
                         counts_per_taxa_per_rank_df.set_index('tax')).sort_index(
@@ -166,8 +173,11 @@ def main(args):
                     export_table = export_table[new_cols]
                     DataTable.from_pandas(
                         export_table,
-                        export=True, file_name=f'wf-metagenomics-rarefied-\
-                        {report_utils.RANKS_NO_SK_K[i]}')
+                        export=True,
+                        file_name=(
+                            f'wf-metagenomics-rarefied-{report_utils.RANKS_NO_SK_K[i]}'
+                        )
+                    )
 
     #
     # 3. DIVERSITY
@@ -188,8 +198,10 @@ def main(args):
         # 3.1. ALPHA DIVERSITY METRICS for the last analyzed level
         #
         with tabs.add_tab('Diversity indices'):
-            p("Sample diversity indices. Indices are calculated from the original\
-               abundance table.")
+            p("""
+            Sample diversity indices. Indices are calculated from the original
+            abundance table.
+            """)
             DataTable.from_pandas(report_utils.calculate_diversity_metrics(
                 last_analyzed_rank).set_index('Sample'))
             em("Note that the taxon 'Unkown' is considered as a unique taxon.")
@@ -197,12 +209,12 @@ def main(args):
         # 3.2. SPECIES RICHNESS CURVES
         #
         with tabs.add_tab('Species richness curves'):
-            p("Sample-based rarefaction curves to display observed taxa richness.\
-                Sample size shows the number of reads sampled from the total amount\
-              of reads analyzed during the real time analysis.\
-              The Y-axis indicates the number of unique taxa at the last analyzed\
-              taxonomic rank in those subsampled reads.\
-            ")
+            p("""Sample-based rarefaction curves to display observed taxa richness.
+                Sample size shows the number of reads sampled from the total amount
+              of reads analyzed during the real time analysis.
+              The Y-axis indicates the number of unique taxa at the last analyzed
+              taxonomic rank in those subsampled reads.
+            """)
             with Grid(columns=1):
                 df_richness = pd.DataFrame.from_dict(
                     richness_curve, orient='index')
