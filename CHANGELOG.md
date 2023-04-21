@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## ["Unreleased"]
 ### Changed
 - Updated existing databases.
+- Docker will use an ARM platform image on appropriate devices
+
 ### Added
 - A new PFP-8 database option.
 - New test_data with Bacteria, Archaea and Fungi.
