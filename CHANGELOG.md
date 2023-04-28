@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated existing databases.
 - Docker will use an ARM platform image on appropriate devices
-
 ### Added
 - A new PFP-8 database option.
 - New test_data with Bacteria, Archaea and Fungi.
+- Optional `required_sample_types` field added to fastqingress. The sample sheet must contain at least one of each sample type provided to be deemed valid.
 ### Fixed
 - Fix file names when exporting tables.
 
