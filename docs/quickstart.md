@@ -82,6 +82,10 @@ To analyze metagenomics data (not just 16S/18S rRNA and ITS) with the kraken2 pi
 
 If you want to run the workflow using your own database, you can use the parameters: database_set, taxonomy, database (kraken2) and reference and ref2taxid (minimap2). Run `nextflow run main.nf --help` to find out more about them.
 
+***Output***
+
+The main output of the wf-metagenomics pipeline is the `wf-metagenomics-report.html` which can be found in the output directory. It contains a summary of read statistics, the taxonomic composition of the community and some diversity metrics.
+
 ***Diversity***
 
 Species diversity refers to the taxonomic composition in a specific microbial community. There are three main concepts:
