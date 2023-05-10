@@ -122,7 +122,7 @@
                 "reference": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Override the FASTA reference file selected by the database_set parameter.",
+                    "description": "Override the FASTA reference file selected by the database_set parameter. It can be a FASTA format reference sequence collection or a minimap2 MMI format index.",
                     "help_text": "This option should be used in conjunction with the database parameter to specify a custom database"
                 },
                 "database_sets": {

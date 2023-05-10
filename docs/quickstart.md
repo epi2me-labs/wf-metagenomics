@@ -80,7 +80,7 @@ To analyze metagenomics data (not just 16S/18S rRNA and ITS) with the kraken2 pi
 * PlusPF-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa and fungi. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
 * PlusPFP-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa, fungi and plant. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
 
-If you want to run the workflow using your own database, you can use the parameters: database_set, taxonomy, database (kraken2) and reference and ref2taxid (minimap2). Run `nextflow run main.nf --help` to find out more about them.
+If you want to run the workflow using your own database, you can use the parameters: database_set, taxonomy, database (kraken2) and reference (either a FASTA format reference or a minimap2 MMI format index) and ref2taxid (minimap2). Run `nextflow run main.nf --help` to find out more about them.
 
 ***Output***
 
