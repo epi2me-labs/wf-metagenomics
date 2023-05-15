@@ -241,6 +241,11 @@
                     "description": "Specify read length lower limit",
                     "help_text": "Any reads shorter than this limit will not be included in the analysis."
                 },
+                "min_read_qual": {
+                    "type": "number",
+                    "description": "Minimum read quality.",
+                    "help_text": "Any reads with a quality lower than this limit will not be included in the analysis."
+                },
                 "max_len": {
                     "type": "integer",
                     "description": "Specify read length upper limit",
