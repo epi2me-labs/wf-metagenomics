@@ -27,7 +27,11 @@ workflow {
     // Checking user parameters
     log.info("Checking inputs.")
 
-
+    // Check maximum and minimum length
+    ArrayList fastcat_extra_args = []
+    if (params.min_len) { fastcat_extra_args << "-a $params.min_len" }
+    if (params.max_len) { fastcat_extra_args << "-b $params.max_len" }
+    if (params.min_read_qual) { fastcat_extra_args << "-q $params.min_read_qual" }
 
     // Check source param is valid
     sources = params.database_sets
@@ -92,7 +96,7 @@ workflow {
         "sample_sheet":params.sample_sheet,
         "analyse_unclassified":params.analyse_unclassified,
         "fastcat_stats": params.wf.fastcat_stats,
-        "fastcat_extra_args": ""])
+        "fastcat_extra_args": fastcat_extra_args.join(" ")])
 
         results = minimap_pipeline(
             samples, reference, refindex, ref2taxid, taxonomy
@@ -148,7 +152,7 @@ workflow {
         "sample_sheet":null,
         "analyse_unclassified":params.analyse_unclassified,
         "fastcat_stats": params.wf.fastcat_stats,
-        "fastcat_extra_args": "",
+        "fastcat_extra_args": fastcat_extra_args.join(" "),
         "watch_path": params.watch_path])
         results = kraken_pipeline(
             samples, taxonomy, database, kmer_distribution)
