@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A new option `min_read_qual` to filter by quality score.
 ### Fixed
 - Fix minimum and maximum length read filter.
+### Removed
+- Default region and AWS CLI path for AWS batch profile
 
 ## [v2.2.0]
 ### Changed
