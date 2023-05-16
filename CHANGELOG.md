@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - A new option `min_read_qual` to filter by quality score.
 - Configuration for running demo data in AWS
+- AWS configuration for external kraken2_server for demonstration at LC23
 ### Fixed
 - Fix minimum and maximum length read filter.
 ### Removed
