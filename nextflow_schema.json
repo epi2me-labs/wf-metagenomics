@@ -4,6 +4,7 @@
     "title": "epi2me-labs/wf-metagenomics",
     "description": "Identification of the origin of single reads from both amplicon-targeted and shotgun metagenomics sequencing.",
     "demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz",
+    "aws_demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo/aws.nextflow.config",
     "url": "https://github.com/epi2me-labs/wf-metagenomics",
     "type": "object",
     "definitions": {
