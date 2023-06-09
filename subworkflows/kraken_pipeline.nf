@@ -181,14 +181,20 @@ process stopCondition {
 kraken_compute = params.kraken_clients == 1 ? 1 : params.kraken_clients - 1
 
 process kraken_server {
-    errorStrategy 'ignore'
     label "wfmetagenomics"
     cpus params.threads
+    // short term solution: the following db require at least 8GB of memory,
+    // normally in laptops with 16GB, docker only uses 8GB, so the wf stalls
+    errorStrategy = {
+        task.exitStatus == 137 & params.database_set in [
+            'PlusPF-8', 'PlusPFP-8']? log.error("Error 137 while running kraken2_server, this may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
+        }
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     input:
         path database
     output:
         val true
+
     script:
     """
     # we add one to requests to allow for stop signal
