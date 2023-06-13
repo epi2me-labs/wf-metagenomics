@@ -173,9 +173,13 @@ process makeReport {
 process output {
     // publish inputs to output directory
     label "wfmetagenomics"
-    publishDir "${params.out_dir}", mode: 'copy', pattern: "*"
+    publishDir (
+        params.out_dir,
+        mode: "copy",
+        saveAs: { dirname ? "$dirname/$fname" : fname }
+    )
     input:
-        path fname
+        tuple path(fname), val(dirname)
     output:
         path fname
     """
@@ -239,8 +243,21 @@ workflow minimap_pipeline {
             workflow_params
         )
 
-        output(report.report_html.mix(
-            software_versions, workflow_params))
+        ch_to_publish = Channel.empty()
+        | mix(
+            software_versions,
+            workflow_params,
+            report.report_html,
+        )
+        | map { [it, null] }
+
+        if (params.keep_bam) {
+            ch_to_publish = ch_to_publish | mix (
+            mm2.bam | map { meta, bam, bai -> [bam, "bam"]},
+            mm2.bam | map { meta, bam, bai -> [bai, "bam"]},
+            )
+        }
+        ch_to_publish | output
     emit:
         report.report_html  // just emit something
 }
