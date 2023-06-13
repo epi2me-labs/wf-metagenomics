@@ -83,5 +83,5 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --keep_bam"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
