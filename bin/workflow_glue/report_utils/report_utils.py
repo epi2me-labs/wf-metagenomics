@@ -7,10 +7,7 @@ import os
 import re
 
 import anytree
-from ezcharts.plots import _HistogramPlot
-from ezcharts.plots import util
-from ezcharts.plots.distribution import MakeRectangles
-import numpy as np
+from ezcharts.plots.distribution import histplot
 import pandas as pd
 import workflow_glue.diversity as diversity
 
@@ -288,14 +285,17 @@ def calculate_diversity_metrics(counts_per_taxa_df):
 # The SeqSummary from ezcharts.components.fastcat cannot be used.
 # It groups data into bins, but from the real time analysis output
 # the input data is already grouped into bins.
-# Adapt histplot function from ezcharts to accept a df of binned data
 
 def read_quality_plot(seq_summary, min_qual=4, max_qual=30, title='Read quality'):
     """Create read quality summary plot."""
     df = pd.DataFrame.from_dict(seq_summary['qual'].items())
     df.columns = ['mean_quality', 'counts']
     df['mean_quality'] = df['mean_quality'].astype('float')
-    plt = histplot(grouped_counts_df=df, x='mean_quality', y='counts')
+    plt = histplot(
+        data=df['mean_quality'],
+        bins=len(df),
+        weights=list(df['counts'])
+        )
     plt.title = dict(text=title)
     plt.xAxis.name = 'Quality score'
     plt.xAxis.min, plt.xAxis.max = min_qual, max_qual
@@ -309,58 +309,11 @@ def read_length_plot(seq_summary, title='Read length'):
     df.columns = ['read_length', 'counts']
     df['read_length'] = df['read_length'].astype('uint64')
     df['read_length'] = df['read_length'] / 1000
-    plt = histplot(grouped_counts_df=df, x='read_length', y='counts')
+    plt = histplot(
+        data=df['read_length'],
+        bins=len(df),
+        weights=list(df['counts']))
     plt.title = dict(text=title)
     plt.xAxis.name = 'Read length / kb'
     plt.yAxis.name = 'Number of reads'
-    return plt
-
-
-def histplot(grouped_counts_df=None, *, x=None, y=None):
-    """Plot histograms from already binned data.
-
-    :param data (Pandas DataFrame, optional): Df with grouped counts.
-    :param x (str, optional): x variable name.
-    :param y (str, optional): y variable name.
-    :return (plot): Histogram plot.
-    """
-    plt = _HistogramPlot()
-    plt.xAxis = dict()
-    plt.yAxis = dict()
-    data = pd.DataFrame(grouped_counts_df)
-
-    if data.shape[1] > 1:
-        # multivariate data
-        opacity = 0.5
-        palette = util.choose_palette(ncolours=data.shape[1])
-    else:
-        opacity = 1.0
-        palette = util.choose_palette(ncolours=1)
-
-    heights = data[y].dropna()
-    edges = data[x]
-
-    # skip calculate counts
-    x_starts = edges[:-1]
-    x_ends = edges[1:]
-    rect_data = np.stack((x_starts, x_ends, heights[1:]), axis=-1)
-
-    # return to original function
-    plt.add_dataset(dict(
-        source=rect_data,
-        dimensions=['x_start', 'x_end', 'height']))
-
-    plt.add_series(dict(
-        name=x,
-        type='custom',
-        renderItem=MakeRectangles(),
-        itemStyle=dict(opacity=opacity, color=palette[0]),
-        datasetIndex=0,
-        encode={
-            'x': ['x_start', 'x_end'],
-            'y': ['height']
-        },
-        clip=True
-        ))
-    plt.xAxis.type = 'value'
     return plt
