@@ -14,7 +14,6 @@ from ezcharts.plots import util
 import pandas as pd
 import workflow_glue.diversity as diversity
 import workflow_glue.report_utils.report_utils as report_utils
-from workflow_glue.report_utils.sankey import sankey_plot
 
 from .util import get_named_logger, wf_parser  # noqa: ABS101
 
@@ -86,7 +85,8 @@ def main(args):
     # Save all ranks info
     ranks_counts = []
     # 2.1. SANKEY
-    sankey_plot(all_json, report)
+    with report.add_section('Lineages', 'Lineages'):
+        ezc.metagenomics_sankey(all_json)
 
     for rank in report_utils.RANKS_NO_SK_K:  # avoid superkingdom (SK), kingdom(K)
         counts_per_taxa_df = report_utils.join_abundance_tables(allranks_tree, rank)
