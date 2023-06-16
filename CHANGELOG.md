@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--keep_bam` parameter to write BAM files into the output directory (minimap pipeline).
 
 ### Changed
+- Updated GitHub issue templates to force capture of more information.
 - Bumped minimum required Nextflow version to 22.10.8
 - Enum choices are enumerated in the `--help` output
 - Enum choices are enumerated as part of the error message when a user has selected an invalid choice
