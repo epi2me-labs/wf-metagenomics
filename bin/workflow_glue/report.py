@@ -87,6 +87,25 @@ def main(args):
     # 2.1. SANKEY
     with report.add_section('Lineages', 'Lineages'):
         ezc.metagenomics_sankey(all_json)
+    # 2.2. SUNBURST
+    with report.add_section('Sunburst', 'Sunburst'):
+        tabs = Tabs()
+        with tabs.add_dropdown_menu('Sample', change_header=False):
+            for barcode in all_json.keys():
+                with tabs.add_dropdown_tab(barcode):
+                    p("""
+                    This visualization can be useful to interactively explore the
+                    taxonomic composition of the sample. It shows hierarchical data:
+                    each layer represents a taxonomic rank. The color indicates the
+                    abundance of that taxon in comparison with the total number of
+                    reads. Zooming into an specific taxon is possible by clicking on it.
+                    """)
+                    lineages = report_utils.prepare_data_to_sunburst(all_json[barcode])
+                    plt = ezc.sunburst(
+                        lineages, label_rotate="tangential",
+                        label_minAngle=25)
+                    EZChart(plt, THEME)
+                    lineages.clear()
 
     for rank in report_utils.RANKS_NO_SK_K:  # avoid superkingdom (SK), kingdom(K)
         counts_per_taxa_df = report_utils.join_abundance_tables(allranks_tree, rank)
@@ -95,7 +114,7 @@ def main(args):
     # Write report
     with report.add_section('Taxonomy', 'Taxonomy'):
         tabs = Tabs()
-        # 2.2. BARPLOT
+        # 2.3. BARPLOT
         with tabs.add_dropdown_menu('Rank', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
                 with tabs.add_dropdown_tab(report_utils.RANKS_NO_SK_K[i]):
@@ -130,7 +149,7 @@ def main(args):
                     plt.title = {
                         "text": f"{report_utils.RANKS_NO_SK_K[i].capitalize()} rank"}
                     EZChart(plt, THEME)
-        # 2.3. ABUNDANCE TABLE
+        # 2.4. ABUNDANCE TABLE
     with report.add_section('Abundances', 'Abundances'):
         tabs = Tabs()
         with tabs.add_dropdown_menu('Abundance tables', change_header=False):
@@ -151,7 +170,7 @@ def main(args):
                             f'wf-metagenomics-counts-{report_utils.RANKS_NO_SK_K[i]}'
                         )
                     )
-        # 2.4. RAREFIED ABUNDANCE TABLE
+        # 2.5. RAREFIED ABUNDANCE TABLE
         with tabs.add_dropdown_menu('Rarefied Abundance tables', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
                 with tabs.add_dropdown_tab(report_utils.RANKS_NO_SK_K[i]):

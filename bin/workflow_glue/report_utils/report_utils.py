@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Create tables for the report."""
 
-
 import json
 import os
 import re
@@ -40,7 +39,26 @@ def parse_lineages(lineages):
     return all_json
 
 
+def prepare_data_to_sunburst(lineages_sample, new_lineages=[], position='outside'):
+    """Join lineage counts into a df for a particular taxonomic rank.
+
+    :param lineages_sample (str): Dictionary with lineages of one sample.
+    :return (dict): Taxa counts in json structure ready for sunburst.
+    """
+    for taxon, taxon_data in lineages_sample.items():
+        if taxon_data.get('count'):
+            new_lineages.append(dict(name=taxon, value=taxon_data["count"]))
+        if bool(taxon_data["children"]):
+            new_lineages[-1].update(children=[])
+            prepare_data_to_sunburst(
+                taxon_data["children"], new_lineages[-1]["children"])
+        else:
+            # add position to make the labels be outside of the outer circle in the plot
+            new_lineages[-1].update(label=dict(position=position))
+    return new_lineages
+
 # PREPARE INPUT DATA
+
 
 def tax_tree(lineage_trees_dict):
     """From lineages json, create a dictionary with {sample:tree (counts per lineage)}.

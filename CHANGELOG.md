@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [unreleased]
 ### Added
 - `--keep_bam` parameter to write BAM files into the output directory (minimap pipeline).
+- Lineages sunburst plot added to the report.
 
 ### Changed
 - Updated GitHub issue templates to force capture of more information.
