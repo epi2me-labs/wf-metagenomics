@@ -10,13 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lineages sunburst plot added to the report.
 
 ### Changed
+- Updated example command displayed when running `--help`.
 - Updated GitHub issue templates to force capture of more information.
-- Bumped minimum required Nextflow version to 22.10.8
-- Enum choices are enumerated in the `--help` output
-- Enum choices are enumerated as part of the error message when a user has selected an invalid choice
+- Bumped minimum required Nextflow version to 22.10.8.
+- Enum choices are enumerated in the `--help` output.
+- Enum choices are enumerated as part of the error message when a user has selected an invalid choice.
 
 ### Fixed
-- Replaced `--threads` option in fastqingress with hardcoded values to remove warning about undefined `param.threads`
+- Replaced `--threads` option in fastqingress with hardcoded values to remove warning about undefined `param.threads`.
 
 ## [v2.2.1]
 ### Added
