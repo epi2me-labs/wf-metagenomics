@@ -39,7 +39,7 @@ docker-run:
         matrix:
             - MATRIX_NAME: [
                 "kraken2", "minimap2", "batch", "kraken2-watch-path", "minimap2-sample-sheet",
-                "kraken2-baf", "minimap2-baf"
+                "kraken2-baf", "minimap2-baf", "minimap2-filter"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -66,13 +66,13 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --minimap2filter '9606,1404' --classifier minimap2"
-          NF_IGNORE_PROCESSES: ""
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case02 --minimap2filter '9606,1404' --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv"
-          NF_IGNORE_PROCESSES: ""
+          NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
      # Add test with data from Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
      # It also works as a test for single file.
      - if: $MATRIX_NAME == "kraken2-baf"
@@ -85,3 +85,10 @@ docker-run:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --keep_bam"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+      # Exclude Archaea and Eukaryota from extracted reads (remaining reads should be just from Bacteria).
+     - if: $MATRIX_NAME == "minimap2-filter"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --minimap2filter '2157,2759' --minimap2exclude"
+          NF_IGNORE_PROCESSES: ""
+         

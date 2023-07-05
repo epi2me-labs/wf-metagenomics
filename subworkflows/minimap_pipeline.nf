@@ -74,8 +74,6 @@ process minimap {
     file1=`cat *.json`
     echo "{"'"$sample_id"'": "\$file1"}" >> temp
     cp "temp" "${sample_id}.json"
-
-
     """
 }
 
@@ -219,19 +217,6 @@ workflow minimap_pipeline {
                 taxonomy
             )
         lineages = lineages.mix(mm2.lineage_json)
-        outputs += [
-            mm2.bam,
-            mm2.assignments,
-            mm2.lineage_txt
-        ]
-        if (params.minimap2filter) {
-            mm2_filt = extractMinimap2Reads(
-                mm2.bam,
-                ref2taxid,
-                taxonomy
-            )
-            outputs += [mm2_filt.extracted]
-            }
 
         // Reporting
         software_versions = getVersions()
@@ -257,6 +242,19 @@ workflow minimap_pipeline {
             mm2.bam | map { meta, bam, bai -> [bai, "bam"]},
             )
         }
+
+        // Extract (or exclude) reads belonging (or not) to the chosen taxids.
+        if (params.minimap2filter) {
+            mm2_filt = extractMinimap2Reads(
+                mm2.bam,
+                ref2taxid,
+                taxonomy
+            )
+            ch_to_publish = ch_to_publish | mix (
+            mm2_filt.extracted | map { meta, fastq -> [fastq, "filtered"]},
+            )
+        }
+
         ch_to_publish | output
     emit:
         report.report_html  // just emit something
