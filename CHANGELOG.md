@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Replaced `--threads` option in fastqingress with hardcoded values to remove warning about undefined `param.threads`.
+- Extract reads using `--minimap2filter` and `--minimap2exclude` filters. The extracted reads are in the output/filtered folder.
 
 ## [v2.2.1]
 ### Added
