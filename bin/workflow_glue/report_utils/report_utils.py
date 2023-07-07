@@ -46,8 +46,7 @@ def prepare_data_to_sunburst(lineages_sample, new_lineages=[], position='outside
     :return (dict): Taxa counts in json structure ready for sunburst.
     """
     for taxon, taxon_data in lineages_sample.items():
-        if taxon_data.get('count'):
-            new_lineages.append(dict(name=taxon, value=taxon_data["count"]))
+        new_lineages.append(dict(name=taxon, value=taxon_data["count"]))
         if bool(taxon_data["children"]):
             new_lineages[-1].update(children=[])
             prepare_data_to_sunburst(
