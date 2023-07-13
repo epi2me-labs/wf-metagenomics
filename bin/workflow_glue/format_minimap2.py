@@ -26,7 +26,15 @@ def main(args):
 
         taxid = 0
         if not aln.is_unmapped:
-            taxid = ref2taxid_df.at[aln.reference_name, 'taxid']
+            if aln.reference_name not in ref2taxid_df.index:
+                raise SystemExit(
+                    """Error: The reference {} is not found in your ref2taxid file.
+                    Please make sure that the ref2taxid matches the reference.
+                    If your input are bam files, make sure that the ref2taxid matches
+                    the reference used for the mapping step."""
+                    .format(aln.reference_name))
+            else:
+                taxid = ref2taxid_df.at[aln.reference_name, 'taxid']
 
         output_tsv.write(
             '{mapped}\t{queryid}\t{taxid}\t0|{querylen}\n'.format(

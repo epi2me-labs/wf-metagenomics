@@ -58,8 +58,8 @@ def update_or_create_count(entry, entries):
 
     previous = entries
     for [name, rank] in zip(lineage_split, ranks_split):
-
-        if rank not in RANKS:
+        # Add this temporarily [https://github.com/DerrickWood/kraken2/issues/739]
+        if rank not in RANKS or name in ['Holozoa', 'Nucletmycea']:
             continue
 
         current = previous.get(name)

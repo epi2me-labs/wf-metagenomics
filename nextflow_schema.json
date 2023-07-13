@@ -92,10 +92,11 @@
                 "database_set": {
                     "type": "string",
                     "default": "ncbi_16s_18s",
-                    "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS','PlusPF-8']. Workflow will require memory available to be slightly higher than the size of the database. PlusPF-8 database requires more than 8Gb.",
+                    "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'PlusPF-8', 'PlusPFP-8']. Workflow will require memory available to be slightly higher than the size of the database. PlusPF-8 database requires more than 8Gb.",
                     "enum": [
                         "ncbi_16s_18s",
                         "ncbi_16s_18s_28s_ITS",
+                        "SILVA_138_1",
                         "PlusPF-8",
                         "PlusPFP-8"
                     ],

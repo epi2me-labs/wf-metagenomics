@@ -30,6 +30,31 @@ process unpackTaxonomy {
 }
 
 
+process check_reference_ref2taxid {
+    label "wfmetagenomics"
+    input:
+        path reference
+        path ref2taxid
+    output:
+        val true
+    """
+    # just check if the reference is a fasta file. It can be a MMI index file.
+    if [[ "${reference}" != *.mmi ]]
+    then
+        if [ "\$(wc -l < "${ref2taxid}")" -eq "\$(grep '>' < "${reference}" | wc -l)" ]
+        then
+            echo 'Match!'
+        else
+            echo "Error: The number of elements of the "${ref2taxid}" doesn't match the number of elements in the "${reference}"."
+            echo "Please provide the fitting "${ref2taxid}" for the "${reference}"."
+            echo "Exiting".
+            exit 1
+        fi
+    fi
+    """
+}
+
+
 process minimap {
     label "wfmetagenomics"
     cpus params.threads
@@ -205,6 +230,10 @@ workflow minimap_pipeline {
         | collectFile ( keepHeader: true )
         | ifEmpty ( OPTIONAL_FILE )
         metadata = samples.map { it[0] }.toList()
+
+        // check that the number of elements of the reference (if it is a fasta)
+        // matches the number of elements of the ref2taxid.
+        check_reference_ref2taxid(reference, ref2taxid)
 
         // Run Minimap2
   

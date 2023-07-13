@@ -343,11 +343,11 @@ process progressive_bracken {
     input:
         path(inputs)
         val(sample_ids)
-        tuple path(database), path(taxonomy), val(bracken_length)
+        tuple path(database), path(taxonomy), val(bracken_length), val(bracken_level)
     output:
         path("${new_state}"), emit: reports
         val(sample_id), emit: sample_id
-        tuple path(database), path(taxonomy), val(bracken_length)
+        tuple path(database), path(taxonomy), val(bracken_length), val(bracken_level)
     script:
         new_state = "bracken.${task.index}"
         def kreports = inputs instanceof List ? inputs.first() : inputs
@@ -362,7 +362,7 @@ process progressive_bracken {
         "${database}" \
         "${kreports}/${sample_id}.kreport.txt" \
         "${bracken_length}" \
-        "${params.bracken_level}" \
+        "${bracken_level}" \
         "${sample_id}.bracken_report.txt"
 
     # do some stuff...
@@ -448,7 +448,13 @@ workflow kraken_pipeline {
         
         database = unpackDatabase(database, kmer_distribution)
         bracken_length = determine_bracken_length(database)
+        if ((params.database_set == 'SILVA_138_1') && (params.bracken_level == 'S')) {
+            bracken_level = 'G' // SILVA database does not contain species rank
+        } else{
+            bracken_level = params.bracken_level
+        }
         
+
         // do we want to run a kraken server ourselves? 
         if (!params.external_kraken2) {
             kraken_server(database)
@@ -482,6 +488,7 @@ workflow kraken_pipeline {
         database
             .combine(taxonomy)
             .combine(bracken_length)
+            .combine(Channel.of(bracken_level))
             .first() // To ensure value channel for scan
             .set {bracken_inputs}
 
