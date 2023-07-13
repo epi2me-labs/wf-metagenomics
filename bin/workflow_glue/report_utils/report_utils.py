@@ -94,7 +94,7 @@ def tax_tree(lineage_trees_dict):
                             taxon, parent=parent_node,
                             count=taxon_data['count'],
                             rank=RANK_ORDER[taxon_data['rank']],
-                            )
+                        )
                     else:  # Add missing ranks
                         original_parent_node = parent_node
                         for i in range(1, diff_ranks):
@@ -114,6 +114,13 @@ def tax_tree(lineage_trees_dict):
                             elif 'Unclassified' not in original_parent_node.name:
                                 node = anytree.Node(
                                     f'{parent_node.name}_{label}',
+                                    parent=parent_node,
+                                    count=taxon_data['count'],
+                                    rank=(parent_node.rank + 1)
+                                    )
+                            elif 'uncultured' not in original_parent_node.name:
+                                node = anytree.Node(
+                                    f'{parent_node.name}_uncultured',
                                     parent=parent_node,
                                     count=taxon_data['count'],
                                     rank=(parent_node.rank + 1)
