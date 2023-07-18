@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 ### Added
+- A new option `kraken2_memory_mapping` to avoid kraken2 loading the database into process-local RAM.
 - `--keep_bam` parameter to write BAM files into the output directory (minimap pipeline).
 - Lineages sunburst plot added to the report.
 - SILVA.138 database available for both kraken2 and minimap2 pipelines.

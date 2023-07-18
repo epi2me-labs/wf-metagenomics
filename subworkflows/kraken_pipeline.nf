@@ -194,14 +194,14 @@ process kraken_server {
         path database
     output:
         val true
-
     script:
+        def memory_mapping = params.kraken2_memory_mapping ? '--memory-mapping' : ''
     """
     # we add one to requests to allow for stop signal
     kraken2_server \
         --port ${params.port} --host-ip ${params.host} \
         --max-requests ${kraken_compute + 1} --thread-pool ${params.server_threads}\
-        --db ./${database}
+        --db ./${database} ${memory_mapping}
     """
 }
 

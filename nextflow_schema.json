@@ -183,6 +183,12 @@
                     "description": "Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow",
                     "default": false,
                     "help_text": "By default the workflow assumes that it is running on a single host computer, and further that it should start its own kraken2 server. It may be desirable to start a kraken2 server outside of the workflow, in which case this option should be enabled. This option may be used in conjuction with the `host` option to specify that the kraken2 server is running on a remote computer. "
+                },
+                "kraken2_memory_mapping": {
+                    "type": "boolean",
+                    "description": "Avoids loading database into RAM",
+                    "default": false,
+                    "help_text": "Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database."
                 }
             },
             "description": "Kraken2 classification options. Only relevant if classifier parameter is set to kraken2"
