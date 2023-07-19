@@ -18,6 +18,11 @@ RANKS = list(RANK_ORDER.keys())
 
 RANKS_NO_SK_K = list(RANK_ORDER.keys())[2:]
 
+RANKS_ABB = {
+    "D": "superkingdom", "K": "kingdom", "P": "phylum", "C": "class",
+    "O": "order", "F": "family", "G": "genus", "S": "species"
+}
+
 # READ INPUT DATA
 
 
@@ -90,11 +95,20 @@ def tax_tree(lineage_trees_dict):
                     # (e.g.: Wohlfahrtiimonas)
                     diff_ranks = RANK_ORDER[taxon_data['rank']] - parent_node.rank
                     if diff_ranks == 1:  # Consecutive ranks
-                        node = anytree.Node(
-                            taxon, parent=parent_node,
-                            count=taxon_data['count'],
-                            rank=RANK_ORDER[taxon_data['rank']],
-                        )
+                        if 'uncultured' not in taxon:  # This appears in SILVA database
+                            node = anytree.Node(
+                                taxon, parent=parent_node,
+                                count=taxon_data['count'],
+                                rank=RANK_ORDER[taxon_data['rank']],
+                            )
+                        else:
+                            # Keep the name of the previous rank to avoid duplicates
+                            node = anytree.Node(
+                                f'{parent_node.name}_uncultured',
+                                parent=parent_node,
+                                count=taxon_data['count'],
+                                rank=(parent_node.rank + 1)
+                                )
                     else:  # Add missing ranks
                         original_parent_node = parent_node
                         for i in range(1, diff_ranks):
@@ -114,13 +128,6 @@ def tax_tree(lineage_trees_dict):
                             elif 'Unclassified' not in original_parent_node.name:
                                 node = anytree.Node(
                                     f'{parent_node.name}_{label}',
-                                    parent=parent_node,
-                                    count=taxon_data['count'],
-                                    rank=(parent_node.rank + 1)
-                                    )
-                            elif 'uncultured' not in original_parent_node.name:
-                                node = anytree.Node(
-                                    f'{parent_node.name}_uncultured',
                                     parent=parent_node,
                                     count=taxon_data['count'],
                                     rank=(parent_node.rank + 1)

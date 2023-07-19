@@ -152,20 +152,6 @@
                     "minimum": 1,
                     "help_text": "Should be set to the length used to generate the kmer distribution file supplied in the kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 10000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300"
                 },
-                "bracken_level": {
-                    "type": "string",
-                    "default": "S",
-                    "description": "Set the level that bracken will estimate abundance at. Default: S (species). Other possible options are K (kingdom level), P (phylum), C (class), O (order), F (family), and G (genus).",
-                    "enum": [
-                        "S",
-                        "G",
-                        "k",
-                        "F",
-                        "O",
-                        "C",
-                        "P"
-                    ]
-                },
                 "port": {
                     "type": "integer",
                     "description": "Network port for communication between kraken2 server and clients",
@@ -280,6 +266,20 @@
                     "default": 2,
                     "description": "Number of clients that can connect at once to the kraken-server for classifying reads.",
                     "help_text": "For the real-time kraken2 workflow, this is the number of clients sending reads to the server. It should not be set to more than 4 fewer than the executor CPU limit."
+                },
+                "taxonomic_rank": {
+                    "type": "string",
+                    "default": "S",
+                    "description": "Returns results at the taxonomic rank chosen. In the kraken2 pipeline: set the level that bracken will estimate abundance at. Default: S (species). Other possible options are K (kingdom level), P (phylum), C (class), O (order), F (family), and G (genus).",
+                    "enum": [
+                        "S",
+                        "G",
+                        "k",
+                        "F",
+                        "O",
+                        "C",
+                        "P"
+                    ]
                 }
             }
         },

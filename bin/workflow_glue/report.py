@@ -30,6 +30,15 @@ def main(args):
     report = LabsReport(
         "Workflow Metagenomics Sequencing Report", "wf-metagenomics",
         args.params, args.versions)
+    global SELECTED_RANKS
+    SELECTED_RANKS = []
+    for i in report_utils.RANKS:
+        # append each rank
+        SELECTED_RANKS.append(i)
+        if i == report_utils.RANKS_ABB[args.taxonomic_rank]:
+            # stop when the user rank has been added
+            break
+    ranks_no_sk_k = SELECTED_RANKS[2:]
 
     #
     # 1. READ SUMMARY
@@ -107,7 +116,7 @@ def main(args):
                     EZChart(plt, THEME)
                     lineages.clear()
 
-    for rank in report_utils.RANKS_NO_SK_K:  # avoid superkingdom (SK), kingdom(K)
+    for rank in ranks_no_sk_k:  # avoid superkingdom (SK), kingdom(K)
         counts_per_taxa_df = report_utils.join_abundance_tables(allranks_tree, rank)
         if not counts_per_taxa_df.empty:
             ranks_counts.append(counts_per_taxa_df)
@@ -117,18 +126,18 @@ def main(args):
         # 2.3. BARPLOT
         with tabs.add_dropdown_menu('Rank', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
-                with tabs.add_dropdown_tab(report_utils.RANKS_NO_SK_K[i]):
+                with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     most_abundant = report_utils.most_abundant_table(
                         counts_per_taxa_per_rank_df, samples, n=N_BARPLOT, percent=True)
                     d2plot = report_utils.split_taxonomy_string(most_abundant)
                     # Long wide format
                     d2plot_melt = d2plot.melt(
-                        id_vars=[report_utils.RANKS_NO_SK_K[i]], value_vars=samples,
+                        id_vars=[ranks_no_sk_k[i]], value_vars=samples,
                         var_name='samples', value_name='counts')
                     # Plot
                     p(f"""
                     Barplot of the {N_BARPLOT} most abundant taxa at the
-                    {report_utils.RANKS_NO_SK_K[i]} rank.
+                    {ranks_no_sk_k[i]} rank.
                     Any remaining taxa have been collapsed under the \'Other\' category
                     to facilitate the visualization.
                     The y-axis indicates the relative abundance of each taxon
@@ -137,7 +146,7 @@ def main(args):
                     """)
                     plt = ezc.barplot(
                         d2plot_melt, x='samples', y='counts',
-                        hue=report_utils.RANKS_NO_SK_K[i], dodge=False)
+                        hue=ranks_no_sk_k[i], dodge=False)
                     plt.yAxis = dict(name='Relative abundance')
                     plt.legend = {
                         'orient': 'horizontal', 'left': 'center', 'top': 'bottom'}
@@ -147,15 +156,15 @@ def main(args):
                     # https://github.com/apache/echarts/issues/14252
                     plt.grid = {'bottom': '18%'}
                     plt.title = {
-                        "text": f"{report_utils.RANKS_NO_SK_K[i].capitalize()} rank"}
+                        "text": f"{ranks_no_sk_k[i].capitalize()} rank"}
                     EZChart(plt, THEME)
         # 2.4. ABUNDANCE TABLE
     with report.add_section('Abundances', 'Abundances'):
         tabs = Tabs()
         with tabs.add_dropdown_menu('Abundance tables', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
-                with tabs.add_dropdown_tab(report_utils.RANKS_NO_SK_K[i]):
-                    p(f"Abundance table for the {report_utils.RANKS_NO_SK_K[i]} rank.")
+                with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
+                    p(f"Abundance table for the {ranks_no_sk_k[i]} rank.")
                     export_table = report_utils.split_taxonomy_string(
                         counts_per_taxa_per_rank_df, set_index=True)
                     # Move tax column to end to not spoil visualization
@@ -167,15 +176,15 @@ def main(args):
                         export_table,
                         export=True,
                         file_name=(
-                            f'wf-metagenomics-counts-{report_utils.RANKS_NO_SK_K[i]}'
+                            f'wf-metagenomics-counts-{ranks_no_sk_k[i]}'
                         )
                     )
         # 2.5. RAREFIED ABUNDANCE TABLE
         with tabs.add_dropdown_menu('Rarefied Abundance tables', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
-                with tabs.add_dropdown_tab(report_utils.RANKS_NO_SK_K[i]):
+                with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     p(f"Rarefied abundance table for the \
-                      {report_utils.RANKS_NO_SK_K[i]} rank.")
+                      {ranks_no_sk_k[i]} rank.")
                     p("""
                         All samples have been randomly subsetted to have the same number
                         of reads.
@@ -194,7 +203,7 @@ def main(args):
                         export_table,
                         export=True,
                         file_name=(
-                            f'wf-metagenomics-rarefied-{report_utils.RANKS_NO_SK_K[i]}'
+                            f'wf-metagenomics-rarefied-{ranks_no_sk_k[i]}'
                         )
                     )
 
@@ -262,6 +271,9 @@ def argparser():
     parser.add_argument(
         "--lineages", nargs='+', required=True,
         help="Read lineage file.")
+    parser.add_argument(
+        '--taxonomic_rank', required=True,
+        help="Taxonomic rank.")
     parser.add_argument(
         "--versions", required=True,
         help="directory containing CSVs containing name,version.")

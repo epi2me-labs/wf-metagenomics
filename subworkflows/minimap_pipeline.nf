@@ -64,6 +64,7 @@ process minimap {
         path refindex
         path ref2taxid
         path taxonomy
+        val taxonomic_rank
     output:
         tuple(
             val(meta),
@@ -95,7 +96,7 @@ process minimap {
     taxonkit \
         --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
-        | workflow-glue aggregate_lineages -p "${sample_id}.minimap2"
+        | workflow-glue aggregate_lineages -p "${sample_id}.minimap2" -r "${taxonomic_rank}"
     file1=`cat *.json`
     echo "{"'"$sample_id"'": "\$file1"}" >> temp
     cp "temp" "${sample_id}.json"
@@ -173,6 +174,7 @@ process makeReport {
         path "lineages/*"
         path "versions/*"
         path "params.json"
+        val taxonomic_rank
     output:
         path "wf-metagenomics-*.html", emit: report_html
     script:
@@ -185,6 +187,7 @@ process makeReport {
         --params params.json \
         $stats_args \
         --lineages lineages \
+        --taxonomic_rank "${taxonomic_rank}" \
         --pipeline "minimap"
     """
 }
@@ -219,6 +222,7 @@ workflow minimap_pipeline {
         refindex
         ref2taxid
         taxonomy
+        taxonomic_rank
     main:
         outputs = []
         lineages = Channel.empty()
@@ -243,7 +247,8 @@ workflow minimap_pipeline {
                 reference,
                 refindex,
                 ref2taxid,
-                taxonomy
+                taxonomy,
+                taxonomic_rank
             )
         lineages = lineages.mix(mm2.lineage_json)
 
@@ -254,7 +259,8 @@ workflow minimap_pipeline {
             per_read_stats,
             lineages.flatMap { it -> [ it[1] ] }.collect(),
             software_versions.collect(),
-            workflow_params
+            workflow_params,
+            taxonomic_rank
         )
 
         ch_to_publish = Channel.empty()

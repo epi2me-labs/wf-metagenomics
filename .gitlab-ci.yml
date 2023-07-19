@@ -52,7 +52,7 @@ docker-run:
      - if: $MATRIX_NAME == "batch"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 "
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 --taxonomic_rank G"
           NF_IGNORE_PROCESSES: "stopCondition"
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
@@ -71,7 +71,7 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv --taxonomic_rank G"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
      # Add test with data from Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
      # It also works as a test for single file.

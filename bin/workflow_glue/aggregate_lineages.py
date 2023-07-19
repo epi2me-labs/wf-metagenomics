@@ -19,6 +19,11 @@ RANKS = [
     "species"
 ]
 
+RANKS_ABB = {
+    "D": "superkingdom", "K": "kingdom", "P": "phylum", "C": "class",
+    "O": "order", "F": "family", "G": "genus", "S": "species"
+}
+
 
 def update_or_create_unclassified(entries):
     """Handle unclassified entries."""
@@ -29,7 +34,7 @@ def update_or_create_unclassified(entries):
             'count': 1,
             'children': {
                 UNKNOWN: {
-                    'rank': "species",
+                    'rank': SELECTED_RANKS[-1],
                     'count': 1,
                     'children': {}
                 }
@@ -57,9 +62,10 @@ def update_or_create_count(entry, entries):
     ranks_split = ranks.split(';')
 
     previous = entries
+
     for [name, rank] in zip(lineage_split, ranks_split):
         # Add this temporarily [https://github.com/DerrickWood/kraken2/issues/739]
-        if rank not in RANKS or name in ['Holozoa', 'Nucletmycea']:
+        if (rank not in SELECTED_RANKS) or (name in ['Holozoa', 'Nucletmycea']):
             continue
 
         current = previous.get(name)
@@ -92,6 +98,17 @@ def main(args):
     """Run lineage aggregation algorithm."""
     lineages = args.lineages
     prefix = args.prefix
+    taxonomic_rank = args.taxonomic_rank
+    # Consider just ranks including the selected taxonomic_rank
+    global SELECTED_RANKS
+    SELECTED_RANKS = []
+    for i in RANKS:
+        # append each rank
+        SELECTED_RANKS.append(i)
+        if i == RANKS_ABB[taxonomic_rank]:
+            # stop when the user rank has been added
+            break
+
     if lineages:
         infile = open(lineages)
     else:
@@ -130,6 +147,13 @@ def argparser():
         '-p',
         help="Prefix to append to output file names.",
         dest="prefix",
+        required=True,
+        metavar='',
+    )
+    parser.add_argument(
+        '-r',
+        help="Taxonomic rank.",
+        dest="taxonomic_rank",
         required=True,
         metavar='',
     )
