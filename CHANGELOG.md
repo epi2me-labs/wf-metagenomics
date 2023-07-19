@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SILVA.138 database available for both kraken2 and minimap2 pipelines.
 
 ### Changed
+- `bracken_level` parameter has been replaced by `taxonomic_rank` to choose the taxonomic rank at which to perform the analysis. It works in both pipelines.
 - Updated example command displayed when running `--help`.
 - Updated GitHub issue templates to force capture of more information.
 - Bumped minimum required Nextflow version to 22.10.8.

@@ -77,7 +77,7 @@ To analyze  archaeal, bacterial and fungal 16S/18S and ITS data, there are two d
 * ncbi_16s_18s
 * ncbi_16s_18s_28s_ITS
 
-Besides, you can also use the [SILVA] (https://www.arb-silva.de/) database (version 138). Note that in this case, SILVA uses its own taxids, which do not match the NCBI taxids. We provide the respective taxdump files, but if you prefer using the NCBI ones, you can create them from the SILVA files [NCBI] (https://www.arb-silva.de/no_cache/download/archive/current/Exports/taxonomy/ncbi/). 
+Besides, you can also use the [SILVA] (https://www.arb-silva.de/) database (version 138). Note that in this case, SILVA uses its own taxids, which do not match the NCBI taxids. We provide the respective taxdump files, but if you prefer using the NCBI ones, you can create them from the SILVA files [NCBI] (https://www.arb-silva.de/no_cache/download/archive/current/Exports/taxonomy/ncbi/). As SILVA database uses genus level, the last taxonomic rank at which the analysis is carried out is genus (`--taxonomic_rank G`).
 
 To analyze metagenomics data (not just 16S/18S rRNA and ITS) with the kraken2 pipeline, there are different databases available [here](https://benlangmead.github.io/aws-indexes/k2). We have selected two of them:
 * PlusPF-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa and fungi. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
@@ -99,7 +99,7 @@ Species diversity refers to the taxonomic composition in a specific microbial co
 
 Two different communities can host the same number of different taxonomic groups (i.e. they have the same richness), but they can have different evenness. For instance, if there is one taxon whose abundance is much larger in one community compared to the other.
 
-To provide a quick overview of the diversity of the microbial community, we provide some of the most common indices calculated by a specific taxonomic rank <sup>[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4224527/)</sup>. This rank can be chosen by the user providind the flag *--bracken_level* and the desired rank: 'D'=Domain,'P'=Phylum, 'C'=Class, 'O'=Order, 'F'=Family, 'G'=Genus, 'S'=Species. By default, the rank is 'S' (species level). Some of these indices are:
+To provide a quick overview of the diversity of the microbial community, we provide some of the most common indices calculated by a specific taxonomic rank <sup>[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4224527/)</sup>. This rank can be chosen by the user providind the flag `--taxonomic_rank` and the desired rank: 'D'=Domain,'P'=Phylum, 'C'=Class, 'O'=Order, 'F'=Family, 'G'=Genus, 'S'=Species. By default, the rank is 'S' (species level). Some of these indices are:
 
 * Shannon Diversity Index (H): Shannon entropy approaches zero when one of the taxa is much more abundant than the others.    
 ```math

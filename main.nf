@@ -53,6 +53,7 @@ workflow {
     // SILVA TaxIDs do not match NCBI TaxIDs.
     if ("${params.classifier}" == "minimap2") {
         if (source_name != "SILVA_138_1" ){
+            taxonomic_rank = params.taxonomic_rank
         // Grab taxonomy files
             taxonomy = file(sources[source_name]["taxonomy"], type: "file")
             if (params.taxonomy) {
@@ -94,7 +95,7 @@ workflow {
             }
         } else{
             log.info("Note: SILVA TaxIDs do not match NCBI TaxIDs")
-            log.info("Note: The database will be created from original files, which make the wf runs slower.")
+            log.info("Note: The database will be created from original files, which may make the wf run slower.")
             // Create all the database for both pipelines.
             silva = prepareSILVA()
             reference = silva.reference
@@ -103,6 +104,12 @@ workflow {
             ref2taxid = silva.ref2taxid
             taxonomy = silva.taxonomy
             database = silva.database
+            if (params.taxonomic_rank == 'S') {
+                log.info("Note: SILVA database does not provide species, genus is the lowest taxonomic rank that can be used.")
+                taxonomic_rank = 'G'
+            } else{
+                taxonomic_rank = params.taxonomic_rank
+            }
         }
 
             samples = fastq_ingress([
@@ -114,7 +121,7 @@ workflow {
             "fastcat_extra_args": fastcat_extra_args.join(" ")])
 
             results = minimap_pipeline(
-                samples, reference, refindex, ref2taxid, taxonomy
+                samples, reference, refindex, ref2taxid, taxonomy, taxonomic_rank
                 )
         }
 
@@ -131,7 +138,7 @@ workflow {
 
         // kraken2.tar.gz
         if (source_name != "SILVA_138_1" ){
-            bracken_level = params.bracken_level
+            taxonomic_rank = params.taxonomic_rank
         // Grab taxonomy files
         taxonomy = file(sources[source_name]["taxonomy"], type: "file")
         if (params.taxonomy) {
@@ -171,7 +178,7 @@ workflow {
         } }
         else{
             log.info("Note: SILVA TaxIDs do not match NCBI TaxIDs.")
-            log.info("Note: The database will be created from original files, which make the wf runs slower.")
+            log.info("Note: The database will be created from original files, which may make the wf run slower.")
         // Create all the database for both pipelines.
             silva = prepareSILVA()
             reference = silva.reference
@@ -181,6 +188,12 @@ workflow {
             taxonomy = silva.taxonomy
             database = silva.database
             kmer_distribution  = silva.bracken_dist
+            if (params.taxonomic_rank == 'S') {
+                log.info("Note: SILVA database does not provide species, genus is the lowest taxonomic rank that can be used.")
+                taxonomic_rank = 'G'
+            } else{
+                taxonomic_rank = params.taxonomic_rank
+            }
         }
         samples = fastq_ingress([
         "input":params.fastq,
@@ -191,7 +204,7 @@ workflow {
         "fastcat_extra_args": fastcat_extra_args.join(" "),
         "watch_path": params.watch_path])
         results = kraken_pipeline(
-            samples, taxonomy, database, kmer_distribution)
+            samples, taxonomy, database, kmer_distribution, taxonomic_rank)
     }
 }
 

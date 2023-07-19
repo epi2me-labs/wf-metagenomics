@@ -18,6 +18,11 @@ RANKS = [
     "species"
 ]
 
+RANKS_ABB = {
+    "D": "superkingdom", "K": "kingdom", "P": "phylum", "C": "class",
+    "O": "order", "F": "family", "G": "genus", "S": "species"
+}
+
 
 def update_or_create_unclassified(entries, unclassified_count):
     """Handle unclassified entries."""
@@ -26,7 +31,7 @@ def update_or_create_unclassified(entries, unclassified_count):
         'count': int(unclassified_count),
         'children': {
             UNKNOWN: {
-                'rank': "species",
+                'rank': SELECTED_RANKS[-1],
                 'count': int(unclassified_count),
                 'children': {}
             }
@@ -46,7 +51,7 @@ def update_or_create_count(entry, entries, bracken_counts):
     for [name, rank] in zip(lineage_split, ranks_split):
 
         # Add this temporarily [https://github.com/DerrickWood/kraken2/issues/739]
-        if rank not in RANKS or name in ['Holozoa', 'Nucletmycea']:
+        if rank not in SELECTED_RANKS or name in ['Holozoa', 'Nucletmycea']:
             continue
 
         current = previous.get(name)
@@ -81,9 +86,18 @@ def main(args):
     prefix = args.prefix
     bracken = args.bracken
     report = args.report
+    taxonomic_rank = args.taxonomic_rank
     bracken_counts = {}
     entries = {}
     total = 0
+    global SELECTED_RANKS
+    SELECTED_RANKS = []
+    for i in RANKS:
+        # append each rank
+        SELECTED_RANKS.append(i)
+        if i == RANKS_ABB[taxonomic_rank]:
+            # stop when the user rank has been added
+            break
     with open(bracken) as f:
         bracken = f.readlines()
     if len(bracken) > 0:
@@ -150,6 +164,14 @@ def argparser():
         dest="prefix",
         required=True,
     )
+
+    parser.add_argument(
+        '-r',
+        help=("Taxonomic rank."),
+        dest="taxonomic_rank",
+        required=True,
+    )
+
     return parser
 
 

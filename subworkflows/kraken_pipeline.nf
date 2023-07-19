@@ -343,11 +343,11 @@ process progressive_bracken {
     input:
         path(inputs)
         val(sample_ids)
-        tuple path(database), path(taxonomy), val(bracken_length), val(bracken_level)
+        tuple path(database), path(taxonomy), val(bracken_length), val(taxonomic_rank)
     output:
         path("${new_state}"), emit: reports
         val(sample_id), emit: sample_id
-        tuple path(database), path(taxonomy), val(bracken_length), val(bracken_level)
+        tuple path(database), path(taxonomy), val(bracken_length), val(taxonomic_rank)
     script:
         new_state = "bracken.${task.index}"
         def kreports = inputs instanceof List ? inputs.first() : inputs
@@ -362,7 +362,7 @@ process progressive_bracken {
         "${database}" \
         "${kreports}/${sample_id}.kreport.txt" \
         "${bracken_length}" \
-        "${bracken_level}" \
+        "${taxonomic_rank}" \
         "${sample_id}.bracken_report.txt"
 
     # do some stuff...
@@ -377,7 +377,8 @@ process progressive_bracken {
     workflow-glue aggregate_lineages_bracken \
         -i "lineages.txt" -b "taxacounts.txt" \
         -u "${kreports}/${sample_id}.kreport.txt" \
-        -p "${sample_id}.kraken2"
+        -p "${sample_id}.kraken2" \
+        -r "${taxonomic_rank}" \
 
     file1=`cat *.json`
     echo "{"'"$sample_id"'": "\$file1"}" >> "bracken.json"
@@ -403,7 +404,7 @@ process makeReport {
     cpus 1
     input:
         path lineages
-        tuple(path(stats), path("versions/*"), path("params.json"))
+        tuple(path(stats), path("versions/*"), path("params.json"), val(taxonomic_rank))
     output:
         path "wf-metagenomics-*.html", emit: report_html
     script:
@@ -414,7 +415,8 @@ process makeReport {
         --versions versions \
         --params params.json \
         --stats ${stats} \
-        --lineages "${lineages}"
+        --lineages "${lineages}" \
+        --taxonomic_rank "${taxonomic_rank}"
     """
 }
 
@@ -442,17 +444,13 @@ workflow kraken_pipeline {
         taxonomy
         database
         kmer_distribution
+        taxonomic_rank
     main:
         opt_file = file("$projectDir/data/OPTIONAL_FILE")
         taxonomy = unpackTaxonomy(taxonomy)
         
         database = unpackDatabase(database, kmer_distribution)
         bracken_length = determine_bracken_length(database)
-        if ((params.database_set == 'SILVA_138_1') && (params.bracken_level == 'S')) {
-            bracken_level = 'G' // SILVA database does not contain species rank
-        } else{
-            bracken_level = params.bracken_level
-        }
         
 
         // do we want to run a kraken server ourselves? 
@@ -488,7 +486,7 @@ workflow kraken_pipeline {
         database
             .combine(taxonomy)
             .combine(bracken_length)
-            .combine(Channel.of(bracken_level))
+            .combine(Channel.of(taxonomic_rank))
             .first() // To ensure value channel for scan
             .set {bracken_inputs}
 
@@ -506,6 +504,7 @@ workflow kraken_pipeline {
         stuff = stats
             .combine(versions)
             .combine(parameters)
+            .combine(Channel.of(taxonomic_rank))
         
         report = makeReport(progressive_bracken.out.reports, stuff)
         
