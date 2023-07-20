@@ -44,10 +44,10 @@ workflow {
         throw new Exception("Source $params.source is invalid, must be one of $keys")
     }
     if (source_name == "PlusPF-8" || params.database){
-        log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB)")
+        log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB) or consider to use --kraken2_memory_mapping")
     }
     if (source_name == "PlusPFP-8" || params.database){
-        log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB)")
+        log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB) or consider to use the --kraken2_memory_mapping")
     }
     
     // SILVA TaxIDs do not match NCBI TaxIDs.
