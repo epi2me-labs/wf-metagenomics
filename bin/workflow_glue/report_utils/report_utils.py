@@ -348,3 +348,17 @@ def read_length_plot(seq_summary, title='Read length'):
     plt.xAxis.name = 'Read length / kb'
     plt.yAxis.name = 'Number of reads'
     return plt
+
+
+def parse_amr(amr_dir):
+    """Join sample jsons together.
+
+    :param amr_dir (str): String indicating the path of the dir with amr json results.
+    :return (dict): Grouped results in json structure.
+    """
+    all_output = dict()
+    for file in os.listdir(amr_dir):
+        with open(f"{amr_dir}/{file}") as fh:
+            data = json.load(fh)
+        all_output.update(data)
+    return all_output

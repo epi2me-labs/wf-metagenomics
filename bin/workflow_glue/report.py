@@ -2,6 +2,7 @@
 """Create workflow report."""
 import json
 
+from dominate import tags as html_tags
 from dominate.tags import em, p
 import ezcharts as ezc
 from ezcharts.components.ezchart import EZChart
@@ -22,6 +23,72 @@ WORKFLOW_NAME = 'wf-metagenomics'
 REPORT_TITLE = f'{WORKFLOW_NAME}-report'
 THEME = 'epi2melabs'
 N_BARPLOT = 8  # number of taxa to plot in the barplot
+
+
+def amr_section(amr_data, html_id):
+    """Parse amr JSON for accordion style table.
+
+    params: amr_data (dict): Dict containing amr results for sample.
+    params: html_id (str): String used for grouping data correctly in html.
+    returns (str): html format of data.
+    """
+    _div = html_tags.div(cls="accordion-item")
+    for i, (gene, data) in enumerate(amr_data.items()):
+        _head = html_tags.h2(id=str(i), style="border: 1px solid rgba(0,0,0,.125);\
+                            border-collapse: collapse;\
+                             padding:0;\
+                             margin-bottom:0")
+        _button = html_tags.button(
+            html_tags.span(html_tags.b(gene)),
+            html_tags.span(
+                    data["count"],
+                    cls="badge rounded-pill bg-danger",
+                    style="top:8px"
+                    ),
+            cls="accordion-button collapsed",
+            type="button",
+            data_bs_toggle="collapse",
+            data_bs_target=f"#collapse{i}",
+            aria_expanded="false",
+            aria_controls=f"collapse{i}",
+            style="display: grid; \
+                    align-items: center;\
+                    grid-template-columns: 1fr max-content max-content;\
+                    grid-gap: 25px"
+            )
+        _head.add(_button)
+        _div.add(_head)
+        _div1 = html_tags.div(
+            id=f"collapse{i}",
+            cls="accordion-collapse collapse",
+            fr=str(i),
+            aria_labelledby=str(i),
+            data_bs_parent=f"#{html_id}")
+        _div2 = html_tags.div(cls="accordion body")
+        _table = html_tags.table(cls="table table-striped")
+        _thead = html_tags.thead()
+        _thead.add(
+            html_tags.tr(
+                html_tags.th("ReadID"),
+                html_tags.th("Coverage %"),
+                html_tags.th("Identity %"),
+                html_tags.th("Resistance")
+            )
+        )
+        _table.add(_thead)
+        for hit in data["meta"]:
+            _tr = html_tags.tr()
+            _tr.add(
+                html_tags.td(hit["SEQUENCE"]),
+                html_tags.td(hit["%COVERAGE"]),
+                html_tags.td(hit["%IDENTITY"]),
+                html_tags.td(hit["RESISTANCE"].replace("_", ""))
+            )
+            _table.add(_tr)
+        _div2.add(_table)
+        _div1.add(_div2)
+        _div.add(_div1)
+    return _div
 
 
 def main(args):
@@ -257,6 +324,27 @@ def main(args):
                 EZChart(plot, 'epi2melabs')
             em("Note that Unknown taxon is considered as a unique taxon.")
 
+    #
+    # 4. AMR
+    #
+    if args.amr:
+        with report.add_section("Antimicrobial resistance", "AMR"):
+            with open(args.params) as f:
+                params = json.load(f)
+            amr_db = params["amr_db"].capitalize()
+            p(f"""Detection of acquired AMR genes within sample using Abricate
+               with the {amr_db} database.
+            Please note that SNP-mediated AMR cannot be detected.
+            """)
+            amr_data = report_utils.parse_amr(args.amr)
+            tabs = Tabs()
+            for sample_id, data in sorted(amr_data.items()):
+                with tabs.add_tab(sample_id):
+                    with html_tags.div(cls="accordion", id=f"accordian_{sample_id}"):
+                        if data["pass"]:
+                            amr_section(data["results"], f"accordion_{sample_id}")
+                        else:
+                            p("No AMR genes detected in sample")
     report.write(args.report)
     logger.info(f"Report written to {args.report}.")
 
@@ -289,6 +377,9 @@ def argparser():
     parser.add_argument(
         "--pipeline", default='unknown',
         help="kraken or minimap")
+    parser.add_argument(
+        "--amr", default=None,
+        help="Path to combined AMR results")
     return parser
 
 

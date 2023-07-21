@@ -1,4 +1,5 @@
-import groovy.json.JsonBuilder
+include { run_amr } from '../modules/local/amr'
+include { run_common } from '../modules/local/common'
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -135,38 +136,6 @@ process extractMinimap2Reads {
 }
 
 
-process getVersions {
-    label "wfmetagenomics"
-    cpus 1
-    output:
-        path "versions.txt"
-    script:
-    """
-    python -c "import pysam; print(f'pysam,{pysam.__version__}')" >> versions.txt
-    python -c "import pandas; print(f'pandas,{pandas.__version__}')" >> versions.txt
-    fastcat --version | sed 's/^/fastcat,/' >> versions.txt
-    minimap2 --version | sed 's/^/minimap2,/' >> versions.txt
-    samtools --version | head -n 1 | sed 's/ /,/' >> versions.txt
-    taxonkit version | sed 's/ /,/' >> versions.txt
-    kraken2 --version | head -n 1 | sed 's/ version /,/' >> versions.txt
-    """
-}
-
-
-process getParams {
-    label "wfmetagenomics"
-    cpus 1
-    output:
-        path "params.json"
-    script:
-        def paramsJSON = new JsonBuilder(params).toPrettyString()
-    """
-    # Output nextflow params object to JSON
-    echo '$paramsJSON' > params.json
-    """
-}
-
-
 process makeReport {
     label "wfmetagenomics"
     input:
@@ -175,11 +144,13 @@ process makeReport {
         path "versions/*"
         path "params.json"
         val taxonomic_rank
+        path amr
     output:
         path "wf-metagenomics-*.html", emit: report_html
     script:
         String report_name = "wf-metagenomics-report.html"
         def stats_args = (per_read_stats.name == OPTIONAL_FILE.name) ? "" : "--stats $per_read_stats"
+        amr = params.amr as Boolean ? "--amr ${amr}" : ""
     """   
     workflow-glue report \
         $report_name \
@@ -188,7 +159,8 @@ process makeReport {
         $stats_args \
         --lineages lineages \
         --taxonomic_rank "${taxonomic_rank}" \
-        --pipeline "minimap"
+        --pipeline "minimap" \
+        $amr
     """
 }
 
@@ -252,21 +224,36 @@ workflow minimap_pipeline {
             )
         lineages = lineages.mix(mm2.lineage_json)
 
+        // Process AMR
+        if (params.amr) {
+            run_amr = run_amr(
+                samples,
+                "${params.amr_db}",
+                "${params.amr_minid}",
+                "${params.amr_mincov}"
+            )
+            amr_reports = run_amr.reports
+        } else {
+            amr_reports = Channel.empty()
+        }
+
         // Reporting
-        software_versions = getVersions()
-        workflow_params = getParams()
+        common = run_common()
+        software_versions = common.software_versions
+        parameters = common.parameters
         report = makeReport(
             per_read_stats,
             lineages.flatMap { it -> [ it[1] ] }.collect(),
-            software_versions.collect(),
-            workflow_params,
-            taxonomic_rank
+            software_versions,
+            parameters,
+            taxonomic_rank,
+            amr_reports.ifEmpty(OPTIONAL_FILE)
         )
 
         ch_to_publish = Channel.empty()
         | mix(
             software_versions,
-            workflow_params,
+            parameters,
             report.report_html,
         )
         | map { [it, null] }

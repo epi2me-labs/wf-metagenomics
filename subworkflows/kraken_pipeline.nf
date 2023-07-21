@@ -1,38 +1,9 @@
-import groovy.json.JsonBuilder
 import nextflow.util.BlankSeparatedList
 
+include { run_amr } from '../modules/local/amr'
+include { run_common } from '../modules/local/common'
 
-process getVersions {
-    label "wfmetagenomics"
-    cpus 1
-    output:
-        path "versions.txt"
-    script:
-    """
-    python -c "import pysam; print(f'pysam,{pysam.__version__}')" >> versions.txt
-    python -c "import pandas; print(f'pandas,{pandas.__version__}')" >> versions.txt
-    fastcat --version | sed 's/^/fastcat,/' >> versions.txt
-    minimap2 --version | sed 's/^/minimap2,/' >> versions.txt
-    samtools --version | head -n 1 | sed 's/ /,/' >> versions.txt
-    taxonkit version | sed 's/ /,/' >> versions.txt
-    kraken2 --version | head -n 1 | sed 's/ version /,/' >> versions.txt
-    """
-}
-
-
-process getParams {
-    label "wfmetagenomics"
-    cpus 1
-    output:
-        path "params.json"
-    script:
-        def paramsJSON = new JsonBuilder(params).toPrettyString()
-    """
-    # Output nextflow params object to JSON
-    echo '$paramsJSON' > params.json
-    """
-}
-
+OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
 process unpackDatabase {
     label "wfmetagenomics"
@@ -59,6 +30,7 @@ process unpackDatabase {
     cp "${kmer_distribution}" database_dir
     """
 }
+
 
 process determine_bracken_length {
     label "wfmetagenomics"
@@ -405,10 +377,12 @@ process makeReport {
     input:
         path lineages
         tuple(path(stats), path("versions/*"), path("params.json"), val(taxonomic_rank))
+        path amr
     output:
         path "wf-metagenomics-*.html", emit: report_html
     script:
         report_name = "wf-metagenomics-report.html"
+        amr = params.amr as Boolean ? "--amr ${amr}" : ""
     """
     workflow-glue report \
         "${report_name}" \
@@ -416,7 +390,8 @@ process makeReport {
         --params params.json \
         --stats ${stats} \
         --lineages "${lineages}" \
-        --taxonomic_rank "${taxonomic_rank}"
+        --taxonomic_rank "${taxonomic_rank}" \
+        $amr
     """
 }
 
@@ -459,6 +434,7 @@ workflow kraken_pipeline {
         }
 
         // maybe split up large files
+        // sample_ids = samples.map { meta, reads, stats -> meta.alias }
         batch_items = samples
         if (params.batch_size != 0) {
             batch_items = rebatchFastq(batch_items.transpose())
@@ -479,6 +455,7 @@ workflow kraken_pipeline {
                 report: rep
             }
             .set { scan_input }
+
         progressive_kraken_reports.scan(
             scan_input.report, scan_input.sample_id, 
             taxonomy)
@@ -494,23 +471,43 @@ workflow kraken_pipeline {
             progressive_kraken_reports.out.reports, progressive_kraken_reports.out.sample_id,
             bracken_inputs)
 
+        // Process AMR
+        if (params.amr) {
+            run_amr = run_amr(
+                batch_items,
+                "${params.amr_db}",
+                "${params.amr_minid}",
+                "${params.amr_mincov}"
+            )
+            amr_reports = run_amr.reports
+        } else {
+	        amr_reports = Channel.empty()
+	}
+
         // report step
         // Nasty: we assume br.report and stats are similarly
         // ordered. This is find because everything has been through scan and
         // is therefore necessarily ordered. This could be tidied up by passing
         // through a job id but that seems unneccessary at this point.
-        versions = getVersions().collect()
-        parameters = getParams().collect()
+
+        common = run_common()
+        software_versions = common.software_versions
+        parameters = common.parameters
         stuff = stats
-            .combine(versions)
+            .combine(software_versions)
             .combine(parameters)
             .combine(Channel.of(taxonomic_rank))
         
-        report = makeReport(progressive_bracken.out.reports, stuff)
+    
+        report = makeReport(
+            progressive_bracken.out.reports,
+            stuff,
+            amr_reports.ifEmpty(opt_file)
+        )
         
         // output updating files as part of this pipeline
         output(report.report_html.mix(
-            versions, parameters),
+            software_versions, parameters),
         )
 
         // Stop server when all are processed

@@ -24,3 +24,57 @@ process prepareSILVA {
     mv $params.database_set/taxonomy taxonomy
     """
 }
+
+process abricateVersion {
+    label "amr"
+    cpus 1
+    output:
+        path "versions.txt"
+    script:
+    """
+    abricate --version | sed 's/ /,/' >> "versions.txt"
+    """
+}
+
+process getVersions {
+    label "wfmetagenomics"
+    cpus 1
+    input:
+        path "input_versions.txt"
+    output:
+        path "versions.txt"
+    script:
+    """
+    cat input_versions.txt >> versions.txt
+    python -c "import pysam; print(f'pysam,{pysam.__version__}')" >> versions.txt
+    python -c "import pandas; print(f'pandas,{pandas.__version__}')" >> versions.txt
+    fastcat --version | sed 's/^/fastcat,/' >> versions.txt
+    minimap2 --version | sed 's/^/minimap2,/' >> versions.txt
+    samtools --version | head -n 1 | sed 's/ /,/' >> versions.txt
+    taxonkit version | sed 's/ /,/' >> versions.txt
+    kraken2 --version | head -n 1 | sed 's/ version /,/' >> versions.txt
+    """
+}
+
+process getParams {
+    label "wfmetagenomics"
+    cpus 1
+    output:
+        path "params.json"
+    script:
+        def paramsJSON = new JsonBuilder(params).toPrettyString()
+    """
+    # Output nextflow params object to JSON
+    echo '$paramsJSON' > params.json
+    """
+}
+
+workflow run_common {
+    main:
+        amr_version = abricateVersion()
+        versions = getVersions(amr_version)
+        parameters = getParams()
+    emit:
+        software_versions = versions
+        parameters = parameters
+}
