@@ -42,6 +42,10 @@ You can also run the workflow in real-time, meaning the workflow will watch the 
 
 ```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --batch_size 1000```
 
+When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with a ```ctrl+c``` command). The workflow can be configured to complete automatically after a set number of reads have been analysed using the ```read_limit``` variable. Once this threshold has been reached, the program will emit a "STOP.fastq" file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq" file is then deleted. 
+
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --read_limit 4000```
+
 **Important Note**
 
 When using the real-time functionality of the workflow, the input directory must contain sequencing reads in fastq files or sub-directories which themselves contain sequencing reads in fastq files. This is in contrast to the standard workflow which can additionally accept reads provided as a single file directly.
@@ -128,4 +132,27 @@ The report also includes the rarefaction curve per sample which displays the mea
 
 *Note: Within each rank, each named taxon is considered to be a unique unit. The counts are the number of reads assigned to that taxon. All 'Unknown' sequences are considered as a unique taxon.*
 
+***Antimicrobial resistance***
 
+The workflow can be used to analyse the prescence of acquired antimicrobial resistance (AMR) or virulence genes within the dataset. It uses [ABRicate](https://github.com/tseemann/abricate) to scan reads against a database of AMR/virulence genes.
+
+```nextflow run epi2me-labs/wf-metagenomics --fastq path/to/fastq/ --database_set PlusPF-8 --amr```
+
+By default, ABRicate is set to search for AMR genes present in the [Resfinder](https://bitbucket.org/genomicepidemiology/resfinder_db/src/master/) database. Users are able to choose from a number of databases using the ```--amr_db``` parameter. 
+
+
+|```--amr_db``` | Database |
+|---------------|----------|
+|```resfinder```| [Resfinder](https://bitbucket.org/genomicepidemiology/resfinder_db/src/master/)|
+|```ecoli_vf```| [E. coli virulence factors](https://github.com/phac-nml/ecoli_vf)|
+|```plasmidfinder```| [PlasmidFinder](https://bitbucket.org/genomicepidemiology/plasmidfinder_db/src/master/)|
+|```card```| [Comprehensive Antibiotic Resistance Database](https://card.mcmaster.ca/)|
+|```argannot```| [ARG-ANNOT](https://www.mediterranee-infection.com/acces-ressources/base-de-donnees/arg-annot-2/)|
+|```vfdb```| [Virulence factor DB](http://www.mgc.ac.cn/VFs/)|
+|```ncbi```| [NCBI AMRFinderPlus](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA313047)|
+|```megares```| [MEGAres](https://www.meglab.org/megares/)|
+|```ecoh```| [E. coli AMR DB from SRST2](https://github.com/katholt/srst2/tree/master/data)|
+
+**Note**
+
+ABRicate can only report the presence of acquired AMR/virulence genes but cannot identify SNP-mediated AMR genes. 

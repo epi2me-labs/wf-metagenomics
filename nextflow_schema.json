@@ -213,6 +213,48 @@
             "description": "Minimap2 classification options. Only relevant if classifier parameter is set to minimap2.",
             "help_text": "Minimap2\nThe default strategy is using minimap2 to perform full\nalignments against .fasta formatted references sequences. "
         },
+        "amr_options": {
+            "title": "Antimicrobial resistance detection options",
+            "type": "object",
+            "fa_icon": "fas fa-pills",
+            "properties": {
+                "amr": {
+                    "type": "boolean",
+                    "description": "Scan reads for antimicrobial resistance or virulence genes",
+                    "help_text": "Reads will be scanned using abricate and the chosen database (`--amr_db`) to identify any acquired antimicrobial resistance or virulence genes found present in the dataset. NOTE: It cannot identify mutational resistance genes"
+                },
+                "amr_db": {
+                    "type": "string",
+                    "default": "resfinder",
+                    "description": "Database of antimicrobial resistance or virulence genes to use",
+                    "enum": [
+                        "resfinder",
+                        "ecoli_vf",
+                        "plasmidfinder",
+                        "card",
+                        "argannot",
+                        "vfdb",
+                        "ncbi",
+                        "megares",
+                        "ecoh"
+                    ]
+                },
+                "amr_minid": {
+                    "type": "integer",
+                    "default": 80,
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Threshold of required identity to report a match between a gene in the database and fastq reads. Valid interval: 0-100"
+                },
+                "amr_mincov": {
+                    "type": "integer",
+                    "default": 80,
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Minimum coverage (breadth-of) threshold required to report a match between a gene in the  database and fastq reads. Valid interval: 0-100"
+                }
+            }
+        },
         "output_options": {
             "title": "Output Options",
             "type": "object",
@@ -347,6 +389,9 @@
         },
         {
             "$ref": "#/definitions/miscellaneous_options"
+        },
+        {
+            "$ref": "#/definitions/amr_options"
         }
     ],
     "docs": {
