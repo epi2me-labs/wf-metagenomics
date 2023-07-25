@@ -382,7 +382,7 @@ process makeReport {
         path "wf-metagenomics-*.html", emit: report_html
     script:
         report_name = "wf-metagenomics-report.html"
-        amr = params.amr as Boolean ? "--amr ${amr}" : ""
+        String amr_arg = amr.name != "OPTIONAL_FILE" ? "--amr ${amr}" : ""
     """
     workflow-glue report \
         "${report_name}" \
@@ -391,7 +391,7 @@ process makeReport {
         --stats ${stats} \
         --lineages "${lineages}" \
         --taxonomic_rank "${taxonomic_rank}" \
-        $amr
+        $amr_arg
     """
 }
 
@@ -481,7 +481,8 @@ workflow kraken_pipeline {
             )
             amr_reports = run_amr.reports
         } else {
-	        amr_reports = Channel.empty()
+            // use first() to coerce this to a value channel
+	        amr_reports = Channel.fromPath("$projectDir/data/OPTIONAL_FILE", checkIfExists: true).first()
 	}
 
         // report step
@@ -502,7 +503,7 @@ workflow kraken_pipeline {
         report = makeReport(
             progressive_bracken.out.reports,
             stuff,
-            amr_reports.ifEmpty(opt_file)
+            amr_reports
         )
         
         // output updating files as part of this pipeline
