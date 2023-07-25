@@ -214,7 +214,7 @@
             "help_text": "Minimap2\nThe default strategy is using minimap2 to perform full\nalignments against .fasta formatted references sequences. "
         },
         "amr_options": {
-            "title": "Antimicrobial resistance detection options",
+            "title": "Antimicrobial Resistance Options",
             "type": "object",
             "fa_icon": "fas fa-pills",
             "properties": {
