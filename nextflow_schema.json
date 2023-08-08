@@ -17,6 +17,7 @@
                 "fastq": {
                     "type": "string",
                     "format": "path",
+                    "title": "FASTQ",
                     "description": "A fastq file or a directory of directories containing fastq input files.",
                     "help_text": "If using the kraken2 classifier type, the input must be either a single file or a directory containing sub-directories which themselves contain sequencing reads in fastq files. See Readme for an example.\n\nIf using the minimap2 classifier type - directories named \\\"barcode*\\\" are found under the `--fastq` directory the data is assumed to be multiplex and each barcode directory will be processed independently. If `.fastq(.gz)` files are found under the `--fastq` directory the sample is assumed to not be multiplexed. In this second case `--samples` should be a simple name rather than a CSV file.",
                     "demo_data": "test_data"
@@ -24,6 +25,7 @@
                 "classifier": {
                     "type": "string",
                     "default": "kraken2",
+                    "title": "Classification method",
                     "description": "Kraken2 or Minimap2 workflow to be used for classification of reads.",
                     "enum": [
                         "kraken2",
@@ -34,17 +36,25 @@
                 "batch_size": {
                     "type": "integer",
                     "default": 0,
+                    "title": "Size of each batch",
                     "description": "Maximum number of sequence records to process in a batch.",
                     "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 32000 is recommended to rebatch large files."
                 },
                 "analyse_unclassified": {
                     "type": "boolean",
+                    "default": false,
+                    "title": "Analyse unclassified reads",
                     "description": "Analyse unclassified reads from input directory. By default the workflow will not process reads in the unclassified directory.",
                     "help_text": "If selected and if the input is a multiplex directory the workflow will also process the unclassified directory."
                 }
             },
-            "required": [
-                "fastq"
+            "allOf": [
+                {
+                    "required": [
+                        "fastq",
+                        "classifier"
+                    ]
+                }
             ]
         },
         "real_time_analysis_options": {
@@ -55,11 +65,13 @@
             "properties": {
                 "watch_path": {
                     "type": "boolean",
+                    "title": "Enable real time processing",
                     "description": "Enable to continuously watch the input directory for new input files. Reads will be analysed as they appear",
                     "help_text": "This option enables the use of Nextflow\u2019s directory watching feature to constantly monitor input directories for new files. As soon as files are written by an external process Nextflow will begin analysing these files. The workflow will accumulate data over time to produce an updating report."
                 },
                 "read_limit": {
                     "type": "integer",
+                    "title": "Number of reads analysed to stop the workflow",
                     "description": "Stop processing data when a particular number of reads have been analysed. By default the workflow will run indefinitely.",
                     "help_text": "Sets the upper bound on the number of reads that will be analysed before the workflow is automatically stopped and no more data is analysed."
                 }
@@ -73,11 +85,13 @@
                 "sample_sheet": {
                     "type": "string",
                     "format": "file-path",
+                    "title": "Sample sheet",
                     "description": "A CSV file used to map barcodes to sample aliases. The sample sheet can be provided when the input data is a directory containing sub-directories with FASTQ files. Used only with the minimap2 classifier.",
                     "help_text": "The sample sheet is a CSV file with, minimally, columns named `barcode` , `sample_id`,  `alias`. Extra columns are allowed. A `type` column is required for certain workflows and should have the following values; `test_sample`, `positive_control`, `negative_control`, `no_template_control`."
                 },
                 "sample": {
                     "type": "string",
+                    "title": "Sample name",
                     "description": "A single sample name for non-multiplexed data. Permissible if passing a single .fastq(.gz) file or directory of .fastq(.gz) files."
                 }
             },
@@ -92,6 +106,7 @@
                 "database_set": {
                     "type": "string",
                     "default": "ncbi_16s_18s",
+                    "title": "Choose a database",
                     "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'PlusPF-8', 'PlusPFP-8']. Workflow will require memory available to be slightly higher than the size of the database. PlusPF-8 database requires more than 8Gb.",
                     "enum": [
                         "ncbi_16s_18s",
@@ -100,23 +115,26 @@
                         "PlusPF-8",
                         "PlusPFP-8"
                     ],
-                    "help_text": "This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options"
+                    "help_text": "This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options."
                 },
                 "database": {
                     "type": "string",
                     "format": "path",
+                    "title": "Kraken2 database",
                     "description": "Not required but can be used to specifically override kraken2 database [.tar.gz or Directory].",
-                    "help_text": "By default uses database chosen in database_set parameter"
+                    "help_text": "By default uses database chosen in database_set parameter."
                 },
                 "taxonomy": {
                     "type": "string",
                     "format": "path",
+                    "title": "Taxonomy database",
                     "description": "Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory].",
-                    "help_text": "By default NCBI taxonomy file will be downloaded and used"
+                    "help_text": "By default NCBI taxonomy file will be downloaded and used."
                 },
                 "store_dir": {
                     "type": "string",
                     "format": "directory-path",
+                    "title": "Store directory name",
                     "description": "Where to store initial download of database.",
                     "default": "store_dir",
                     "help_text": "database set selected will be downloaded as part of the workflow and saved in this location, on subsequent runs it will use this as the database. "
@@ -124,13 +142,36 @@
                 "reference": {
                     "type": "string",
                     "format": "file-path",
+                    "title": "Minimap2 reference",
                     "description": "Override the FASTA reference file selected by the database_set parameter. It can be a FASTA format reference sequence collection or a minimap2 MMI format index.",
-                    "help_text": "This option should be used in conjunction with the database parameter to specify a custom database"
+                    "help_text": "This option should be used in conjunction with the database parameter to specify a custom database."
+                },
+                "ref2taxid": {
+                    "type": "string",
+                    "format": "file-path",
+                    "title": "File linking reference IDs to specific taxids",
+                    "description": "Not required but can be used to specify a  ref2taxid mapping. Format is .tsv (refname  taxid), no header row.",
+                    "help_text": "By default uses ref2taxid for option chosen in database_set parameter."
                 },
                 "database_sets": {
                     "type": "object",
                     "hidden": true,
-                    "description": "A map containing the available sources and their default resource paths"
+                    "description": "A map containing the available sources and their default resource paths."
+                },
+                "taxonomic_rank": {
+                    "type": "string",
+                    "default": "S",
+                    "title": "Taxonomic rank",
+                    "description": "Returns results at the taxonomic rank chosen. In the kraken2 pipeline: set the level that bracken will estimate abundance at. Default: S (species). Other possible options are K (kingdom level), P (phylum), C (class), O (order), F (family), and G (genus).",
+                    "enum": [
+                        "S",
+                        "G",
+                        "k",
+                        "F",
+                        "O",
+                        "C",
+                        "P"
+                    ]
                 }
             }
         },
@@ -143,37 +184,43 @@
                 "bracken_dist": {
                     "type": "string",
                     "format": "file-path",
+                    "title": "Bracken kmer distance file",
                     "description": "Specifically override bracken kmer dist file",
                     "help_text": "A default kmer_dist is provided in database_set selected. Which was generated from the kraken database."
                 },
                 "bracken_length": {
                     "type": "integer",
+                    "title": "Bracken length",
                     "description": "Set the length value bracken will use",
                     "minimum": 1,
                     "help_text": "Should be set to the length used to generate the kmer distribution file supplied in the kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 10000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300"
                 },
                 "port": {
                     "type": "integer",
-                    "description": "Network port for communication between kraken2 server and clients",
                     "default": 8080,
+                    "title": "Network port",
+                    "description": "Network port for communication between kraken2 server and clients",
                     "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate."
                 },
                 "host": {
                     "type": "string",
-                    "description": "Network hostname (or IP address) for communication between kraken2 server and clients. (See also 'external_kraken2' parameter).",
                     "default": "localhost",
+                    "title": "Network hostname (or IP address)",
+                    "description": "Network hostname (or IP address) for communication between kraken2 server and clients. (See also 'external_kraken2' parameter).",
                     "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network hostname (or IP address) of the kraken server."
                 },
                 "external_kraken2": {
                     "type": "boolean",
-                    "description": "Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow",
                     "default": false,
+                    "title": "External kraken2 server",
+                    "description": "Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow",
                     "help_text": "By default the workflow assumes that it is running on a single host computer, and further that it should start its own kraken2 server. It may be desirable to start a kraken2 server outside of the workflow, in which case this option should be enabled. This option may be used in conjuction with the `host` option to specify that the kraken2 server is running on a remote computer. "
                 },
                 "kraken2_memory_mapping": {
                     "type": "boolean",
-                    "description": "Avoids loading database into RAM",
                     "default": false,
+                    "title": "Enable memory mapping",
+                    "description": "Avoids loading database into RAM",
                     "help_text": "Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database."
                 }
             },
@@ -186,27 +233,27 @@
             "properties": {
                 "minimap2filter": {
                     "type": "string",
+                    "title": "Select reads belonging to the following taxonomy identifiers (taxids)",
                     "description": "Filter output of minimap2 by taxids inc. child nodes, E.g. \"9606,1404\"",
                     "help_text": "Provide a list of taxids if you are only interested in certain ones in your minimap2 analysis outputs."
                 },
                 "minimap2exclude": {
                     "type": "boolean",
+                    "default": false,
+                    "title": "Exclude reads from previous selected taxids",
                     "description": "Invert minimap2filter and exclude the given taxids instead",
-                    "help_text": "Provide a list of taxids that you want to exclude from analysis outputs."
-                },
-                "ref2taxid": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Not required but can be used to specify a  ref2taxid mapping. Format is .tsv (refname  taxid), no header row.",
-                    "help_text": "By default uses ref2taxid for option chosen in database_set parameter"
+                    "help_text": "Exclude a list of taxids from analysis outputs."
                 },
                 "split_prefix": {
                     "type": "boolean",
+                    "title": "Enable multipart index",
                     "description": "Enable if using a very large reference with minimap2",
                     "help_text": "If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2. "
                 },
                 "keep_bam": {
                     "type": "boolean",
+                    "title": "Enable keep BAM files",
+                    "default": false,
                     "description": "Copy bam files into the output directory."
                 }
             },
@@ -220,13 +267,15 @@
             "properties": {
                 "amr": {
                     "type": "boolean",
+                    "title": "Enable search for antimicrobial resistance genes (AMR)",
                     "description": "Scan reads for antimicrobial resistance or virulence genes",
                     "help_text": "Reads will be scanned using abricate and the chosen database (`--amr_db`) to identify any acquired antimicrobial resistance or virulence genes found present in the dataset. NOTE: It cannot identify mutational resistance genes"
                 },
                 "amr_db": {
                     "type": "string",
                     "default": "resfinder",
-                    "description": "Database of antimicrobial resistance or virulence genes to use",
+                    "title": "AMR database",
+                    "description": "Database of antimicrobial resistance or virulence genes to use.",
                     "enum": [
                         "resfinder",
                         "ecoli_vf",
@@ -244,6 +293,7 @@
                     "default": 80,
                     "minimum": 0,
                     "maximum": 100,
+                    "title": "AMR identity threshold",
                     "description": "Threshold of required identity to report a match between a gene in the database and fastq reads. Valid interval: 0-100"
                 },
                 "amr_mincov": {
@@ -251,6 +301,7 @@
                     "default": 80,
                     "minimum": 0,
                     "maximum": 100,
+                    "title": "AMR coverage (breadth-of) threshold",
                     "description": "Minimum coverage (breadth-of) threshold required to report a match between a gene in the  database and fastq reads. Valid interval: 0-100"
                 }
             }
@@ -265,6 +316,7 @@
                     "type": "string",
                     "format": "directory-path",
                     "default": "output",
+                    "title": "Output folder name",
                     "description": "Directory for output of all user-facing files."
                 }
             }
@@ -278,50 +330,42 @@
                 "min_len": {
                     "type": "integer",
                     "default": 0,
-                    "description": "Specify read length lower limit",
+                    "title": "Minimum read length",
+                    "description": "Specify read length lower limit.",
                     "help_text": "Any reads shorter than this limit will not be included in the analysis."
                 },
                 "min_read_qual": {
                     "type": "number",
-                    "description": "Minimum read quality.",
+                    "title": "Minimum read quality",
+                    "description": "Specify read quality lower limit.",
                     "help_text": "Any reads with a quality lower than this limit will not be included in the analysis."
                 },
                 "max_len": {
                     "type": "integer",
+                    "title": "Maximum read length",
                     "description": "Specify read length upper limit",
                     "help_text": "Any reads longer than this limit will not be included in the analysis."
                 },
                 "threads": {
                     "type": "integer",
                     "default": 2,
+                    "title": "Maximum number of CPU threads",
                     "description": "Maximum number of CPU threads to use per workflow task.",
                     "help_text": "Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See server threads parameter for kraken specific threads."
                 },
                 "server_threads": {
                     "type": "integer",
                     "default": 2,
+                    "title": "CPU threads used by the kraken2 server",
                     "description": "Number of CPU threads used by the kraken2 server for classifying reads.",
                     "help_text": "For the real-time kraken2 workflow, this is the number of CPU threads used by the kraken2 server for classifying reads."
                 },
                 "kraken_clients": {
                     "type": "integer",
                     "default": 2,
+                    "title": "Clients used by the kraken2 server",
                     "description": "Number of clients that can connect at once to the kraken-server for classifying reads.",
                     "help_text": "For the real-time kraken2 workflow, this is the number of clients sending reads to the server. It should not be set to more than 4 fewer than the executor CPU limit."
-                },
-                "taxonomic_rank": {
-                    "type": "string",
-                    "default": "S",
-                    "description": "Returns results at the taxonomic rank chosen. In the kraken2 pipeline: set the level that bracken will estimate abundance at. Default: S (species). Other possible options are K (kingdom level), P (phylum), C (class), O (order), F (family), and G (genus).",
-                    "enum": [
-                        "S",
-                        "G",
-                        "k",
-                        "F",
-                        "O",
-                        "C",
-                        "P"
-                    ]
                 }
             }
         },
@@ -334,29 +378,21 @@
             "properties": {
                 "disable_ping": {
                     "type": "boolean",
+                    "title": "Disable ping",
                     "description": "Enable to prevent sending a workflow ping.",
                     "hidden": true
                 },
                 "help": {
                     "type": "boolean",
-                    "description": "Display help text.",
+                    "title": "Display help text",
                     "fa_icon": "fas fa-question-circle",
                     "hidden": true
                 },
                 "version": {
                     "type": "boolean",
+                    "title": "Display version",
                     "description": "Display version and exit.",
                     "fa_icon": "fas fa-question-circle",
-                    "hidden": true
-                },
-                "aws_image_prefix": {
-                    "type": "string",
-                    "description": "aws image prefix.",
-                    "hidden": true
-                },
-                "aws_queue": {
-                    "type": "string",
-                    "description": "aws queue.",
                     "hidden": true
                 }
             }
@@ -394,6 +430,28 @@
             "$ref": "#/definitions/amr_options"
         }
     ],
+    "properties": {
+        "aws_image_prefix": {
+            "type": "string",
+            "title": "AWS image prefix",
+            "hidden": true
+        },
+        "aws_queue": {
+            "type": "string",
+            "title": "AWS queue",
+            "hidden": true
+        },
+        "monochrome_logs": {
+            "type": "boolean"
+        },
+        "validate_params": {
+            "type": "boolean",
+            "default": true
+        },
+        "show_hidden_params": {
+            "type": "boolean"
+        }
+    },
     "docs": {
         "intro": "\n## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n### Kraken2 - Default\n\n[Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample which can be visualised in the report. The Kraken2 workflow mode can be run in real time. See quickstart below for more details.\n\n### Minimap2 \n\n[Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.\n\n",
         "links": "## Useful links\n\n* [nextflow](https://www.nextflow.io/)\n* [docker](https://www.docker.com/products/docker-desktop)"
