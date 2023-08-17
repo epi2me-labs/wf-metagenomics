@@ -146,21 +146,23 @@ process makeReport {
         val taxonomic_rank
         path amr
     output:
-        path "wf-metagenomics-*.html", emit: report_html
+        path "*.html", emit: report_html
     script:
-        String report_name = "wf-metagenomics-report.html"
+        String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
+        String report_name = "${workflow_name}-report.html"
         def stats_args = (per_read_stats.name == OPTIONAL_FILE.name) ? "" : "--stats $per_read_stats"
         amr = params.amr as Boolean ? "--amr ${amr}" : ""
     """   
     workflow-glue report \
-        $report_name \
+        "${report_name}" \
+        --workflow_name ${workflow_name} \
         --versions versions \
         --params params.json \
-        $stats_args \
+        ${stats_args} \
         --lineages lineages \
         --taxonomic_rank "${taxonomic_rank}" \
         --pipeline "minimap" \
-        $amr
+        ${amr}
     """
 }
 
