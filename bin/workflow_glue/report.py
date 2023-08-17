@@ -19,8 +19,6 @@ import workflow_glue.report_utils.report_utils as report_utils
 from .util import get_named_logger, wf_parser  # noqa: ABS101
 
 # Setup simple globals
-WORKFLOW_NAME = 'wf-metagenomics'
-REPORT_TITLE = f'{WORKFLOW_NAME}-report'
 THEME = 'epi2melabs'
 N_BARPLOT = 8  # number of taxa to plot in the barplot
 
@@ -95,7 +93,7 @@ def main(args):
     """Run the entry point."""
     logger = get_named_logger("Report")
     report = LabsReport(
-        "Workflow Metagenomics Sequencing Report", "wf-metagenomics",
+        f"{args.workflow_name} Sequencing Report", args.workflow_name,
         args.params, args.versions)
     global SELECTED_RANKS
     SELECTED_RANKS = []
@@ -353,6 +351,9 @@ def argparser():
     """Argument parser for entrypoint."""
     parser = wf_parser("report")
     parser.add_argument("report", help="Report output file")
+    parser.add_argument(
+        "--workflow_name", required=True,
+        help="The name of the workflow.")
     parser.add_argument(
         "--stats", nargs='+', required=False,
         help="Read summary file.")

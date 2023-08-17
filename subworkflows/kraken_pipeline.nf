@@ -379,13 +379,15 @@ process makeReport {
         tuple(path(stats), path("versions/*"), path("params.json"), val(taxonomic_rank))
         path amr
     output:
-        path "wf-metagenomics-*.html", emit: report_html
+        path "*.html", emit: report_html
     script:
-        report_name = "wf-metagenomics-report.html"
+        String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
+        String report_name = "${workflow_name}-report.html"
         String amr_arg = amr.name != "OPTIONAL_FILE" ? "--amr ${amr}" : ""
     """
     workflow-glue report \
         "${report_name}" \
+        --workflow_name ${workflow_name} \
         --versions versions \
         --params params.json \
         --stats ${stats} \
