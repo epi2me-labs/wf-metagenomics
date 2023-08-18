@@ -98,17 +98,21 @@ The main output of the wf-metagenomics pipeline is the `wf-metagenomics-report.h
 
 ***Diversity***
 
-Species diversity refers to the taxonomic composition in a specific microbial community. There are three main concepts:
-
+Species diversity refers to the taxonomic composition in a specific microbial community. There are some useful concepts to take into account:
 * Richness: number of unique taxonomic groups present in the community,
 * Taxonomic group abundance: number of individuals of a particular taxonomic group present in the community,
 * Evenness: refers to the equitability of the different taxonomic groups in terms of their abundances.
+    Two different communities can host the same number of different taxonomic groups (i.e. they have the same richness), but they can have different evenness. For instance, if there is one taxon whose abundance is much larger in one community compared to the other.
 
-Two different communities can host the same number of different taxonomic groups (i.e. they have the same richness), but they can have different evenness. For instance, if there is one taxon whose abundance is much larger in one community compared to the other.
+There are three types of biodiversity measures described over a special scale <sup>[1](https://doi.org/10.2307/1218190), [2](https://doi.org/10.1016/B978-0-12-384719-5.00036-8)</sup>: alpha-, beta-, and gamma-diversity.
+* Alpha-diversity refers to the richness that occurs within a community given area within a region.
+* Beta-diversity defined as variation in the identities of species among sites, provides a direct link between biodiversity at local scales (alpha diversity) and the broader regional species pool (gamma diversity).
+* Gamma-diversity is the total observed richness within an entire region.
 
-To provide a quick overview of the diversity of the microbial community, we provide some of the most common indices calculated by a specific taxonomic rank <sup>[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4224527/)</sup>. This rank can be chosen by the user providind the flag `--taxonomic_rank` and the desired rank: 'D'=Domain,'P'=Phylum, 'C'=Class, 'O'=Order, 'F'=Family, 'G'=Genus, 'S'=Species. By default, the rank is 'S' (species level). Some of these indices are:
+To provide a quick overview of the alpha-diversity of the microbial community, we provide some of the most common indices calculated by a specific taxonomic rank <sup>[3](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4224527/)</sup>. This rank can be chosen by the user providind the flag `--taxonomic_rank` and the desired rank: 'D'=Domain,'P'=Phylum, 'C'=Class, 'O'=Order, 'F'=Family, 'G'=Genus, 'S'=Species. By default, the rank is 'S' (species level). Some of these indices are:
 
-* Shannon Diversity Index (H): Shannon entropy approaches zero when one of the taxa is much more abundant than the others.    
+* Shannon Diversity Index (H): Shannon entropy approaches zero when one of the taxa is much more abundant than the others.
+
 ```math
 H = -\sum_{i=1}^{S}p_i*ln(p_i)
 ```
@@ -125,8 +129,19 @@ D = \sum_{i=1}^{S}p_i^2
 J = H/ln(S)
 ```
 
+* Berger-Parker dominance index (BP): expresses the proportional importance of the most abundant type, i.e., the ratio of number of individuals of most abundant species to the total number of individuals of all the species in the sample.
 
-These indices are calculated by default using the original abundance table (see McMurdie and Holmes<sup>[2](https://pubmed.ncbi.nlm.nih.gov/24699258/)</sup>, 2014 and Willis<sup>[3](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full)</sup>, 2019). If you want to calculate them from a rarefied abundance table (i.e. all the samples have been subsampled to contain the same number of counts per sample, which is the 95% of the minimum number of total counts), you can use download the rarefied table from the report.
+```math
+BP = n_i/N, where n_i refers to the counts of the most abundant taxon and N is the total of counts.
+```
+
+* Fisher’s alpha: Fisher (see Fisher, 1943<sup>[4](https://doi.org/10.2307/1411)</sup>) noticed that only a few species tend to be abundant while most are represented by only a few individuals ('rare biosphere'). These differences in species abundance can be incorporated into species diversity measurements such as the Fisher’s alpha. This index is based upon the logarithmic distribution of number of individuals of different species. 
+
+```math
+S = \alpha * ln(1 + N/\alpha), where S is the total number of taxa, N is the total number of individuals in the sample. The value of Fisher's \alpha is calculated by iteration.
+```
+
+These indices are calculated by default using the original abundance table (see McMurdie and Holmes<sup>[5](https://pubmed.ncbi.nlm.nih.gov/24699258/)</sup>, 2014 and Willis<sup>[6](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full)</sup>, 2019). If you want to calculate them from a rarefied abundance table (i.e. all the samples have been subsampled to contain the same number of counts per sample, which is the 95% of the minimum number of total counts), you can download the rarefied table from the report.
 
 The report also includes the rarefaction curve per sample which displays the mean of species richness for a subsample of reads (sample size). Generally, this curve initially grows rapidly, as most abundant species are sequenced and they add new taxa in the community, then slightly flattens due to the fact that 'rare' species are more difficult of being sampled, and because of that is more difficult to report an increase in the number of observed species.
 

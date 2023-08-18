@@ -4,6 +4,7 @@
 # as an approach of one OTU.
 
 import numpy as np
+import scipy as scp
 
 # Rarefy
 #
@@ -165,9 +166,36 @@ def pielou(shannon_index, species):
         return shannon_index/np.log(species)
 
 
+def berger_parkers(counts):
+    """Calculate Berger–Parker index.
+
+    BP = max(pi)
+
+    :param counts: vector with number of counts per taxa. Type: pandas Series.
+    :return: berger parkers index.
+    :rtype: float.
+    """
+    return max(counts/counts.sum())
+
+
+def fishers_alpha(counts):
+    """Calculate Fisher's slope constant.
+
+    S = alpha * ln(1 + N/alpha)
+    :param counts: vector with number of counts per taxa. Type: pandas Series.
+    :rtype: float.
+    """
+    s = len(counts)
+    n = counts.sum()
+
+    def eq(alpha):
+        return alpha * np.log(1 + n/alpha) - s
+    alpha_fisher = scp.optimize.fsolve(eq, 1)[0]
+    return alpha_fisher
+
+
 # Diversity metrics
 #
-
 
 def alpha_diversity(df):
     """Calculate alpha diversity metrics.
@@ -179,15 +207,24 @@ def alpha_diversity(df):
     # df expects samples in columns, taxa in rows
     # Read table
     diversity = df.apply(sum, axis=0, raw=False).to_frame()
+    indices_dict = {
+        "S": "Richness", "H": "Shannon diversity index",
+        "ENS": "effective number of species", "D": "Simpson\'s index",
+        "Inverse of D": "Inverse Simpson\'s index", "J": "Pielou\'s evenness",
+        "F": "Fisher\'s alpha", "BP": "Berger Parker index"
+        }
     diversity.columns = ['Total counts']
     # Richness: n of Species in the ecosystem
     diversity['S'] = df.apply(observed_richness, axis=0)
     diversity['H'] = df.apply(shannon_entropy, axis=0)
-    diversity['Effective N Species'] = diversity[
+    diversity['ENS'] = diversity[
         'H'].apply(effective_nspecies)
-    diversity['Simpson\'s Index (D)'] = df.apply(simpson, axis=0)
+    diversity['D'] = df.apply(simpson, axis=0)
     diversity['Inverse of D'] = diversity[
-        'Simpson\'s Index (D)'].apply(lambda x: 1/x if x != 0 else float("nan"))
+        'D'].apply(lambda x: 1/x if x != 0 else float("nan"))
+    diversity['BP'] = df.apply(berger_parkers, axis=0)
+    diversity['F'] = df.apply(fishers_alpha, axis=0)
     # Evenness: the extent to which species are evenly distributed
-    diversity['Pielou evenness'] = diversity.apply(lambda x: pielou(x.H, x.S), axis=1)
-    return diversity
+    diversity['J'] = diversity.apply(lambda x: pielou(x.H, x.S), axis=1)
+    diversity.rename(columns=indices_dict, inplace=True)
+    return diversity.T

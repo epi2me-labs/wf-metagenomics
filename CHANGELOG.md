@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v2.4.3]
 ### Changed
 - Remove abricate version if AMR does not run.
-
 ### Fixed
 - Changelog format.
+### Added
+- Alpha diversity indices: Berger-Parker dominance index, Fisher’s alpha.
 
 ## [v2.4.2]
 ### Changed
