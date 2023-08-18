@@ -28,17 +28,6 @@ process prepareSILVA {
 process abricateVersion {
     label "amr"
     cpus 1
-    output:
-        path "versions.txt"
-    script:
-    """
-    abricate --version | sed 's/ /,/' >> "versions.txt"
-    """
-}
-
-process getVersions {
-    label "wfmetagenomics"
-    cpus 1
     input:
         path "input_versions.txt"
     output:
@@ -46,6 +35,17 @@ process getVersions {
     script:
     """
     cat input_versions.txt >> versions.txt
+    abricate --version | sed 's/ /,/' >> "versions.txt"
+    """
+}
+
+process getVersions {
+    label "wfmetagenomics"
+    cpus 1
+    output:
+        path "versions.txt"
+    script:
+    """
     python -c "import pysam; print(f'pysam,{pysam.__version__}')" >> versions.txt
     python -c "import pandas; print(f'pandas,{pandas.__version__}')" >> versions.txt
     fastcat --version | sed 's/^/fastcat,/' >> versions.txt
@@ -71,8 +71,12 @@ process getParams {
 
 workflow run_common {
     main:
-        amr_version = abricateVersion()
-        versions = getVersions(amr_version)
+        common_versions = getVersions()
+        if (params.amr){
+            versions = abricateVersion(common_versions)
+        } else{
+            versions = common_versions
+        }
         parameters = getParams()
     emit:
         software_versions = versions
