@@ -15,7 +15,8 @@ def main(args):
     aln_infile = AlignmentFile(sam, "r")
     aln_outfile = AlignmentFile('-', "w", template=aln_infile)
     ref2taxid_df = pd.read_csv(
-        reference2taxid, sep='\t', names=['acc', 'taxid'], index_col=0)
+        reference2taxid, sep='\t', names=['acc', 'taxid'], index_col=0,
+        dtype={'taxid': int})
     output_tsv = open(output, 'w+')
 
     for aln in aln_infile.fetch(until_eof=True):

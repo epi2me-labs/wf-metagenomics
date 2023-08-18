@@ -241,7 +241,7 @@ def main(args):
                         export_table,
                         export=True,
                         file_name=(
-                            f'wf-metagenomics-counts-{ranks_no_sk_k[i]}'
+                            f'{args.workflow_name}-counts-{ranks_no_sk_k[i]}'
                         )
                     )
         # 2.5. RAREFIED ABUNDANCE TABLE
@@ -268,7 +268,7 @@ def main(args):
                         export_table,
                         export=True,
                         file_name=(
-                            f'wf-metagenomics-rarefied-{ranks_no_sk_k[i]}'
+                            f'{args.workflow_name}-rarefied-{ranks_no_sk_k[i]}'
                         )
                     )
 
@@ -295,9 +295,14 @@ def main(args):
             Sample diversity indices. Indices are calculated from the original
             abundance table.
             """)
-            DataTable.from_pandas(report_utils.calculate_diversity_metrics(
-                last_analyzed_rank).set_index('Sample'))
-            em("Note that the taxon 'Unkown' is considered as a unique taxon.")
+            diversity_df = report_utils.calculate_diversity_metrics(
+                last_analyzed_rank)
+            diversity_df.rename(columns={'Sample': 'Indices'}, inplace=True)
+            DataTable.from_pandas(
+                diversity_df.set_index('Indices'), export=True,
+                file_name=(f'{args.workflow_name}-diversity'))
+            em("Note that the taxon 'Unknown' is considered as a unique taxon.\n")
+
         #
         # 3.2. SPECIES RICHNESS CURVES
         #
