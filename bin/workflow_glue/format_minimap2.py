@@ -15,8 +15,7 @@ def main(args):
     aln_infile = AlignmentFile(sam, "r")
     aln_outfile = AlignmentFile('-', "w", template=aln_infile)
     ref2taxid_df = pd.read_csv(
-        reference2taxid, sep='\t', names=['acc', 'taxid'], index_col=0,
-        dtype={'taxid': int})
+        reference2taxid, sep='\t', names=['acc', 'taxid'], index_col=0)
     output_tsv = open(output, 'w+')
 
     for aln in aln_infile.fetch(until_eof=True):
@@ -35,7 +34,7 @@ def main(args):
                     the reference used for the mapping step."""
                     .format(aln.reference_name))
             else:
-                taxid = ref2taxid_df.at[aln.reference_name, 'taxid']
+                taxid = ref2taxid_df.at[aln.reference_name, 'taxid'].astype('int64')
 
         output_tsv.write(
             '{mapped}\t{queryid}\t{taxid}\t0|{querylen}\n'.format(
