@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- `--abundance_threshold `: filter taxa based on their abundances.
+- `--n_taxa_barplot`: control the number of taxa displayed in the barplot.
+- Plot the taxa abundance distribution (e.g. Species abundance distribution plots).
+
 ## [v2.4.3]
 ### Changed
 - Remove abricate version if AMR does not run.

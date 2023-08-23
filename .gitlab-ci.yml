@@ -71,7 +71,7 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv --taxonomic_rank G"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv --taxonomic_rank G --n_taxa_barplot 10 --abundance_threshold 0.01"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
      # Add test with data from Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
      # It also works as a test for single file.

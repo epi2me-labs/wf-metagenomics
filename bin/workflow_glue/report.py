@@ -104,7 +104,8 @@ def main(args):
             # stop when the user rank has been added
             break
     ranks_no_sk_k = SELECTED_RANKS[2:]
-
+    abundance_threshold = args.abundance_threshold
+    n_taxa_barplot = args.n_taxa_barplot
     #
     # 1. READ SUMMARY
     #
@@ -157,7 +158,7 @@ def main(args):
     allranks_tree = report_utils.tax_tree(all_json)
     samples = list(allranks_tree.keys())
     # Save all ranks info
-    ranks_counts = []
+    ranks_counts_filtered = []
     # 2.1. SANKEY
     with report.add_section('Lineages', 'Lineages'):
         ezc.metagenomics_sankey(all_json)
@@ -184,16 +185,30 @@ def main(args):
     for rank in ranks_no_sk_k:  # avoid superkingdom (SK), kingdom(K)
         counts_per_taxa_df = report_utils.join_abundance_tables(allranks_tree, rank)
         if not counts_per_taxa_df.empty:
-            ranks_counts.append(counts_per_taxa_df)
+            # Filter by abundance threshold.
+            # Distinguish between natural number cutoff or percentage.
+            if abundance_threshold >= 1:
+                counts_per_taxa_df_filtered = counts_per_taxa_df[
+                    counts_per_taxa_df['total'] > abundance_threshold]
+                counts_per_taxa_df_filtered = counts_per_taxa_df_filtered.dropna()
+            elif abundance_threshold < 1:
+                abundance_threshold_pc = abundance_threshold * round(
+                    counts_per_taxa_df['total'].sum())
+                counts_per_taxa_df_filtered = counts_per_taxa_df[
+                    counts_per_taxa_df['total'] > abundance_threshold_pc]
+                counts_per_taxa_df_filtered = counts_per_taxa_df_filtered.dropna()
+            ranks_counts_filtered.append(counts_per_taxa_df_filtered)
+            ranks_counts = counts_per_taxa_df  # save last table
     # Write report
     with report.add_section('Taxonomy', 'Taxonomy'):
         tabs = Tabs()
         # 2.3. BARPLOT
         with tabs.add_dropdown_menu('Rank', change_header=False):
-            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
+            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     most_abundant = report_utils.most_abundant_table(
-                        counts_per_taxa_per_rank_df, samples, n=N_BARPLOT, percent=True)
+                        counts_per_taxa_per_rank_df, samples, n=n_taxa_barplot,
+                        percent=True)
                     d2plot = report_utils.split_taxonomy_string(most_abundant)
                     # Long wide format
                     d2plot_melt = d2plot.melt(
@@ -201,7 +216,7 @@ def main(args):
                         var_name='samples', value_name='counts')
                     # Plot
                     p(f"""
-                    Barplot of the {N_BARPLOT} most abundant taxa at the
+                    Barplot of the {n_taxa_barplot} most abundant taxa at the
                     {ranks_no_sk_k[i]} rank.
                     Any remaining taxa have been collapsed under the \'Other\' category
                     to facilitate the visualization.
@@ -227,7 +242,7 @@ def main(args):
     with report.add_section('Abundances', 'Abundances'):
         tabs = Tabs()
         with tabs.add_dropdown_menu('Abundance tables', change_header=False):
-            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
+            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     p(f"Abundance table for the {ranks_no_sk_k[i]} rank.")
                     export_table = report_utils.split_taxonomy_string(
@@ -246,7 +261,7 @@ def main(args):
                     )
         # 2.5. RAREFIED ABUNDANCE TABLE
         with tabs.add_dropdown_menu('Rarefied Abundance tables', change_header=False):
-            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts):
+            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     p(f"Rarefied abundance table for the \
                       {ranks_no_sk_k[i]} rank.")
@@ -277,7 +292,7 @@ def main(args):
     #
 
     # Return counts for the last analyzed rank to calculate diversity
-    last_analyzed_rank = ranks_counts[-1].set_index('tax')
+    last_analyzed_rank = ranks_counts_filtered[-1].set_index('tax')
     # Rarefy step by step
     rarefied_counts = last_analyzed_rank.apply(
         lambda x: diversity.rarefaction_curve(x), axis=0)
@@ -326,6 +341,35 @@ def main(args):
                     x='Sample size', y='Richness', hue='Sample')
                 EZChart(plot, 'epi2melabs')
             em("Note that Unknown taxon is considered as a unique taxon.")
+
+        #
+        # 3.3. SPECIES ABUNDANCE DISTRIBUTION: SAD
+        #
+        with tabs.add_dropdown_menu('Taxa abundance distribution', change_header=False):
+            for barcode in all_json.keys():
+                with tabs.add_dropdown_tab(barcode):
+                    # Remove Unknown
+                    ranks_counts = ranks_counts[
+                        ~(ranks_counts['tax'].str.contains('Unknown'))]
+                    df_sample_counts = ranks_counts.sort_values(
+                        by=barcode, ascending=False)[barcode]
+                    if df_sample_counts.sum() != 0:
+                        df_sample_counts.index = list(
+                                range(1, df_sample_counts.shape[0] + 1))
+                        plt = ezc.barplot(
+                            df_sample_counts.reset_index().rename(
+                                columns={'index': 'rank'}))
+                        # hiding x axis, just show the abundance distribution of the
+                        # taxa to have an idea of singletons, SAD distribution.
+                        plt.xAxis.axisLabel = {'show': False}
+                        plt.xAxis.axisTick = {'show': False}
+                        EZChart(plt, 'epi2melabs')
+                        em("""This plot includes all the counts (except Unknown),
+                        previous to apply any filter threshold based on abundances.
+                        """)
+                    # case of barcode03 with all unclassified.
+                    else:
+                        em("""There are no taxa to display.""")
 
     #
     # 4. AMR
@@ -386,6 +430,12 @@ def argparser():
     parser.add_argument(
         "--amr", default=None,
         help="Path to combined AMR results")
+    parser.add_argument(
+        "--abundance_threshold", default=1, type=float,
+        help="Remove those taxa whose abundance is below this cut-off.")
+    parser.add_argument(
+        "--n_taxa_barplot", default=8, type=int,
+        help="Number of taxa to be displayed in the barplot.")
     return parser
 
 

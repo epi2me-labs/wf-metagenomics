@@ -306,6 +306,26 @@
                 }
             }
         },
+        "report_options": {
+            "title": "Report Options",
+            "type": "object",
+            "fa_icon": "fas fa-pills",
+            "properties": {
+                "abundance_threshold": {
+                    "type": "number",
+                    "default": 0,
+                    "title": "Abundance threshold",
+                    "description": "Remove those taxa whose abundance is lower than the chosen value.",
+                    "help_text": "If it is a natural number it remove those taxa which less counts. To remove those taxa below a percent use a percent expressed as a decimal between 0-1."
+                },
+                "n_taxa_barplot": {
+                    "type": "integer",
+                    "default": 8,
+                    "title": "Number of taxa to be displayed in the barplot",
+                    "description": "Number of most abundance taxa to be displayed in the barplot. The rest of taxa will be grouped under the \"Other\" category."
+                }
+            }
+        },
         "output_options": {
             "title": "Output Options",
             "type": "object",
@@ -428,6 +448,9 @@
         },
         {
             "$ref": "#/definitions/amr_options"
+        },
+        {
+            "$ref": "#/definitions/report_options"
         }
     ],
     "properties": {

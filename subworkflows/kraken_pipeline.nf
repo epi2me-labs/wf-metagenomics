@@ -393,6 +393,8 @@ process makeReport {
         --stats ${stats} \
         --lineages "${lineages}" \
         --taxonomic_rank "${taxonomic_rank}" \
+        --abundance_threshold "${params.abundance_threshold}"\
+        --n_taxa_barplot "${params.n_taxa_barplot}"\
         $amr_arg
     """
 }
