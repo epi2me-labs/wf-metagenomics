@@ -9,8 +9,7 @@ include { kraken_pipeline } from './subworkflows/kraken_pipeline'
 include {
     prepareSILVA;
 } from "./modules/local/common.nf"
-nextflow.preview.recursion=true
-   
+nextflow.preview.recursion=true   
 
 // entrypoint workflow
 WorkflowMain.initialise(workflow, params, log)

@@ -162,6 +162,8 @@ process makeReport {
         --lineages lineages \
         --taxonomic_rank "${taxonomic_rank}" \
         --pipeline "minimap" \
+        --abundance_threshold "${params.abundance_threshold}"\
+        --n_taxa_barplot "${params.n_taxa_barplot}"\
         ${amr}
     """
 }

@@ -209,7 +209,7 @@ def alpha_diversity(df):
     diversity = df.apply(sum, axis=0, raw=False).to_frame()
     indices_dict = {
         "S": "Richness", "H": "Shannon diversity index",
-        "ENS": "effective number of species", "D": "Simpson\'s index",
+        "ENS": "Effective number of species", "D": "Simpson\'s index",
         "Inverse of D": "Inverse Simpson\'s index", "J": "Pielou\'s evenness",
         "F": "Fisher\'s alpha", "BP": "Berger Parker index"
         }
