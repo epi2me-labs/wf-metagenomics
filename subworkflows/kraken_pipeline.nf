@@ -444,9 +444,13 @@ workflow kraken_pipeline {
             batch_items = rebatchFastq(batch_items.transpose())
                 .transpose()
         }
-
+        // filter host reads
+        common = run_common(batch_items)
+        software_versions = common.software_versions
+        parameters = common.parameters
+        samples_filtered = common.samples
         // Run Kraken2
-        kraken2_client(batch_items)
+        kraken2_client(samples_filtered)
     
         // progressive stats -- scan doesn't like tuple :/
         stats = progressive_stats.scan(
@@ -494,10 +498,6 @@ workflow kraken_pipeline {
         // ordered. This is find because everything has been through scan and
         // is therefore necessarily ordered. This could be tidied up by passing
         // through a job id but that seems unneccessary at this point.
-
-        common = run_common()
-        software_versions = common.software_versions
-        parameters = common.parameters
         stuff = stats
             .combine(software_versions)
             .combine(parameters)
