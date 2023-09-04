@@ -39,7 +39,8 @@ docker-run:
         matrix:
             - MATRIX_NAME: [
                 "kraken2", "minimap2", "batch", "kraken2-watch-path", "minimap2-sample-sheet",
-                "kraken2-baf", "minimap2-baf", "minimap2-filter", "kraken2-amr", "minimap2-amr"
+                "kraken2-baf", "minimap2-baf", "minimap2-filter", "kraken2-amr", "minimap2-amr",
+                "minimap2-exclude-host", "kraken2-exclude-host"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -102,4 +103,14 @@ docker-run:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq s3://ont-exd-int-s3-euwst1-epi2me-labs/wf-bacterial-genomes/test_data/isolates_fastq/barcode08 --classifier minimap2 --amr"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+     - if: $MATRIX_NAME == "minimap2-exclude-host"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04 --classifier minimap2 --exclude_host test_data/case04/host.fasta.gz"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+     - if: $MATRIX_NAME == "kraken2-exclude-host"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04 --exclude_host test_data/case04/host.fasta.gz"
+          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
          

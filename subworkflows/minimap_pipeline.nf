@@ -214,7 +214,11 @@ workflow minimap_pipeline {
         // check that the number of elements of the reference (if it is a fasta)
         // matches the number of elements of the ref2taxid.
         check_reference_ref2taxid(reference, ref2taxid)
-
+        // Run common
+        common = run_common(samples)
+        software_versions = common.software_versions
+        parameters = common.parameters
+        samples = common.samples
         // Run Minimap2
   
         mm2 = minimap(
@@ -242,9 +246,6 @@ workflow minimap_pipeline {
         }
 
         // Reporting
-        common = run_common()
-        software_versions = common.software_versions
-        parameters = common.parameters
         report = makeReport(
             per_read_stats,
             lineages.flatMap { it -> [ it[1] ] }.collect(),

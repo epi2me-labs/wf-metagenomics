@@ -255,6 +255,12 @@
                     "title": "Enable keep BAM files",
                     "default": false,
                     "description": "Copy bam files into the output directory."
+                },
+                "exclude_host": {
+                    "type": "string",
+                    "format": "path",
+                    "title": "Exclude reads from the host",
+                    "description": "A fastq file of the host reference."
                 }
             },
             "description": "Minimap2 classification options. Only relevant if classifier parameter is set to minimap2.",
