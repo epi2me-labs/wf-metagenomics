@@ -66,6 +66,7 @@
                 "watch_path": {
                     "type": "boolean",
                     "title": "Enable real time processing",
+                    "default": false,
                     "description": "Enable to continuously watch the input directory for new input files. Reads will be analysed as they appear",
                     "help_text": "This option enables the use of Nextflow\u2019s directory watching feature to constantly monitor input directories for new files. As soon as files are written by an external process Nextflow will begin analysing these files. The workflow will accumulate data over time to produce an updating report."
                 },
@@ -247,6 +248,7 @@
                 "split_prefix": {
                     "type": "boolean",
                     "title": "Enable multipart index",
+                    "default": false,
                     "description": "Enable if using a very large reference with minimap2",
                     "help_text": "If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2. "
                 },
@@ -274,6 +276,7 @@
                 "amr": {
                     "type": "boolean",
                     "title": "Enable search for antimicrobial resistance genes (AMR)",
+                    "default": false,
                     "description": "Scan reads for antimicrobial resistance or virulence genes",
                     "help_text": "Reads will be scanned using abricate and the chosen database (`--amr_db`) to identify any acquired antimicrobial resistance or virulence genes found present in the dataset. NOTE: It cannot identify mutational resistance genes"
                 },
@@ -405,18 +408,21 @@
                 "disable_ping": {
                     "type": "boolean",
                     "title": "Disable ping",
+                    "default": false,
                     "description": "Enable to prevent sending a workflow ping.",
                     "hidden": true
                 },
                 "help": {
                     "type": "boolean",
                     "title": "Display help text",
+                    "default": false,
                     "fa_icon": "fas fa-question-circle",
                     "hidden": true
                 },
                 "version": {
                     "type": "boolean",
                     "title": "Display version",
+                    "default": false,
                     "description": "Display version and exit.",
                     "fa_icon": "fas fa-question-circle",
                     "hidden": true
