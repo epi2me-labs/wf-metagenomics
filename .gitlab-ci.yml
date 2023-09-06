@@ -53,7 +53,7 @@ docker-run:
      - if: $MATRIX_NAME == "batch"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 --taxonomic_rank G"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 --taxonomic_rank G --kraken_confidence 0.01"
           NF_IGNORE_PROCESSES: "stopCondition"
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.

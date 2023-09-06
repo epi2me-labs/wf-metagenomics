@@ -6,11 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- `--kraken_confidence` to specify a threshold score.
 - `--exclude_host`: takes a FASTA/MMI index as reference to exclude reads mapping there (host reads) from further analysis.
 
 ## [v2.4.4]
 ### Added
-- `--abundance_threshold `: filter taxa based on their abundances.
+- `--abundance_threshold`: filter taxa based on their abundances.
 - `--n_taxa_barplot`: control the number of taxa displayed in the barplot.
 - Plot the taxa abundance distribution (e.g. Species abundance distribution plots).
 
@@ -57,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v2.2.1]
 ### Added
-- A new option `min_read_qual` to filter by quality score.
+- A new option `--min_read_qual` to filter by quality score.
 - Configuration for running demo data in AWS
 - AWS configuration for external kraken2_server for demonstration at LC23
 

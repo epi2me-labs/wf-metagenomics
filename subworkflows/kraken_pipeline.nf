@@ -96,15 +96,15 @@ process rebatchFastq {
         def sample_id = "${meta.alias}"
     """
     # Batch fasta file
-    seqkit split2 ${fastq} \
+    seqkit split2 "${fastq}" \
         -j ${task.cpus - 1} -s ${params.batch_size} \
         -e .gz -o "${sample_id}" \
         -O fastq
     # Batch stats file
     mkdir -p fastcat_stats
-    tail -n +2 ${stats}/per-read-stats.tsv | split -l "${params.batch_size}" \
+    tail -n +2 "${stats}/per-read-stats.tsv" | split -l "${params.batch_size}" \
     -d --additional-suffix=.tsv \
-    --filter='sh -c "{ head -n1 ${stats}/per-read-stats.tsv; cat; } > fastcat_stats/\$FILE"' - "${sample_id}"_part_
+    --filter='sh -c "{ head -n1 "${stats}/per-read-stats.tsv"; cat; } > fastcat_stats/\$FILE"' - "${sample_id}"_part_
     """
 }
 
@@ -173,6 +173,7 @@ process kraken_server {
     kraken2_server \
         --port ${params.port} --host-ip ${params.host} \
         --max-requests ${kraken_compute + 1} --thread-pool ${params.server_threads}\
+        --confidence ${params.kraken2_confidence}\
         --db ./${database} ${memory_mapping}
     """
 }
@@ -195,14 +196,13 @@ process kraken2_client {
     output:
         tuple val("${meta.alias}"), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.${task.index}.json")
     script:
-        def max_length = "${params.max_len}"== null ? "-b ${params.max_len}" : ""
         def sample_id = "${meta.alias}"
     """
     if [[ -f $stats ]]
     then
-        stats_file=${stats}
+        stats_file="${stats}"
     else
-        stats_file=${stats}/per-read-stats.tsv
+        stats_file="${stats}/per-read-stats.tsv"
     fi
 
     workflow-glue fastcat_histogram \
@@ -212,7 +212,7 @@ process kraken2_client {
     kraken2_client \
         --port ${params.port} --host-ip ${params.host} \
         --report report.txt \
-        --sequence $fastq > "${sample_id}.kraken2.assignments.tsv"
+        --sequence "${fastq}" > "${sample_id}.kraken2.assignments.tsv"
     tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
 }

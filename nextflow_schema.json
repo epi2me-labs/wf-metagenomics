@@ -223,6 +223,13 @@
                     "title": "Enable memory mapping",
                     "description": "Avoids loading database into RAM",
                     "help_text": "Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database."
+                },
+                "kraken2_confidence": {
+                    "type": "number",
+                    "default": 0.0,
+                    "title": "Confidence score threshold",
+                    "description": "Kraken2 Confidence score threshold. Default: 0.0. Valid interval: 0-1",
+                    "help_text": "Apply a threshold to determine if a sequence is classified or unclassified. Please visit the following link for further details about how it works: https://github.com/DerrickWood/kraken2/wiki/Manual#confidence-scoring."
                 }
             },
             "description": "Kraken2 classification options. Only relevant if classifier parameter is set to kraken2"
