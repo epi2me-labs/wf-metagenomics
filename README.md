@@ -38,7 +38,8 @@ The workflow can currently be run using either
 the required software. Both methods are automated out-of-the-box provided
 either docker or singularity is installed.
 
-It is not required to clone or download the git repository in order to run the workflow.
+It is not required to clone or download the git repository in order to run the workflow. You may be interested in exploring our workflows through the EPI2ME Desktop application which can automatically download and run our workflows on demo data for you. It can be downloaded from [here](https://labs.epi2me.io/downloads/).
+
 For more information on running EPI2ME Labs workflows [visit out website](https://labs.epi2me.io/wfindex).
 
 **Workflow options**
@@ -58,21 +59,20 @@ The main options are:
 * `minimap2`: When set to true will run the analysis with minimap2.
 * `watch_path`: Used to run the workflow in real-time, will continue to watch until a "STOP.fastq" is found.
 * `read_limit`: Used in combination with watch_path the specify an end point.
-* `kraken2_memory_mapping`: Used to avoid load the database into RAM memory. Available for kraken2 pipeline.
 
 ***Kraken2***
 
-You can run the workflow with test_data available in the github repository.
+You can run the workflow with test_data available in the github repository. The command below uses test data available from the [github repository](https://github.com/epi2me-labs/wf-metagenomics/tree/master/test_data/case01)
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01```
 
 You can also run the workflow in real-time, meaning the workflow will watch the input directory(s) and process inputs at they become available in the batch sizes specified.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --batch_size 1000```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --watch_path --batch_size 1000```
 
 When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with a ```ctrl+c``` command). The workflow can be configured to complete automatically after a set number of reads have been analysed using the ```read_limit``` variable. Once this threshold has been reached, the program will emit a "STOP.fastq" file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq" file is then deleted. 
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --watch_path --read_limit 4000```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --watch_path --read_limit 4000```
 
 **Important Note**
 
@@ -94,12 +94,22 @@ eg.
                                 └── barcode03
                                     └── reads0.fastq
 ```
+**Notes on CPU resource of kraken server and client**
+The kraken2 subworkflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
+- `--port`: The option specifies the local network port on which the server and clients will communicate.
+- `--host`: Network hostname (or IP address) for communication between kraken2 server and clients. (See also `external_kraken2` parameter).
+- `--external_kraken2`: Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow. By default the workflow assumes that it is running on a single host computer, and further that it should start its own kraken2 server. It may be desirable to start a kraken2 server outside of the workflow (for example to host a large database), in which case this option should be enabled. This option may be used in conjuction with the `host` option to specify that the kraken2 server is running on a remote computer.
+- `--kraken2_memory_mapping`: Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database.
+- `--threads`: Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See `server_threads` parameter for kraken specific threads.
+- `--server_threads`: Number of CPU threads used by the kraken2 server for classifying reads.
+- `--kraken_clients`: Number of clients that can connect at once to the kraken-server for classifying reads. It should not be set to more than 4 fewer than the executor CPU limit.
+
 
 ***Minimap2***
 
 Alternatively you can run using minimap2 instead. Currently this mode does not support real-time.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data --classifier minimap2```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --classifier minimap2```
 
 ***Databases***
 
