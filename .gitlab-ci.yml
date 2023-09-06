@@ -48,12 +48,12 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_kraken2_assignments"
           NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
      - if: $MATRIX_NAME == "batch"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 --taxonomic_rank G --kraken_confidence 0.01"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 --taxonomic_rank G --include_kraken2_assignments --kraken_confidence 0.01"
           NF_IGNORE_PROCESSES: "stopCondition"
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
@@ -62,7 +62,7 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2-watch-path"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --watch_path --read_limit 1000"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --watch_path --read_limit 1000 --include_kraken2_assignments"
           NF_IGNORE_PROCESSES: "rebatchFastq"
      - if: $MATRIX_NAME == "minimap2"
        variables:
@@ -80,7 +80,7 @@ docker-run:
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
+          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
@@ -97,7 +97,7 @@ docker-run:
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq s3://ont-exd-int-s3-euwst1-epi2me-labs/wf-bacterial-genomes/test_data/isolates_fastq/barcode08 --amr"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
+          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
      - if: $MATRIX_NAME == "minimap2-amr"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
@@ -112,5 +112,5 @@ docker-run:
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case04 --exclude_host test_data/case04/host.fasta.gz"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
+          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
          

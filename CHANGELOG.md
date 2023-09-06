@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `--kraken_confidence` to specify a threshold score.
 - `--exclude_host`: takes a FASTA/MMI index as reference to exclude reads mapping there (host reads) from further analysis.
+- `--include_kraken2_assignments`: output the classification of each read.
 
 ## [v2.4.4]
 ### Added
