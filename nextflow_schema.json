@@ -46,6 +46,12 @@
                     "title": "Analyse unclassified reads",
                     "description": "Analyse unclassified reads from input directory. By default the workflow will not process reads in the unclassified directory.",
                     "help_text": "If selected and if the input is a multiplex directory the workflow will also process the unclassified directory."
+                },
+                "exclude_host": {
+                    "type": "string",
+                    "format": "path",
+                    "title": "Exclude host reads",
+                    "description": "A FASTA or MMI file of the host reference. Reads that align with this reference will be excluded from the analysis."
                 }
             },
             "allOf": [
@@ -228,7 +234,7 @@
                     "type": "boolean",
                     "default": false,
                     "title": "Include kraken2 reads assignments",
-                    "description": "A per sample TSV file that indicates how each input sequence was classified as well as the sample and taxon that has been assigned to each read. The TSV's will only be output at the end of the workflow and therefore not at all if using the real time options and running indefinitely.",
+                    "description": "A per sample TSV file that indicates how each input sequence was classified as well as the taxon that has been assigned to each read. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely.",
                     "help": "It also includes the taxon that each k-mer mapped back to, if the k-mer was able to be classified."
                 },
                 "kraken2_confidence": {
@@ -271,12 +277,6 @@
                     "title": "Enable keep BAM files",
                     "default": false,
                     "description": "Copy bam files into the output directory."
-                },
-                "exclude_host": {
-                    "type": "string",
-                    "format": "path",
-                    "title": "Exclude reads from the host",
-                    "description": "A fastq file of the host reference."
                 }
             },
             "description": "Minimap2 classification options. Only relevant if classifier parameter is set to minimap2.",

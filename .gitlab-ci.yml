@@ -106,11 +106,11 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2-exclude-host"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04 --classifier minimap2 --exclude_host test_data/case04/host.fasta.gz"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04/reads.fastq.gz --exclude_host test_data/case04/host.fasta.gz --classifier minimap2"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
      - if: $MATRIX_NAME == "kraken2-exclude-host"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04 --exclude_host test_data/case04/host.fasta.gz"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04/reads.fastq.gz --exclude_host test_data/case04/host.fasta.gz"
           NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
          

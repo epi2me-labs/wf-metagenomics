@@ -4,11 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v2.5.0]
 ### Added
 - `--kraken_confidence` to specify a threshold score.
-- `--exclude_host`: takes a FASTA/MMI index as reference to exclude reads mapping there (host reads) from further analysis.
-- `--include_kraken2_assignments`: output the classification of each read.
+- `--exclude_host`: Optional parameter can accept a FASTA/MMI file with a host reference to be excluded from the analysis.
+- `--include_kraken2_assignments`: Output the classification of each read.
 
 ## [v2.4.4]
 ### Added
