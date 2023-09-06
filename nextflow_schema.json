@@ -224,6 +224,13 @@
                     "description": "Avoids loading database into RAM",
                     "help_text": "Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database."
                 },
+                "include_kraken2_assignments": {
+                    "type": "boolean",
+                    "default": false,
+                    "title": "Include kraken2 reads assignments",
+                    "description": "A per sample TSV file that indicates how each input sequence was classified as well as the sample and taxon that has been assigned to each read. The TSV's will only be output at the end of the workflow and therefore not at all if using the real time options and running indefinitely.",
+                    "help": "It also includes the taxon that each k-mer mapped back to, if the k-mer was able to be classified."
+                },
                 "kraken2_confidence": {
                     "type": "number",
                     "default": 0.0,

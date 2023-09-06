@@ -194,7 +194,7 @@ process kraken2_client {
     input:
         tuple val(meta), path(fastq), path(stats)
     output:
-        tuple val("${meta.alias}"), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.${task.index}.json")
+        tuple val("${meta.alias}"), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.${task.index}.json"), path("kraken2.assignments.tsv")
     script:
         def sample_id = "${meta.alias}"
     """
@@ -212,7 +212,7 @@ process kraken2_client {
     kraken2_client \
         --port ${params.port} --host-ip ${params.host} \
         --report report.txt \
-        --sequence "${fastq}" > "${sample_id}.kraken2.assignments.tsv"
+        --sequence $fastq > "kraken2.assignments.tsv"
     tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
 }
@@ -369,6 +369,30 @@ process progressive_bracken {
     """
 }
 
+// Concatenate kraken reports per read
+process concatAssignments {
+    label "wfmetagenomics"
+    input:
+        tuple (
+        val(sample_id),
+        path("classifications/kraken2.assignments.tsv")
+        )
+        path taxonomy
+    output:
+        tuple(
+            val(sample_id),
+            path("*_lineages.kraken2.assignments.tsv"), 
+            emit: kraken2_reads_assignments
+            )
+    script:
+    def sample_id = "${sample_id}"
+    """
+    cat classifications/* > all.sample.assignments.tsv
+    # Run taxonkit to give users a more informative table
+    taxonkit reformat  -I 3  --data-dir "${taxonomy}" -f "{k}|{p}|{c}|{o}|{f}|{g}|{s}|{t}" -F all.sample.assignments.tsv > "${sample_id}_lineages.kraken2.assignments.tsv"
+    """
+
+}
 
 process makeReport {
     label "wfmetagenomics"
@@ -406,9 +430,13 @@ process makeReport {
 process output {
     // publish inputs to output directory
     label "wfmetagenomics"
-    publishDir "${params.out_dir}", mode: 'copy', pattern: "*"
+    publishDir (
+        params.out_dir,
+        mode: "copy",
+        saveAs: { dirname ? "$dirname/$fname" : fname }
+    )
     input:
-        path fname
+        tuple path(fname), val(dirname)
     output:
         path fname
     """
@@ -454,11 +482,11 @@ workflow kraken_pipeline {
     
         // progressive stats -- scan doesn't like tuple :/
         stats = progressive_stats.scan(
-            kraken2_client.out.map { id, report, json -> json },
+            kraken2_client.out.map { id, report, json, assignments -> json },
         )
 
         kraken2_client.out.multiMap {
-            id, rep, json ->
+            id, rep, json, assignments ->
                 sample_id: id
                 report: rep
             }
@@ -511,9 +539,27 @@ workflow kraken_pipeline {
         )
         
         // output updating files as part of this pipeline
-        output(report.report_html.mix(
-            software_versions, parameters),
+        ch_to_publish = Channel.empty()
+        | mix(
+            software_versions,
+            parameters,
+            report.report_html,
         )
+        | map { [it, null] }
+
+        if (params.include_kraken2_assignments) {
+            kraken2_assignments = concatAssignments(
+                kraken2_client.out.map{ 
+                    id, report, json, assignments -> tuple(id, assignments) 
+                }.groupTuple(), taxonomy)
+            ch_to_publish = ch_to_publish | mix (
+            kraken2_assignments.kraken2_reads_assignments | map {
+                 id, kraken_reads_classification -> [kraken_reads_classification, "kraken_reads_assignments"]},
+            )
+        }
+
+        ch_to_publish | output
+
 
         // Stop server when all are processed
         if (!params.external_kraken2) {
