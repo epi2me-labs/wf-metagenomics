@@ -51,7 +51,12 @@ def prepare_data_to_sunburst(lineages_sample, new_lineages=[], position='outside
     :return (dict): Taxa counts in json structure ready for sunburst.
     """
     for taxon, taxon_data in lineages_sample.items():
-        new_lineages.append(dict(name=taxon, value=taxon_data["count"]))
+        # replace single quotes to double quotes to be escaped in ezcharts
+        # (as some species names in NCBI taxdmp files contain single quotes,
+        # e.g. "'Sphingomonas aeria' Park et al. 2015 non Xue et al. 2018")
+        new_lineages.append(dict(
+            name=taxon.replace("'", '"'), value=taxon_data["count"]
+        ))
         if bool(taxon_data["children"]):
             new_lineages[-1].update(children=[])
             prepare_data_to_sunburst(
