@@ -414,7 +414,7 @@ process makeReport {
         --workflow_name ${workflow_name} \
         --versions versions \
         --params params.json \
-        --stats ${stats} \
+        --read_stats ${stats} \
         --lineages "${lineages}" \
         --taxonomic_rank "${taxonomic_rank}" \
         --abundance_threshold "${params.abundance_threshold}"\

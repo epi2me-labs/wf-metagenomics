@@ -67,13 +67,13 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv --taxonomic_rank G --n_taxa_barplot 10 --abundance_threshold 0.01"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
      # Add test with data from Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
      # It also works as a test for single file.
      - if: $MATRIX_NAME == "kraken2-baf"
@@ -84,14 +84,14 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --keep_bam"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --keep_bam --minimap2_by_reference"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
       # Exclude Archaea and Eukaryota from extracted reads (remaining reads should be just from Bacteria).
      - if: $MATRIX_NAME == "minimap2-filter"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --minimap2filter '2157,2759' --minimap2exclude"
-          NF_IGNORE_PROCESSES: ""
+          NF_IGNORE_PROCESSES: "getAlignmentStats"
       # AMR tests using isolate test data (need to find better tests)
      - if: $MATRIX_NAME == "kraken2-amr"
        variables:
@@ -102,12 +102,12 @@ docker-run:
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq s3://ont-exd-int-s3-euwst1-epi2me-labs/wf-bacterial-genomes/test_data/isolates_fastq/barcode08 --classifier minimap2 --amr"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
      - if: $MATRIX_NAME == "minimap2-exclude-host"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case04/reads.fastq.gz --exclude_host test_data/case04/host.fasta.gz --classifier minimap2"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
      - if: $MATRIX_NAME == "kraken2-exclude-host"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
