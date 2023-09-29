@@ -135,11 +135,46 @@ process extractMinimap2Reads {
     """
 }
 
+// Process to compute the sequencing depth of each reference and their coverages.
+process getAlignmentStats {
+    label "wfmetagenomics"
+    cpus params.threads
+    input:
+        tuple val(meta), path("input.bam"), path("input.bam.bai")
+        path ref2taxid
+        path taxonomy
+    output:
+        path "*.tsv.gz", emit: align_stats
+    script:
+        def sample_name = meta["alias"]
+    """
+    samtools depth input.bam | bgzip -c > "${sample_name}.depth.tsv.gz" 
+    # Reference stats
+    samtools coverage input.bam \
+    | awk 'BEGIN { OFS="\t" } { if((\$4 != 0) && (\$6 != 0)) {print } }' \
+    | sort --parallel=${task.cpus} > "${sample_name}.reference_coverage.tsv"
+    # add taxonomy info
+    if [ `zcat "${sample_name}.depth.tsv.gz" | head -n 1 | wc -c ` -ne 0 ]
+    then
+        cut -f1 "${sample_name}.reference_coverage.tsv" | sed '1d'| grep -f - $ref2taxid \
+        |  sort --parallel=${task.cpus} | cut -f2 \
+        | taxonkit reformat --data-dir $taxonomy -f "{k}\t{K}\t{p}\t{c}\t{o}\t{f}\t{g}\t{s}" -F -I 1 \
+        | sed '1 i\\taxid\tsuperkingdom\tkingdom\tphylum\tclass\torder\tfamily\tgenus\tspecies' \
+        |paste "${sample_name}.reference_coverage.tsv" - \
+        | bgzip -c > "${sample_name}.reference.tsv.gz"
+        # compress tsv
+        bgzip "${sample_name}.reference_coverage.tsv"
+    fi
+
+    """
+}
+
 
 process makeReport {
     label "wfmetagenomics"
     input:
         path per_read_stats
+        path "alignment_stats/*"
         path "lineages/*"
         path "versions/*"
         path "params.json"
@@ -150,9 +185,10 @@ process makeReport {
     script:
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
         String report_name = "${workflow_name}-report.html"
-        def stats_args = (per_read_stats.name == OPTIONAL_FILE.name) ? "" : "--stats $per_read_stats"
+        def stats_args = (per_read_stats.name == OPTIONAL_FILE.name) ? "" : "--read_stats $per_read_stats"
+        align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
         amr = params.amr as Boolean ? "--amr ${amr}" : ""
-    """   
+    """
     workflow-glue report \
         "${report_name}" \
         --workflow_name ${workflow_name} \
@@ -164,6 +200,7 @@ process makeReport {
         --pipeline "minimap" \
         --abundance_threshold "${params.abundance_threshold}"\
         --n_taxa_barplot "${params.n_taxa_barplot}"\
+        ${align_stats} \
         ${amr}
     """
 }
@@ -231,7 +268,13 @@ workflow minimap_pipeline {
                 taxonomic_rank
             )
         lineages = lineages.mix(mm2.lineage_json)
-
+        // Add some statistics related to the mapping
+        if (params.minimap2_by_reference) {
+            alignment_reports = getAlignmentStats(mm2.bam, ref2taxid, taxonomy) | collect
+        } else {
+            alignment_reports = Channel.empty()
+        }
+        
         // Process AMR
         if (params.amr) {
             run_amr = run_amr(
@@ -248,6 +291,7 @@ workflow minimap_pipeline {
         // Reporting
         report = makeReport(
             per_read_stats,
+            alignment_reports.ifEmpty(OPTIONAL_FILE),
             lineages.flatMap { it -> [ it[1] ] }.collect(),
             software_versions,
             parameters,

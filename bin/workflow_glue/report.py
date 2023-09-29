@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Create workflow report."""
+
 import json
 
 from dominate import tags as html_tags
@@ -20,7 +21,6 @@ from .util import get_named_logger, wf_parser  # noqa: ABS101
 
 # Setup simple globals
 THEME = 'epi2melabs'
-N_BARPLOT = 8  # number of taxa to plot in the barplot
 
 
 def amr_section(amr_data, html_id):
@@ -110,8 +110,8 @@ def main(args):
     # 1. READ SUMMARY
     #
     if args.pipeline == 'minimap':
-        if args.stats:
-            stats_files = util.read_files(args.stats)
+        if args.read_stats:
+            stats_files = util.read_files(args.read_stats)
             with report.add_section("Read summary", "Read summary"):
                 SeqSummary(stats_files)
                 # Add metadata section
@@ -128,7 +128,7 @@ def main(args):
     # to be plotted directly as an histogram
     else:
         with report.add_section("Read summary", "Read summary"):
-            with open(args.stats[0]) as f:
+            with open(args.read_stats[0]) as f:
                 datas = json.load(f)
                 tabs = Tabs()
                 total_reads = {}
@@ -392,6 +392,36 @@ def main(args):
                             amr_section(data["results"], f"accordion_{sample_id}")
                         else:
                             p("No AMR genes detected in sample")
+    if args.align_stats:
+        samples_references = {}
+        for s in samples:
+            samples_references[s] = report_utils.load_alignment_data(
+                args.align_stats, s)
+        # make sure that the samples really have data.
+        dataset_results = {k: v for k, v in samples_references.items() if v is not None}
+        logger.info(f"Report written to {samples_references.keys()}.")
+        if len(dataset_results) >= 1:
+            with report.add_section("Alignment Statistics", "References"):
+                tabs = Tabs()
+                # Show table with the detailed output.
+                with tabs.add_dropdown_menu("Dataset", change_header=False):
+                    for barcode, metrics in dataset_results.items():
+                        with tabs.add_dropdown_tab(barcode):
+                            DataTable.from_pandas(
+                                    metrics[0],
+                                    export=True,
+                                    file_name='wf-metagenomics-alignment'
+                            )
+                # Show reference scatterplot of number of reads by coverage.
+                with tabs.add_dropdown_menu("Scatter", change_header=False):
+                    for barcode, metrics in dataset_results.items():
+                        with tabs.add_dropdown_tab(barcode):
+                            EZChart(metrics[1], 'epi2melabs')
+                # Show heatmap of relative positional coverage.
+                with tabs.add_dropdown_menu("Heatmap", change_header=False):
+                    for barcode, metrics in dataset_results.items():
+                        with tabs.add_dropdown_tab(barcode):
+                            EZChart(metrics[2], 'epi2melabs')
     report.write(args.report)
     logger.info(f"Report written to {args.report}.")
 
@@ -404,11 +434,14 @@ def argparser():
         "--workflow_name", required=True,
         help="The name of the workflow.")
     parser.add_argument(
-        "--stats", nargs='+', required=False,
+        "--read_stats", nargs='+', required=False,
         help="Read summary file.")
     parser.add_argument(
         "--lineages", nargs='+', required=True,
         help="Read lineage file.")
+    parser.add_argument(
+        "--align_stats", required=False,
+        help="Folder containing the mapping and depth statistics in TSV format.")
     parser.add_argument(
         '--taxonomic_rank', required=True,
         help="Taxonomic rank.")
