@@ -135,6 +135,23 @@ process output_host {
     """
 }
 
+// Process to collapse lineages info into abundance dataframes.
+process createAbundanceTables {
+    label "wfmetagenomics"
+    input:
+        // lineages is a folder in the kraken2, but is a list of files in the minimap2 approach
+        path "lineages/*"
+        val taxonomic_rank
+    output:
+        path("abundance_table_*.tsv"), emit: abundance_tsv
+
+    """
+    workflow-glue abundance_tables \
+        --lineages lineages \
+        --taxonomic_rank "${taxonomic_rank}" \
+        --pipeline "${params.classifier}"
+    """
+}
 
 workflow run_common {
     take:

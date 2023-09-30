@@ -3,9 +3,7 @@
 import json
 import os
 from pathlib import Path
-import re
 
-import anytree
 import ezcharts as ezc
 from ezcharts.plots.distribution import histplot
 import numpy as np
@@ -72,180 +70,6 @@ def prepare_data_to_sunburst(lineages_sample, new_lineages=[], position='outside
 # PREPARE INPUT DATA
 
 
-def tax_tree(lineage_trees_dict):
-    """From lineages json, create a dictionary with {sample:tree (counts per lineage)}.
-
-    Save the full taxonomy string.
-
-    :param d (dict): Taxa counts in json structure. Nested dictionary.
-        {"Sample": {"Taxon name":{"rank":str, "count":int, "children": dict},}}.
-    :return (dict): Dictionary with one lineage tree per sample.
-    """
-    # Root project
-    trees = {}
-    for sample_id, lineage_sample in lineage_trees_dict.items():
-        # Root sample
-        rootnode = anytree.Node("root", rank=None, count=0, sample=None)
-
-        def itertaxa(d, parent=None, parent_node=None):
-            """From lineages json, construct a tree with the counts per each taxon.
-
-            :param d (dict): Taxa counts in json structure. Nested dictionary:
-                {"Taxon":{"rank":str, "count":int, "children": {}}}}.
-            :param parent (str): Name of the parent taxon.
-            :param parent_node (Node): Node with the info related to the parent taxon.
-            """
-            for taxon, taxon_data in d.items():
-                if parent:
-                    # Databases don't always follow a perfect structure.
-                    # Check that parent belongs to immediate previous rank
-                    # to avoid those cases in which some ranks are missing
-                    # (e.g.: Wohlfahrtiimonas)
-                    diff_ranks = RANK_ORDER[taxon_data['rank']] - parent_node.rank
-                    if diff_ranks == 1:  # Consecutive ranks
-                        if 'uncultured' not in taxon:  # This appears in SILVA database
-                            node = anytree.Node(
-                                taxon, parent=parent_node,
-                                count=taxon_data['count'],
-                                rank=RANK_ORDER[taxon_data['rank']],
-                            )
-                        else:
-                            # Keep the name of the previous rank to avoid duplicates
-                            node = anytree.Node(
-                                f'{parent_node.name}_uncultured',
-                                parent=parent_node,
-                                count=taxon_data['count'],
-                                rank=(parent_node.rank + 1)
-                                )
-                    else:  # Add missing ranks
-                        original_parent_node = parent_node
-                        for i in range(1, diff_ranks):
-                            # Fill missing ranks with label: Incertae sedis,
-                            # i.e. https://en.wikipedia.org/wiki/Wohlfahrtiimonas
-                            label = 'Incertae_sedis'
-                            if (
-                                'Bacteria' in original_parent_node.name or
-                                    'Archaea' in original_parent_node.name):
-                                # Leave in blank
-                                node = anytree.Node(
-                                    'none',
-                                    parent=parent_node,
-                                    count=taxon_data['count'],
-                                    rank=(parent_node.rank + 1)
-                                    )
-                            elif 'Unclassified' not in original_parent_node.name:
-                                node = anytree.Node(
-                                    f'{parent_node.name}_{label}',
-                                    parent=parent_node,
-                                    count=taxon_data['count'],
-                                    rank=(parent_node.rank + 1)
-                                    )
-                            else:  # Do not do this for Unclassified
-                                node = anytree.Node(
-                                    taxon,
-                                    parent=parent_node,
-                                    count=taxon_data['count'],
-                                    rank=(parent_node.rank + 1)
-                                    )
-                            parent_node = node
-                        # Add last identified rank
-                        node = anytree.Node(
-                            taxon, parent=node,
-                            count=taxon_data['count'],
-                            rank=RANK_ORDER[taxon_data['rank']]
-                            )
-                        # Return to original parent node
-                        parent_node = original_parent_node
-                else:
-                    node = anytree.Node(
-                        taxon, parent=rootnode,
-                        count=taxon_data['count'],
-                        rank=RANK_ORDER[taxon_data['rank']]
-                        )
-                if isinstance(taxon_data['children'], dict):
-                    itertaxa(taxon_data['children'], parent=taxon, parent_node=node)
-
-        itertaxa(lineage_sample)
-        trees[sample_id] = rootnode
-    return trees
-
-
-def check_counts(taxa_trees):
-    """Verify that more general taxonomic ranks contains counts from more specific ones.
-
-    Otherwise, add an 'Unclassified_<taxon>' Node to not miss those counts.
-
-    :param taxa_trees (anytree.Node): Tree structure with a rootnode (the sample)
-        and children nodes following the lineage structure.
-    :return (dict): Tree structure with a rootnode (the sample)
-        and children nodes following the lineage structure.
-    """
-    # TODO: This shouln't happen from bracken report, but allow this in future?.
-    # Total counts per node == sum(counts of children nodes), i.e. [in counts]:
-    # Gammaproteobacteria (c) = Enterobacterales (o) + found Order (o)
-    # If not:
-    # Gammaproteobacteria_unclassified (o) = Gammaproteobacteria (c) - sum(found order)
-
-    for node in anytree.PreOrderIter(taxa_trees, maxlevel=taxa_trees.height):
-        if sum([n.count for n in node.children]) != node.count:
-            # Add unclassified node
-            if not re.match('^Unclassified|^root', node.name):
-                unclassified_taxon = f'Unclassified_{node.name}'
-                counts = node.count - sum([n.count for n in node.children])
-                anytree.Node(
-                    unclassified_taxon, parent=node, rank=node.rank + 1, count=counts)
-    return taxa_trees
-
-
-def prepare_taxa_table(taxa_tree, rank):
-    """Filter the abundance table for a specific rank.
-
-    :param sample_taxa_tree (anytree.Node): Node with counts for all possible ranks.
-    :param rank (str): Index of the taxonomic rank to use as filter.
-    :return (DataFrame): DataFrame with counts per specific rank for one sample.
-    """
-    # Make df from anytree.Node
-    d = []
-    for node in anytree.search.findall(taxa_tree, lambda node: node.rank == rank):
-        d.append(
-            {
-                'rank': node.rank,
-                'count':  node.count,
-                'tax': ';'.join([str(node.name) for node in node.path[1:]])
-            }
-        )
-    # If the rank level does not exist, return None
-    if d:
-        df = pd.DataFrame(d)
-        return df
-    else:
-        return None
-
-
-def join_abundance_tables(taxa_trees, rank):
-    """Take taxonomy trees and create a dataframe from them.
-
-    :param taxa_trees (dict): Dictionary with one lineage tree per sample.
-    :param rank (str): Taxonomic rank to subset the df.
-
-    :return (DataFrame): Table with counts per specific rank for all the samples.
-    """
-    # Trees into tables
-    tables = {}
-    for s, t in taxa_trees.items():
-        tables[s] = prepare_taxa_table(check_counts(t), RANK_ORDER[rank])
-    df_all = pd.concat(list(tables.values()), keys=list(tables.keys()))
-    # Remove multiindex
-    df_all_samples = df_all.reset_index().rename(columns={'level_0': 'sample'})
-    # Pivot table. Make each sample a different column
-    df = df_all_samples.pivot_table(
-        columns=['sample'], values='count', index=['tax'], fill_value=0)
-    df['total'] = df.sum(axis=1)
-    df = df.sort_values('total', ascending=False).reset_index()
-    df.columns.name = None
-    return df
-
-
 def split_taxonomy_string(counts_per_taxa_df, set_index=False):
     """Divide the taxonomy string into columns for each different taxonomic rank.
 
@@ -277,8 +101,9 @@ def most_abundant_table(counts_per_taxa_df, samples, n=10, percent=False):
     """
     # Extract n most abundant taxa & group less abundant in Others
     most_abundant_taxa = counts_per_taxa_df[:n]
-    less_abundant_taxa = counts_per_taxa_df[n:].sum()[samples + ['total']].to_dict()
-    less_abundant_taxa['tax'] = 'Other' + ';Other' * len(list(RANK_ORDER.keys())[1:])
+    less_abundant_taxa = counts_per_taxa_df[n:].sum().to_dict()
+    less_abundant_taxa['tax'] = 'Other' + ';Other' * (
+        len(most_abundant_taxa['tax'][0].split(';'))-1)
     if less_abundant_taxa['total'] > 1:  # no "other" taxa
         other = pd.DataFrame(less_abundant_taxa,  index=['Other'])
         # Concat other to most abundant, this is data for plotting

@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Broken plots caused by single quotes in NCBI taxon names.
 ### Added
-- Optional `minimap2_by_reference` parameter to output the sequencing depth and coverage of each matched reference in the database.
+- Add the abundance_table_<rank>.tsv in the output for the last analysed rank.
+- Optional `--minimap2_by_reference` parameter to output the sequencing depth and coverage of each matched reference in the database.
 
 ## [v2.5.0]
 ### Added

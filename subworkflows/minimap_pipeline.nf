@@ -1,5 +1,8 @@
 include { run_amr } from '../modules/local/amr'
 include { run_common } from '../modules/local/common'
+include {
+    createAbundanceTables;
+} from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -174,6 +177,7 @@ process makeReport {
     label "wfmetagenomics"
     input:
         path per_read_stats
+        path abundance_table
         path "alignment_stats/*"
         path "lineages/*"
         path "versions/*"
@@ -196,6 +200,7 @@ process makeReport {
         --params params.json \
         ${stats_args} \
         --lineages lineages \
+        --abundance_table "${abundance_table}" \
         --taxonomic_rank "${taxonomic_rank}" \
         --pipeline "minimap" \
         --abundance_threshold "${params.abundance_threshold}"\
@@ -275,6 +280,9 @@ workflow minimap_pipeline {
             alignment_reports = Channel.empty()
         }
         
+        abundance_tables = createAbundanceTables(
+            lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
+            taxonomic_rank)
         // Process AMR
         if (params.amr) {
             run_amr = run_amr(
@@ -291,8 +299,9 @@ workflow minimap_pipeline {
         // Reporting
         report = makeReport(
             per_read_stats,
+            abundance_tables.abundance_tsv,
             alignment_reports.ifEmpty(OPTIONAL_FILE),
-            lineages.flatMap { it -> [ it[1] ] }.collect(),
+            lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
             software_versions,
             parameters,
             taxonomic_rank,
@@ -304,6 +313,7 @@ workflow minimap_pipeline {
             software_versions,
             parameters,
             report.report_html,
+            abundance_tables.abundance_tsv,
         )
         | map { [it, null] }
 
