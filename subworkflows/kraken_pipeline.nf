@@ -2,6 +2,9 @@ import nextflow.util.BlankSeparatedList
 
 include { run_amr } from '../modules/local/amr'
 include { run_common } from '../modules/local/common'
+include {
+    createAbundanceTables;
+} from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -400,6 +403,7 @@ process makeReport {
     cpus 1
     input:
         path lineages
+        path abundance_table
         tuple(path(stats), path("versions/*"), path("params.json"), val(taxonomic_rank))
         path amr
     output:
@@ -416,6 +420,7 @@ process makeReport {
         --params params.json \
         --read_stats ${stats} \
         --lineages "${lineages}" \
+        --abundance_table "${abundance_table}" \
         --taxonomic_rank "${taxonomic_rank}" \
         --abundance_threshold "${params.abundance_threshold}"\
         --n_taxa_barplot "${params.n_taxa_barplot}"\
@@ -519,22 +524,26 @@ workflow kraken_pipeline {
         } else {
             // use first() to coerce this to a value channel
 	        amr_reports = Channel.fromPath("$projectDir/data/OPTIONAL_FILE", checkIfExists: true).first()
-	}
+	    }
 
         // report step
         // Nasty: we assume br.report and stats are similarly
-        // ordered. This is find because everything has been through scan and
+        // ordered. This is fine because everything has been through scan and
         // is therefore necessarily ordered. This could be tidied up by passing
-        // through a job id but that seems unneccessary at this point.
-        stuff = stats
+        // through a job id but that seems unnecessary at this point.
+        basic_report_components = stats
             .combine(software_versions)
             .combine(parameters)
             .combine(Channel.of(taxonomic_rank))
         
-    
+        abundance_tables = createAbundanceTables(
+            progressive_bracken.out.reports,
+            taxonomic_rank)
+        
         report = makeReport(
             progressive_bracken.out.reports,
-            stuff,
+            abundance_tables.abundance_tsv,
+            basic_report_components,
             amr_reports
         )
         
@@ -544,6 +553,7 @@ workflow kraken_pipeline {
             software_versions,
             parameters,
             report.report_html,
+            abundance_tables.abundance_tsv
         )
         | map { [it, null] }
 

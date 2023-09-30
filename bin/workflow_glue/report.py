@@ -154,19 +154,20 @@ def main(args):
 
     # Join taxonomy data
     all_json = report_utils.parse_lineages(args.lineages[0])
-    # Extract all possible lineages
-    allranks_tree = report_utils.tax_tree(all_json)
-    samples = list(allranks_tree.keys())
-    # Save all ranks info
-    ranks_counts_filtered = []
+    abundance_table = pd.read_csv(args.abundance_table, sep='\t')
+    # need to read samples from the table, as it is in a different process
+    # is not updated the same time that lineages: lineages can include 2 samples and
+    # at the same moment abundance table just contains 1 of them.
+    samples = [i for i in abundance_table.columns if i not in ['tax', 'total']]
     # 2.1. SANKEY
     with report.add_section('Lineages', 'Lineages'):
         ezc.metagenomics_sankey(all_json)
     # 2.2. SUNBURST
     with report.add_section('Sunburst', 'Sunburst'):
         tabs = Tabs()
-        with tabs.add_dropdown_menu('Sample', change_header=False):
+        with tabs.add_dropdown_menu('Sample', change_header=True):
             for barcode in all_json.keys():
+                logger.info(f"Sample {barcode}.")
                 with tabs.add_dropdown_tab(barcode):
                     p("""
                     This visualization can be useful to interactively explore the
@@ -181,9 +182,15 @@ def main(args):
                         label_minAngle=25)
                     EZChart(plt, THEME)
                     lineages.clear()
-
+    # Save all ranks info
+    ranks_counts_filtered = []
     for rank in ranks_no_sk_k:  # avoid superkingdom (SK), kingdom(K)
-        counts_per_taxa_df = report_utils.join_abundance_tables(allranks_tree, rank)
+        abundance_table_rank = abundance_table.copy()
+        # update full taxonomy string to an string which finishes at the rank asked.
+        abundance_table_rank['tax'] = [';'.join(
+            i.split(';')[:report_utils.RANK_ORDER[rank]]
+            ) for i in abundance_table['tax']]
+        counts_per_taxa_df = abundance_table_rank.groupby(['tax']).sum().reset_index()
         if not counts_per_taxa_df.empty:
             # Filter by abundance threshold.
             # Distinguish between natural number cutoff or percentage.
@@ -203,9 +210,10 @@ def main(args):
     with report.add_section('Taxonomy', 'Taxonomy'):
         tabs = Tabs()
         # 2.3. BARPLOT
-        with tabs.add_dropdown_menu('Rank', change_header=False):
+        with tabs.add_dropdown_menu('Rank', change_header=True):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
+                    logger.info(f"rank {ranks_no_sk_k[i]}.")
                     most_abundant = report_utils.most_abundant_table(
                         counts_per_taxa_per_rank_df, samples, n=n_taxa_barplot,
                         percent=True)
@@ -228,6 +236,8 @@ def main(args):
                         d2plot_melt, x='samples', y='counts',
                         hue=ranks_no_sk_k[i], dodge=False)
                     plt.yAxis = dict(name='Relative abundance')
+                    # rotate x axis labels to avoid overlaping with many barcodes
+                    plt.xAxis.axisLabel = dict(rotate=45)
                     plt.legend = {
                         'orient': 'horizontal', 'left': 'center', 'top': 'bottom'}
                     plt.tooltip = {'trigger': 'axis', 'axisPointer': {'type': 'shadow'}}
@@ -292,7 +302,7 @@ def main(args):
     #
 
     # Return counts for the last analyzed rank to calculate diversity
-    last_analyzed_rank = ranks_counts_filtered[-1].set_index('tax')
+    last_analyzed_rank = ranks_counts[samples + ['total']]
     # Rarefy step by step
     rarefied_counts = last_analyzed_rank.apply(
         lambda x: diversity.rarefaction_curve(x), axis=0)
@@ -346,7 +356,7 @@ def main(args):
         # 3.3. SPECIES ABUNDANCE DISTRIBUTION: SAD
         #
         with tabs.add_dropdown_menu('Taxa abundance distribution', change_header=False):
-            for barcode in all_json.keys():
+            for barcode in samples:
                 with tabs.add_dropdown_tab(barcode):
                     # Remove Unknown
                     ranks_counts = ranks_counts[
@@ -359,6 +369,7 @@ def main(args):
                         plt = ezc.barplot(
                             df_sample_counts.reset_index().rename(
                                 columns={'index': 'rank'}))
+                        plt.title = dict(text=barcode)
                         # hiding x axis, just show the abundance distribution of the
                         # taxa to have an idea of singletons, SAD distribution.
                         plt.xAxis.axisLabel = {'show': False}
@@ -442,6 +453,9 @@ def argparser():
     parser.add_argument(
         "--align_stats", required=False,
         help="Folder containing the mapping and depth statistics in TSV format.")
+    parser.add_argument(
+        "--abundance_table", required=True,
+        help="Read abundance tsv file.")
     parser.add_argument(
         '--taxonomic_rank', required=True,
         help="Taxonomic rank.")
