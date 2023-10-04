@@ -79,12 +79,12 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10"
           NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --keep_bam --minimap2_by_reference"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --keep_bam --minimap2_by_reference --abundance_threshold 10"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
       # Exclude Archaea and Eukaryota from extracted reads (remaining reads should be just from Bacteria).
      - if: $MATRIX_NAME == "minimap2-filter"
