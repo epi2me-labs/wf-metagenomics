@@ -215,7 +215,8 @@ def main(args):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     logger.info(f"rank {ranks_no_sk_k[i]}.")
                     most_abundant = report_utils.most_abundant_table(
-                        counts_per_taxa_per_rank_df, samples, n=n_taxa_barplot,
+                        counts_per_taxa_per_rank_df,
+                        n=n_taxa_barplot,
                         percent=True)
                     d2plot = report_utils.split_taxonomy_string(most_abundant)
                     # Long wide format

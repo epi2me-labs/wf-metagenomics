@@ -89,7 +89,7 @@ def split_taxonomy_string(counts_per_taxa_df, set_index=False):
     return df_ranks
 
 
-def most_abundant_table(counts_per_taxa_df, samples, n=10, percent=False):
+def most_abundant_table(counts_per_taxa_df, n=10, percent=False):
     """Select most abundant taxa and group the rest into 'Other' taxa.
 
     :param counts_per_taxa_df (DataFrame): DataFrame with counts per specific rank.
@@ -99,11 +99,13 @@ def most_abundant_table(counts_per_taxa_df, samples, n=10, percent=False):
     :return (DataFrame): DataFrame with most abundant taxa (in the total of all the\
             samples) and the rest group in Others.
     """
+    # sort table - just in case
+    counts_per_taxa_df = counts_per_taxa_df.sort_values(by=['total'], ascending=False)
     # Extract n most abundant taxa & group less abundant in Others
     most_abundant_taxa = counts_per_taxa_df[:n]
     less_abundant_taxa = counts_per_taxa_df[n:].sum().to_dict()
     less_abundant_taxa['tax'] = 'Other' + ';Other' * (
-        len(most_abundant_taxa['tax'][0].split(';'))-1)
+        len(most_abundant_taxa['tax'].iloc[0].split(';'))-1)
     if less_abundant_taxa['total'] > 1:  # no "other" taxa
         other = pd.DataFrame(less_abundant_taxa,  index=['Other'])
         # Concat other to most abundant, this is data for plotting
