@@ -48,7 +48,7 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_kraken2_assignments"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_kraken2_assignments --abundance_threshold 1"
           NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
      - if: $MATRIX_NAME == "batch"
        variables:
