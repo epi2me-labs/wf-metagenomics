@@ -176,7 +176,7 @@ process getAlignmentStats {
 process makeReport {
     label "wfmetagenomics"
     input:
-        path per_read_stats
+        path "read_stats/per-read-stats*.tsv.gz"
         path abundance_table
         path "alignment_stats/*"
         path "lineages/*"
@@ -189,9 +189,9 @@ process makeReport {
     script:
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
         String report_name = "${workflow_name}-report.html"
-        def stats_args = (per_read_stats.name == OPTIONAL_FILE.name) ? "" : "--read_stats $per_read_stats"
-        align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
-        amr = params.amr as Boolean ? "--amr ${amr}" : ""
+        def stats_args = params.wf.stats ? "--read_stats read_stats/*" : ""
+        def align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
+        def amr = params.amr as Boolean ? "--amr ${amr}" : ""
     """
     workflow-glue report \
         "${report_name}" \
@@ -245,14 +245,8 @@ workflow minimap_pipeline {
         outputs = []
         lineages = Channel.empty()
         taxonomy = unpackTaxonomy(taxonomy)
-        // Initial reads QC
-        per_read_stats = samples.map {
-            it[2] ? it[2].resolve('per-read-stats.tsv') : null
-        }
-        | collectFile ( keepHeader: true )
         | ifEmpty ( OPTIONAL_FILE )
         metadata = samples.map { it[0] }.toList()
-
         // check that the number of elements of the reference (if it is a fasta)
         // matches the number of elements of the ref2taxid.
         check_reference_ref2taxid(reference, ref2taxid)
@@ -261,6 +255,8 @@ workflow minimap_pipeline {
         software_versions = common.software_versions
         parameters = common.parameters
         samples = common.samples
+        // Initial reads QC
+        per_read_stats = samples.map {it[2].resolve('per-read-stats.tsv.gz')}.collect()
         // Run Minimap2
   
         mm2 = minimap(

@@ -48,7 +48,8 @@ def main(args):
     df = pd.read_csv(
         args.input, sep="\t",
         usecols=['read_length', 'mean_quality'],
-        dtype={'read_length': int, 'mean_quality': float})
+        dtype={'read_length': int, 'mean_quality': float},
+        compression='gzip')
     final = {args.sample_id: get_stats(df)}
     with open(args.output, 'w') as fp:
         json.dump(final, fp)
