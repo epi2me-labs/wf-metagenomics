@@ -92,8 +92,8 @@ process rebatchFastq {
     output:
         tuple(
             val(meta),
-            path("fastq/${meta.alias}.part_*.fastq.gz"),
-            path("fastcat_stats/${meta.alias}_part_*.tsv")
+            path("fastq/*.part_*.fastq.gz"),
+            path("fastq/fastcat_stats/*.tsv.gz")
             )
     script:
         def sample_id = "${meta.alias}"
@@ -104,13 +104,23 @@ process rebatchFastq {
         -e .gz -o "${sample_id}" \
         -O fastq
     # Batch stats file
-    mkdir -p fastcat_stats
-    tail -n +2 "${stats}/per-read-stats.tsv" | split -l "${params.batch_size}" \
-    -d --additional-suffix=.tsv \
-    --filter='sh -c "{ head -n1 "${stats}/per-read-stats.tsv"; cat; } > fastcat_stats/\$FILE"' - "${sample_id}"_part_
+    # run fastcat on each of the batch files:
+    # don't need extra_args because the sequences have already passed fastcat during ingress
+    mkdir -p fastq/fastcat_stats
+    for f in \$(ls fastq);
+        do
+        if [[ fastq/\$f = *.fastq.gz ]];
+        then
+            batch_part=(\${f/.fastq.gz/})
+            fastcat \
+                -s \$batch_part \
+                -r >(bgzip -c > "fastq/fastcat_stats/\$batch_part-per-read-stats.tsv.gz") \
+                -f "fastq/fastcat_stats/\$batch_part-per-file-stats.tsv" \
+                fastq/\$f
+        fi
+    done 
     """
 }
-
 
 // watch path stop condition, if params.read_limit is met will inject a stop file in to input folder.
 process stopCondition { 
@@ -205,7 +215,7 @@ process kraken2_client {
     then
         stats_file="${stats}"
     else
-        stats_file="${stats}/per-read-stats.tsv"
+        stats_file="${stats}/per-read-stats.tsv.gz"
     fi
 
     workflow-glue fastcat_histogram \

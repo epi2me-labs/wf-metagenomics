@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Create tables for the report."""
+import collections
 import json
 import os
 from pathlib import Path
@@ -121,14 +122,25 @@ def most_abundant_table(counts_per_taxa_df, n=10, percent=False):
     return d2plot
 
 
-def per_sample_stats(df_allstats):
+def per_sample_stats(stats):
     """Read from fastcat stats and return total reads per sample.
 
-    :param df_allstats (DataFrame): Fastcat statistics.
+    :param stats (list): List with fastcat statistics.
     :return (DataFrame): Reads per sample.
     """
-    df = df_allstats.groupby('sample_name').size().to_frame('count').reset_index()
-    return df
+    dfs = collections.Counter()
+    for fastcat_file in stats:
+        df = pd.read_csv(
+            fastcat_file,
+            sep="\t",
+            header=0
+            )
+        # save total number of reads per sample
+        dfs += collections.Counter(df['sample_name'])
+    df_allstats = pd.DataFrame.from_dict(
+        dfs, orient='index').reset_index()
+    df_allstats.columns = ['sample_name', 'Number of reads']
+    return df_allstats.sort_values(by=['sample_name'])
 
 
 def calculate_diversity_metrics(counts_per_taxa_df):

@@ -112,6 +112,7 @@ process exclude_host_reads {
             -r $fastcat_stats_outdir/per-read-stats.tsv \
             -f $fastcat_stats_outdir/per-file-stats.tsv \
             "${sample_id}.unmapped.fastq" > "${sample_id}.filtered.unmapped.fastq"
+    bgzip $fastcat_stats_outdir/per-read-stats.tsv 
     """
 }
 
@@ -152,6 +153,7 @@ process createAbundanceTables {
         --pipeline "${params.classifier}"
     """
 }
+
 
 workflow run_common {
     take:

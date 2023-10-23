@@ -12,7 +12,6 @@ from ezcharts.components.reports.labs import LabsReport
 from ezcharts.layout.snippets import DataTable
 from ezcharts.layout.snippets import Grid
 from ezcharts.layout.snippets import Tabs
-from ezcharts.plots import util
 import pandas as pd
 import workflow_glue.diversity as diversity
 import workflow_glue.report_utils.report_utils as report_utils
@@ -111,9 +110,8 @@ def main(args):
     #
     if args.pipeline == 'minimap':
         if args.read_stats:
-            stats_files = util.read_files(args.read_stats)
             with report.add_section("Read summary", "Read summary"):
-                SeqSummary(stats_files)
+                SeqSummary(args.read_stats)
                 # Add metadata section
             with report.add_section("Samples summary", "Samples summary"):
                 tabs = Tabs()
@@ -121,7 +119,7 @@ def main(args):
                     with Grid(columns=1):
                         # Add barplot with reads per sample
                         sample_reads = ezc.barplot(data=report_utils.per_sample_stats(
-                            stats_files), x='sample_name', y='count')
+                            args.read_stats), x='sample_name', y='Number of reads')
                         sample_reads.title = {"text": "Number of reads per sample."}
                         EZChart(sample_reads, THEME)
     # kraken stats are not in tsv, they came from json files with binned counts
@@ -446,8 +444,9 @@ def argparser():
         "--workflow_name", required=True,
         help="The name of the workflow.")
     parser.add_argument(
-        "--read_stats", nargs='+', required=False,
-        help="Read summary file.")
+        "--read_stats",  nargs='+', required=False,
+        help="Fastcat per-read stats (file or dir with files)."
+    )
     parser.add_argument(
         "--lineages", nargs='+', required=True,
         help="Read lineage file.")

@@ -3,7 +3,7 @@
 import groovy.json.JsonBuilder
 nextflow.enable.dsl = 2
 
-include { fastq_ingress } from './lib/fastqingress'
+include { fastq_ingress } from './lib/ingress'
 include { minimap_pipeline } from './subworkflows/minimap_pipeline'
 include { kraken_pipeline } from './subworkflows/kraken_pipeline'
 include {
@@ -14,10 +14,7 @@ nextflow.preview.recursion=true
 // entrypoint workflow
 WorkflowMain.initialise(workflow, params, log)
 workflow {
-    if (params.disable_ping == false) {
-        Pinguscript.ping_post(workflow, "start", "none", params.out_dir, params)
-       
-    }
+    Pinguscript.ping_start(nextflow, workflow, params)
 
     dataDir = projectDir + '/data'
 
@@ -116,7 +113,7 @@ workflow {
             "sample":params.sample,
             "sample_sheet":params.sample_sheet,
             "analyse_unclassified":params.analyse_unclassified,
-            "fastcat_stats": params.wf.fastcat_stats,
+            "stats": params.wf.stats,
             "fastcat_extra_args": fastcat_extra_args.join(" ")])
 
             results = minimap_pipeline(
@@ -199,7 +196,7 @@ workflow {
         "sample":null,
         "sample_sheet":null,
         "analyse_unclassified":params.analyse_unclassified,
-        "fastcat_stats": params.wf.fastcat_stats,
+        "stats": params.wf.stats,
         "fastcat_extra_args": fastcat_extra_args.join(" "),
         "watch_path": params.watch_path])
         results = kraken_pipeline(
@@ -207,13 +204,9 @@ workflow {
     }
 }
 
-
-if (params.disable_ping == false) {
-    workflow.onComplete {
-        Pinguscript.ping_post(workflow, "end", "none", params.out_dir, params)
-    }
-    
-    workflow.onError {
-        Pinguscript.ping_post(workflow, "error", "$workflow.errorMessage", params.out_dir, params)
-    }
+workflow.onComplete {
+    Pinguscript.ping_complete(nextflow, workflow, params)
+}
+workflow.onError {
+    Pinguscript.ping_error(nextflow, workflow, params)
 }
