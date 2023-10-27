@@ -8,79 +8,6 @@ include {
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
-process unpackDatabase {
-    label "wfmetagenomics"
-    cpus 1
-    storeDir "${params.store_dir}/${database.simpleName}"
-    input:
-        path database
-        path kmer_distribution
-    output:
-        path "database_dir"
-    """
-    if [[ "${database}" == *.tar.gz ]]
-    then
-        mkdir database_dir
-        tar xf "${database}" -C database_dir
-    elif [ -d "${database}" ]
-    then
-        mv "${database}" database_dir
-    else
-        echo "Error: database is neither .tar.gz nor a dir"
-        echo "Exiting".
-        exit 1
-    fi
-    cp "${kmer_distribution}" database_dir
-    """
-}
-
-
-process determine_bracken_length {
-    label "wfmetagenomics"
-    input:
-        path database
-    output:
-        env BRACKEN_LENGTH
-    """
-    if [[ -f "${database}"/database${params.bracken_length}mers.kmer_distrib ]]; then
-        BRACKEN_LENGTH="${params.bracken_length}"
-    else
-        cd "${database}"
-        BRACKEN_LENGTH=\$(ls -v1 *.kmer_distrib | tail -1 | sed -e "s@^database@@" -e "s@mers.kmer_distrib@@")
-        cd ..
-    fi
-    """
-}
-
-
-process unpackTaxonomy {
-    label "wfmetagenomics"
-    cpus 1
-    storeDir "${params.store_dir}/${taxonomy.simpleName}"
-    input:
-        path taxonomy
-    output:
-        path "taxonomy_dir"
-    """
-    if [[ "${taxonomy}" == *.tar.gz ]]
-    then
-        mkdir taxonomy_dir
-        tar xf "${taxonomy}" -C taxonomy_dir
-    elif [[ "${taxonomy}" == *.zip ]]
-    then
-        mkdir taxonomy_dir
-        unzip  "${taxonomy}" -d taxonomy_dir
-    elif [ -d "${taxonomy}" ]
-    then
-        mv "${taxonomy}" taxonomy_dir
-    else
-        echo "Error: taxonomy is neither .tar.gz, .zip nor a dir"
-        echo "Exiting".
-        exit 1
-    fi
-    """
-} 
-
 
 // Rebundle fastqs (this is mostly in case we're given one big file)
 process rebatchFastq {
@@ -286,11 +213,9 @@ process progressive_kraken_reports {
     input:
         path kreport
         val sample_ids
-        path taxonomy
     output:
         path("kraken.${task.index}.${sample_id}"), emit: reports
         val(sample_id), emit: sample_id
-        path taxonomy
     script:
         def new_input = kreport instanceof List ? kreport.first() : kreport
         def state = kreport instanceof List ? kreport.last() : "NOSTATE"
@@ -328,11 +253,11 @@ process progressive_bracken {
     input:
         path(inputs)
         val(sample_ids)
-        tuple path(database), path(taxonomy), val(bracken_length), val(taxonomic_rank)
+        tuple path(database), path(taxonomy), path(bracken_length_file), val(taxonomic_rank)
     output:
         path("${new_state}"), emit: reports
         val(sample_id), emit: sample_id
-        tuple path(database), path(taxonomy), val(bracken_length), val(taxonomic_rank)
+        tuple path(database), path(taxonomy), path(bracken_length_file), val(taxonomic_rank)
     script:
         new_state = "bracken.${task.index}"
         def kreports = inputs instanceof List ? inputs.first() : inputs
@@ -343,10 +268,11 @@ process progressive_bracken {
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
     # is written alongside the input
+    BRACKEN_LENGTH=\$(cat "${bracken_length_file}")
     workflow-glue run_bracken \
         "${database}" \
         "${kreports}/${sample_id}.kreport.txt" \
-        "${bracken_length}" \
+        \$BRACKEN_LENGTH \
         "${taxonomic_rank}" \
         "${sample_id}.bracken_report.txt"
 
@@ -465,16 +391,10 @@ workflow kraken_pipeline {
         samples
         taxonomy
         database
-        kmer_distribution
+        bracken_length
         taxonomic_rank
     main:
         opt_file = file("$projectDir/data/OPTIONAL_FILE")
-        taxonomy = unpackTaxonomy(taxonomy)
-        
-        database = unpackDatabase(database, kmer_distribution)
-        bracken_length = determine_bracken_length(database)
-        
-
         // do we want to run a kraken server ourselves? 
         if (!params.external_kraken2) {
             kraken_server(database)
@@ -508,13 +428,12 @@ workflow kraken_pipeline {
             .set { scan_input }
 
         progressive_kraken_reports.scan(
-            scan_input.report, scan_input.sample_id, 
-            taxonomy)
-
+            scan_input.report, scan_input.sample_id)
+        
         database
             .combine(taxonomy)
             .combine(bracken_length)
-            .combine(Channel.of(taxonomic_rank))
+            .combine(taxonomic_rank)
             .first() // To ensure value channel for scan
             .set {bracken_inputs}
 
@@ -544,7 +463,7 @@ workflow kraken_pipeline {
         basic_report_components = stats
             .combine(software_versions)
             .combine(parameters)
-            .combine(Channel.of(taxonomic_rank))
+            .combine(taxonomic_rank)
         
         abundance_tables = createAbundanceTables(
             progressive_bracken.out.reports,

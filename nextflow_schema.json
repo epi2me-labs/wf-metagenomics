@@ -188,13 +188,6 @@
             "fa_icon": "fas fa-university",
             "help_text": "\nKraken2\nIt is possible to enable classification by kraken2, \nand disable alignment which is a faster but coarser method of \nclassification reliant on the presence of a kraken2 database.\n",
             "properties": {
-                "bracken_dist": {
-                    "type": "string",
-                    "format": "file-path",
-                    "title": "Bracken kmer distance file",
-                    "description": "Specifically override bracken kmer dist file",
-                    "help_text": "A default kmer_dist is provided in database_set selected. Which was generated from the kraken database."
-                },
                 "bracken_length": {
                     "type": "integer",
                     "title": "Bracken length",

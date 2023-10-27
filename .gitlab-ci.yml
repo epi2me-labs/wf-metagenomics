@@ -13,8 +13,12 @@ variables:
     NF_WORKFLOW_OPTS: "--fastq test_data/case01"
     NF_IGNORE_PROCESSES: "rebatchFastq"
     CI_FLAVOUR: "new"
+    CWG_AWS_ENV_NAME: "stack"
 
 aws-run:
+    variables:
+        NF_WORKFLOW_OPTS: "--fastq test_data/case01 --store_dir s3://$${XAWS_BUCKET}/${CI_PROJECT_NAME}/store"
+        NF_IGNORE_PROCESSES: "rebatchFastq"
     artifacts:
         when: always
         paths:

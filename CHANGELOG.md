@@ -4,9 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [Unreleased]
 ### Fixed
+- Use store_dir without staging files from the web. Kraken2 can run offline if the databases have been previously stored.
 - Fastcat plots showing the stats in the report before removing host sequences when `--exclude_host` in the minimap2 pipeline.
+
+### Added
+- Minimap  pipeline is also able to use store_dir to store databases and run offline if the databases have been previously stored.
+
+### Removed
+- `--bracken_dist`: the bracken additional file for the database must be included in the database folder, as it is in the kraken2 indexes and when the database is generated.
 
 ## [v2.6.1]
 ### Fixed
@@ -17,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Broken plots caused by single quotes in NCBI taxon names.
 ### Added
-- Add the abundance_table_<rank>.tsv in the output for the last analysed rank.
+- Add the abundance_table_rank.tsv in the output for the last analysed rank.
 - Optional `--minimap2_by_reference` parameter to output the sequencing depth and coverage of each matched reference in the database.
 
 ## [v2.5.0]

@@ -6,66 +6,12 @@ include {
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
-process unpackTaxonomy {
-    label "wfmetagenomics"
-    cpus 1
-    input:
-        path taxonomy
-    output:
-        path "taxonomy_dir"
-    """
-    if [[ "${taxonomy}" == *.tar.gz ]]
-    then
-        mkdir taxonomy_dir
-        tar xf "${taxonomy}" -C taxonomy_dir
-    elif [[ "${taxonomy}" == *.zip ]]
-    then
-        mkdir taxonomy_dir
-        unzip "${taxonomy}" -d taxonomy_dir
-    elif [ -d "${taxonomy}" ]
-    then
-        mv "${taxonomy}" taxonomy_dir
-    else
-        echo "Error: taxonomy is neither .tar.gz nor a dir"
-        echo "Exiting".
-        exit 1
-    fi
-    """
-}
-
-
-process check_reference_ref2taxid {
-    label "wfmetagenomics"
-    input:
-        path reference
-        path ref2taxid
-    output:
-        val true
-    """
-    # just check if the reference is a fasta file. It can be a MMI index file.
-    if [[ "${reference}" != *.mmi ]]
-    then
-        if [ "\$(wc -l < "${ref2taxid}")" -eq "\$(grep '>' < "${reference}" | wc -l)" ]
-        then
-            echo 'Match!'
-        else
-            echo "Error: The number of elements of the "${ref2taxid}" doesn't match the number of elements in the "${reference}"."
-            echo "Please provide the fitting "${ref2taxid}" for the "${reference}"."
-            echo "Exiting".
-            exit 1
-        fi
-    fi
-    """
-}
-
-
 process minimap {
     label "wfmetagenomics"
     cpus params.threads
     input:
         tuple val(meta), path(concat_seqs), path(fastcat_stats)
         path reference
-        path refindex
         path ref2taxid
         path taxonomy
         val taxonomic_rank
@@ -237,19 +183,15 @@ workflow minimap_pipeline {
     take:
         samples
         reference
-        refindex
         ref2taxid
         taxonomy
         taxonomic_rank
     main:
         outputs = []
         lineages = Channel.empty()
-        taxonomy = unpackTaxonomy(taxonomy)
-        | ifEmpty ( OPTIONAL_FILE )
         metadata = samples.map { it[0] }.toList()
-        // check that the number of elements of the reference (if it is a fasta)
-        // matches the number of elements of the ref2taxid.
-        check_reference_ref2taxid(reference, ref2taxid)
+
+
         // Run common
         common = run_common(samples)
         software_versions = common.software_versions
@@ -263,7 +205,6 @@ workflow minimap_pipeline {
                 samples
                 | map { [it[0], it[1], it[2] ?: OPTIONAL_FILE ] },
                 reference,
-                refindex,
                 ref2taxid,
                 taxonomy,
                 taxonomic_rank
