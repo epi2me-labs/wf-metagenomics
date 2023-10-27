@@ -6,10 +6,8 @@ nextflow.enable.dsl = 2
 include { fastq_ingress } from './lib/ingress'
 include { minimap_pipeline } from './subworkflows/minimap_pipeline'
 include { kraken_pipeline } from './subworkflows/kraken_pipeline'
-include {
-    prepareSILVA;
-} from "./modules/local/common.nf"
-nextflow.preview.recursion=true   
+include { prepare_databases } from "./modules/local/databases.nf"
+nextflow.preview.recursion=true
 
 // entrypoint workflow
 WorkflowMain.initialise(workflow, params, log)
@@ -33,81 +31,58 @@ workflow {
 
     // Check source param is valid
     sources = params.database_sets
-    source_name = params.database_set
-    source_data = sources.get(source_name, false)
-    if (!sources.containsKey(source_name) || !source_data) {
-        keys = sources.keySet()
-        throw new Exception("Source $params.source is invalid, must be one of $keys")
-    }
-    if (source_name == "PlusPF-8" || params.database){
-        log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB) or consider to use --kraken2_memory_mapping")
-    }
-    if (source_name == "PlusPFP-8" || params.database){
-        log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB) or consider to use the --kraken2_memory_mapping")
-    }
     
-    // SILVA TaxIDs do not match NCBI TaxIDs.
-    if ("${params.classifier}" == "minimap2") {
-        if (source_name != "SILVA_138_1" ){
-            taxonomic_rank = params.taxonomic_rank
-        // Grab taxonomy files
-            taxonomy = file(sources[source_name]["taxonomy"], type: "file")
-            if (params.taxonomy) {
-                log.info("Checking custom taxonomy mapping exists")
-                taxonomy = file(params.taxonomy, type: "dir", checkIfExists:true)
-            }
-            // Handle getting alignment reference files if minimap2 classifier selected
-            reference = null
-            refindex  = null
-            ref2taxid = null
-            // .fasta
-            if (params.reference) {
-                log.info("Checking custom reference exists")
-                reference = file(params.reference, type: "file", checkIfExists:true)
-            } else {
-                source_reference = source_data.get("reference", false)
-                if (!source_reference) {
-                    throw new Exception(
-                        "Error: Source $source_name does not include a reference for "
-                        + "use with minimap2, please choose another source, "
-                        + "provide a custom reference or disable minimap2.")
-                }
-                reference = file(source_reference, type: "file")
-            }
-            // .fasta.fai
-            refindex = file(sources[source_name]["refindex"], type: "file")
-            if (params.reference) {
-                log.info("Checking custom reference index exists")
-                refindex = file(params.reference + '.fai', type: "file")
-                if (!refindex.exists()) {
-                    refindex = file(OPTIONAL, type: "file")
-                }
-            }
-            // .ref2taxid.csv
-            ref2taxid = file(sources[source_name]["ref2taxid"], type: "file")
-            if (params.ref2taxid) {
-                log.info("Checking custom ref2taxid mapping exists")
-                ref2taxid = file(params.ref2taxid, type: "file", checkIfExists:true)
-            }
-        } else{
-            log.info("Note: SILVA TaxIDs do not match NCBI TaxIDs")
-            log.info("Note: The database will be created from original files, which may make the wf run slower.")
-            // Create all the database for both pipelines.
-            silva = prepareSILVA()
-            reference = silva.reference
-            OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
-            refindex  = OPTIONAL_FILE
-            ref2taxid = silva.ref2taxid
-            taxonomy = silva.taxonomy
-            database = silva.database
-            if (params.taxonomic_rank == 'S') {
-                log.info("Note: SILVA database does not provide species, genus is the lowest taxonomic rank that can be used.")
-                taxonomic_rank = 'G'
-            } else{
-                taxonomic_rank = params.taxonomic_rank
-            }
+    // Stop the pipeline in case not valid parameters combinations
+    if (params.classifier == 'minimap2' && params.database) {
+        throw new Exception("To use minimap2 with your custom database, you need to use `--reference` (instead of `--database`) and `--ref2taxid`.")
+    }
+    if (params.classifier == 'kraken2' && params.reference) {
+        throw new Exception("To use kraken2 with your custom database, you need to use `--database` (instead of `--reference`) and include the `bracken_dist` within it.")
+    }
+
+    // If user provides each database, set to 'custom' the params.database_set
+    if (params.reference || params.database) {
+        source_name = 'custom'
+        // distinguish between taxonomy and database to be able to use taxonomy default db in some cases.
+        // this can be potentially risky but might be justified if the reference and ref2taxid use NCBI taxids.
+        source_data_database = null
+        source_name_taxonomy = params.database_set
+        source_data_taxonomy = sources.get(source_name_taxonomy, false)
+        log.info("Note: Reference/Database are custom.")
+        log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index.")
+        if (params.classifier == "kraken2"){
+            log.info("Note: Or consider to use the --kraken2_memory_mapping.")
         }
 
+    } 
+    if(params.taxonomy){
+        // this can be useful if the user wants to use a new taxonomy database (maybe updated) but the default reference.
+        source_name = params.database_set
+        source_data_database = sources.get(source_name, false)
+        source_data_taxonomy = null
+        log.info("Note: Taxonomy database is custom.")
+    } else {
+        source_name = params.database_set
+        source_data_database = sources.get(source_name, false)
+        source_data_taxonomy = sources.get(source_name, false)
+        if (!sources.containsKey(source_name) || !source_data_database) {
+            keys = sources.keySet()
+            throw new Exception("Source $params.database_set is invalid, must be one of $keys")
+        }
+        if (source_name == "PlusPF-8" || source_name == "PlusPFP-8"){
+            log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB) or consider to use --kraken2_memory_mapping")
+        }
+    }
+    
+    
+    if ("${params.classifier}" == "minimap2") {
+        log.info("Minimap2 pipeline.")
+            database = null
+            kmer_dist = null
+            databases_minimap2 = prepare_databases(
+                source_data_taxonomy,
+                source_data_database
+            )
             samples = fastq_ingress([
             "input":params.fastq,
             "sample":params.sample,
@@ -117,80 +92,37 @@ workflow {
             "fastcat_extra_args": fastcat_extra_args.join(" ")])
 
             results = minimap_pipeline(
-                samples, reference, refindex, ref2taxid, taxonomy, taxonomic_rank
+                samples,
+                databases_minimap2.reference,
+                databases_minimap2.ref2taxid,
+                databases_minimap2.taxonomy,
+                databases_minimap2.taxonomic_rank
                 )
-        }
+    }
 
     // Handle getting kraken2 database files if kraken2 classifier selected
-    database = null
-    kmer_distribution = null
     if ("${params.classifier}" == "kraken2") {
+        log.info("Kraken2 pipeline.")
         if (params.sample_sheet != null) {
             log.info("The `sample_sheet` parameter is not used in the kraken2 classifier mode.")
         }
         if (params.sample != null) {
             log.info("The `sample` parameter is not used in the kraken2 classifier mode.")
         }
-
-        // kraken2.tar.gz
-        if (source_name != "SILVA_138_1" ){
-            taxonomic_rank = params.taxonomic_rank
-        // Grab taxonomy files
-        taxonomy = file(sources[source_name]["taxonomy"], type: "file")
-        if (params.taxonomy) {
-            log.info("Checking custom taxonomy mapping exists")
-            taxonomy = file(params.taxonomy, type: "dir", checkIfExists:true)
-        }
-        if (params.database) {
-            log.info("Checking custom kraken2 database exists")
-            database = file(params.database, type: "dir", checkIfExists:true)
-        } else {
-            source_database = source_data.get("database", false)
-            if (!source_database) {
-                throw new Exception(
-                    "Error: Source $source_name does not include a database for "
-                    + "use with kraken2, please choose another source, "
-                    + "provide a custom database or disable kraken2.")
-            }
-            database = file(source_database, type: "file")
-        }
-        // kmer_distrib
-        kmer_dist_path = sources[source_name]["kmer_dist"]
-        if (params.bracken_dist) {
-            log.info("Checking custom bracken2 database exists")
-            kmer_distribution = file(
-                params.bracken_dist, type: "file", checkIfExists:true)
-        } else if (!kmer_dist_path) {
-            kmer_distribution = file(OPTIONAL, type: "file")
-        } else {
-            kmer_distribution = file(sources[source_name]["kmer_dist"], type: "file")
-        }
+        reference = null
+        ref2taxid = null
+        databases_kraken2 = prepare_databases(
+                source_data_taxonomy,
+                source_data_database
+        )
         // check combination of params are set
         if (params.watch_path){
             if (!params.read_limit){
                 log.info("Workflow will run indefinitely as no read_limit is set.")
             }
             log.info("Workflow will stop processing files after ${params.read_limit} reads.")
-        } }
-        else{
-            log.info("Note: SILVA TaxIDs do not match NCBI TaxIDs.")
-            log.info("Note: The database will be created from original files, which may make the wf run slower.")
-        // Create all the database for both pipelines.
-            silva = prepareSILVA()
-            reference = silva.reference
-            OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
-            refindex  = OPTIONAL_FILE
-            ref2taxid = silva.ref2taxid
-            taxonomy = silva.taxonomy
-            database = silva.database
-            kmer_distribution  = silva.bracken_dist
-            if (params.taxonomic_rank == 'S') {
-                log.info("Note: SILVA database does not provide species, genus is the lowest taxonomic rank that can be used.")
-                taxonomic_rank = 'G'
-            } else{
-                taxonomic_rank = params.taxonomic_rank
-            }
         }
+
         samples = fastq_ingress([
         "input":params.fastq,
         "sample":null,
@@ -200,7 +132,11 @@ workflow {
         "fastcat_extra_args": fastcat_extra_args.join(" "),
         "watch_path": params.watch_path])
         results = kraken_pipeline(
-            samples, taxonomy, database, kmer_distribution, taxonomic_rank)
+            samples,
+            databases_kraken2.taxonomy,
+            databases_kraken2.database,
+            databases_kraken2.bracken_length,
+            databases_kraken2.taxonomic_rank)
     }
 }
 
