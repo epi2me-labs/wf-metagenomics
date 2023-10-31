@@ -1,7 +1,8 @@
 include { run_amr } from '../modules/local/amr'
-include { run_common } from '../modules/local/common'
 include {
+    run_common;
     createAbundanceTables;
+    output;
 } from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
@@ -148,7 +149,7 @@ process makeReport {
         --lineages lineages \
         --abundance_table "${abundance_table}" \
         --taxonomic_rank "${taxonomic_rank}" \
-        --pipeline "minimap" \
+        --pipeline "minimap2" \
         --abundance_threshold "${params.abundance_threshold}"\
         --n_taxa_barplot "${params.n_taxa_barplot}"\
         ${align_stats} \
@@ -157,27 +158,6 @@ process makeReport {
 }
 
  
-// See https://github.com/nextflow-io/nextflow/issues/1636
-// This is the only way to publish files from a workflow whilst
-// decoupling the publish from the process steps.
-process output {
-    // publish inputs to output directory
-    label "wfmetagenomics"
-    publishDir (
-        params.out_dir,
-        mode: "copy",
-        saveAs: { dirname ? "$dirname/$fname" : fname }
-    )
-    input:
-        tuple path(fname), val(dirname)
-    output:
-        path fname
-    """
-    echo "Writing output files"
-    """
-}
-
-
 // workflow module
 workflow minimap_pipeline {
     take:
@@ -187,7 +167,6 @@ workflow minimap_pipeline {
         taxonomy
         taxonomic_rank
     main:
-        outputs = []
         lineages = Channel.empty()
         metadata = samples.map { it[0] }.toList()
 
@@ -219,7 +198,7 @@ workflow minimap_pipeline {
         
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
-            taxonomic_rank)
+            taxonomic_rank, params.classifier)
         // Process AMR
         if (params.amr) {
             run_amr = run_amr(

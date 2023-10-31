@@ -108,7 +108,7 @@ def main(args):
     #
     # 1. READ SUMMARY
     #
-    if args.pipeline == 'minimap':
+    if args.pipeline != 'real_time':
         if args.read_stats:
             with report.add_section("Read summary", "Read summary"):
                 SeqSummary(args.read_stats)
@@ -122,7 +122,8 @@ def main(args):
                             args.read_stats), x='sample_name', y='Number of reads')
                         sample_reads.title = {"text": "Number of reads per sample."}
                         EZChart(sample_reads, THEME)
-    # kraken stats are not in tsv, they came from json files with binned counts
+    # kraken stats for the real time are not in tsv,
+    # they came from json files with binned counts
     # to be plotted directly as an histogram
     else:
         with report.add_section("Read summary", "Read summary"):
@@ -457,7 +458,7 @@ def argparser():
         "--abundance_table", required=True,
         help="Read abundance tsv file.")
     parser.add_argument(
-        '--taxonomic_rank', required=True,
+        '--taxonomic_rank', required=True, choices=["S", "G", "k", "F", "O", "C", "P"],
         help="Taxonomic rank.")
     parser.add_argument(
         "--versions", required=True,
@@ -472,8 +473,8 @@ def argparser():
         "--commit", default='unknown',
         help="git commit of the executed workflow")
     parser.add_argument(
-        "--pipeline", default='unknown',
-        help="kraken or minimap")
+        "--pipeline", default='kraken2', choices=["kraken2", "minimap2", "real_time"],
+        help="kraken2, minimap2 or real_time")
     parser.add_argument(
         "--amr", default=None,
         help="Path to combined AMR results")

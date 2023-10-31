@@ -20,7 +20,7 @@ wf-metagenomics offers two different approaches to assigning sequence reads to a
 
 [Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.
 
-The wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.
+The wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the `--database_set` parameter but the workflow is not tied to this database and can also be used with custom databases as required.
 
 
 
@@ -57,8 +57,7 @@ The main options are:
 * `fastq`: A fastq file or directory containing fastq input files or directories of input files. 
 * `kraken2`: When set to true will run the analysis with Kraken2 and Bracken.
 * `minimap2`: When set to true will run the analysis with minimap2.
-* `watch_path`: Used to run the workflow in real-time, will continue to watch until a "STOP.fastq" is found. Available in the kraken2 pipeline.
-* `read_limit`: Used in combination with watch_path the specify an end point. 
+* `real_time`: Classify reads with kraken2 as they are written in real-time. The workflow will continue to watch files until a "STOP.fastq" is found.
 * `exclude_host`: Used to remove host reads from the analysis. Requires a FASTA file or MMI that can be used as the host reference.
 
 
@@ -71,11 +70,11 @@ You can run the workflow with test_data available in the github repository. The 
 
 You can also run the workflow in real-time, meaning the workflow will watch the input directory(s) and process inputs at they become available in the batch sizes specified.
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --watch_path --batch_size 1000```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --real_time --batch_size 1000```
 
 When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with a ```ctrl+c``` command). The workflow can be configured to complete automatically after a set number of reads have been analysed using the ```read_limit``` variable. Once this threshold has been reached, the program will emit a "STOP.fastq" file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq" file is then deleted. 
 
-```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --watch_path --read_limit 4000```
+```nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --real_time --read_limit 4000```
 
 **Important Note**
 
@@ -97,8 +96,8 @@ eg.
                                 └── barcode03
                                     └── reads0.fastq
 ```
-**Notes on CPU resource of kraken server and client**
-The kraken2 subworkflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
+**Notes on CPU resource of kraken server and client in the real time workflow**
+The real_time subworkflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
 - `--port`: The option specifies the local network port on which the server and clients will communicate.
 - `--host`: Network hostname (or IP address) for communication between kraken2 server and clients. (See also `external_kraken2` parameter).
 - `--external_kraken2`: Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow. By default the workflow assumes that it is running on a single host computer, and further that it should start its own kraken2 server. It may be desirable to start a kraken2 server outside of the workflow (for example to host a large database), in which case this option should be enabled. This option may be used in conjuction with the `host` option to specify that the kraken2 server is running on a remote computer.

@@ -12,9 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Minimap  pipeline is also able to use store_dir to store databases and run offline if the databases have been previously stored.
+- Kraken2 pipeline accepts a sample sheet if the real time option is disabled.
 
 ### Removed
 - `--bracken_dist`: the bracken additional file for the database must be included in the database folder, as it is in the kraken2 indexes and when the database is generated.
+
+### Changed
+- `--watch_path` is now called `--real_time` and enables the kraken2 pipeline to classify reads as they are written with watch_path.
+- The kraken2 workflow can now be used without `--real_time`, this will use the serverless kraken2 executable.
 
 ## [v2.6.1]
 ### Fixed
