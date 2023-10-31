@@ -11,7 +11,7 @@ variables:
     # (not things such as -profile)
     NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
     NF_WORKFLOW_OPTS: "--fastq test_data/case01"
-    NF_IGNORE_PROCESSES: "rebatchFastq"
+    NF_IGNORE_PROCESSES: "rebatchFastq, output_kraken2_read_assignments"
     CI_FLAVOUR: "new"
     CWG_AWS_ENV_NAME: "stack"
 
@@ -42,71 +42,73 @@ docker-run:
     parallel:
         matrix:
             - MATRIX_NAME: [
-                "kraken2", "minimap2", "batch", "kraken2-watch-path", "minimap2-sample-sheet",
+                "kraken2", "minimap2", "kraken2-real-time", "minimap2-sample-sheet",
                 "kraken2-baf", "minimap2-baf", "minimap2-filter", "kraken2-amr", "minimap2-amr",
                 "minimap2-exclude-host", "kraken2-exclude-host"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
        when: never
+     # REGULAR TESTS
+     ## Regular test kraken2
      - if: $MATRIX_NAME == "kraken2"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_kraken2_assignments --abundance_threshold 1"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition"
-     - if: $MATRIX_NAME == "batch"
-       variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --batch_size 1000 --taxonomic_rank G --include_kraken2_assignments --kraken_confidence 0.01"
-          NF_IGNORE_PROCESSES: "stopCondition"
+          NF_IGNORE_PROCESSES: ""
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
      # It creates a STOP.fastq.gz that will be a new input in the wf and make it stop.
      # Use the creation of this file to test if watch_path is able to detect new input files.
-     - if: $MATRIX_NAME == "kraken2-watch-path"
+     - if: $MATRIX_NAME == "kraken2-real-time"
        variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --watch_path --read_limit 1000 --include_kraken2_assignments"
-          NF_IGNORE_PROCESSES: "rebatchFastq"
+          NF_PROCESS_FILES: "subworkflows/real_time_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --read_limit 3000 --include_kraken2_assignments --batch_size 1000"
+          NF_IGNORE_PROCESSES: ""
+     ## Regular test minimap2 - mapping stats
      - if: $MATRIX_NAME == "minimap2"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+     # Minimap2 - sample sheet - taxonomic_rank - taxa barplot - abundance_threshold
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --sample_sheet test_data/case02/sample_sheet.csv --taxonomic_rank G --n_taxa_barplot 10 --abundance_threshold 0.01"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
-     # Add test with data from Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
-     # It also works as a test for single file.
+     # BACTERIA-ARCHAEA-EUKARYA
+     ## Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
+     ## It also works as a test for single file - kraken_confidence - include_kraken2_assignments
      - if: $MATRIX_NAME == "kraken2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10 --include_kraken2_assignments --sample bacteria_archea_fungi"
+          NF_IGNORE_PROCESSES: "concatAssignments"
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --keep_bam --minimap2_by_reference --abundance_threshold 10"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
-      # Exclude Archaea and Eukaryota from extracted reads (remaining reads should be just from Bacteria).
+      ## Exclude Archaea and Eukaryota from extracted reads (remaining reads should be just from Bacteria).
      - if: $MATRIX_NAME == "minimap2-filter"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --minimap2filter '2157,2759' --minimap2exclude"
           NF_IGNORE_PROCESSES: "getAlignmentStats"
-      # AMR tests using isolate test data (need to find better tests)
+      # AMR TESTS
+      ## AMR tests using isolate test data (need to find better tests)
      - if: $MATRIX_NAME == "kraken2-amr"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq s3://ont-exd-int-s3-euwst1-epi2me-labs/wf-bacterial-genomes/test_data/isolates_fastq/barcode08 --amr"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
+          NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
      - if: $MATRIX_NAME == "minimap2-amr"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq s3://ont-exd-int-s3-euwst1-epi2me-labs/wf-bacterial-genomes/test_data/isolates_fastq/barcode08 --classifier minimap2 --amr"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
+     # EXCLUDE HOST
      - if: $MATRIX_NAME == "minimap2-exclude-host"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
@@ -116,5 +118,5 @@ docker-run:
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case04/reads.fastq.gz --exclude_host test_data/case04/host.fasta.gz"
-          NF_IGNORE_PROCESSES: "rebatchFastq,stopCondition,concatAssignments"
+          NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
          

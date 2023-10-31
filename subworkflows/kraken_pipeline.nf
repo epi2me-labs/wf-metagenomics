@@ -1,390 +1,141 @@
 import nextflow.util.BlankSeparatedList
 
 include { run_amr } from '../modules/local/amr'
-include { run_common } from '../modules/local/common'
 include {
+    run_common;
     createAbundanceTables;
+    output;
 } from "../modules/local/common"
+
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
-
-// Rebundle fastqs (this is mostly in case we're given one big file)
-process rebatchFastq {
-    label "wfmetagenomics"
-    maxForks params.threads  // no point having more inputs than processing threads
-    cpus 3
+// Filter reads, calculate some stats, and run kraken2 classification
+process run_kraken2 {
+    label 'wfmetagenomics'
+    publishDir "${params.out_dir}/kraken2", mode: 'copy', pattern: "*kraken2*"
+    cpus 1
     input:
-        tuple val(meta), path(fastq), path(stats)
+        tuple val(meta), path(sample_fastq), path(fastq_stats)
+        path kraken_db
     output:
-        tuple(
-            val(meta),
-            path("fastq/*.part_*.fastq.gz"),
-            path("fastq/fastcat_stats/*.tsv.gz")
-            )
+        tuple val(meta), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.kraken2.assignments.tsv"), emit: kraken2_reports
     script:
         def sample_id = "${meta.alias}"
-    """
-    # Batch fasta file
-    seqkit split2 "${fastq}" \
-        -j ${task.cpus - 1} -s ${params.batch_size} \
-        -e .gz -o "${sample_id}" \
-        -O fastq
-    # Batch stats file
-    # run fastcat on each of the batch files:
-    # don't need extra_args because the sequences have already passed fastcat during ingress
-    mkdir -p fastq/fastcat_stats
-    for f in \$(ls fastq);
-        do
-        if [[ fastq/\$f = *.fastq.gz ]];
-        then
-            batch_part=(\${f/.fastq.gz/})
-            fastcat \
-                -s \$batch_part \
-                -r >(bgzip -c > "fastq/fastcat_stats/\$batch_part-per-read-stats.tsv.gz") \
-                -f "fastq/fastcat_stats/\$batch_part-per-file-stats.tsv" \
-                fastq/\$f
-        fi
-    done 
-    """
-}
-
-// watch path stop condition, if params.read_limit is met will inject a stop file in to input folder.
-process stopCondition { 
-    label "wfmetagenomics"
-    cpus 1 
-    publishDir params.fastq, mode: 'copy', pattern: "*"
-    input:
-        path json
-    output:
-        path "STOP.fastq.gz", optional: true, emit: stop
-    script:
-        int threshold = params.read_limit
-    """    
-    #!/usr/bin/env python
-    import json
-    with open("$json") as json_file:
-        state = json.load(json_file)
-        total = 0 
-        for k,v in state.items():
-            total += v["total_reads"]
-        if total >= $threshold:
-            with open("STOP.fastq.gz", "x") as f:
-                pass
-    """
-}
-
-
-// Notes on CPU resource of kraken server and client:
-//
-// - server will use as much resource as number of clients running,
-//   plus one extra thread => set maxForks of clients to kraken_clients - 1.
-//   (not doing so gives gRPC server: "Server Threadpool Exhausted")
-// - we need potentially one extra request thread to allow stop request
-//   to be handled
-// - cannot start so many clients (or other processes) such that
-//   server never starts from Nextflow executor limit
-// - we'd like to leave some resource for downstream processes such that we
-//   get reporting updated frequently
-// - this might all be considered a bit inefficient - but we are set
-//   up for real-time dynamism not speed
-//
-
-kraken_compute = params.kraken_clients == 1 ? 1 : params.kraken_clients - 1
-
-process kraken_server {
-    label "wfmetagenomics"
-    cpus params.threads
-    // short term solution: the following db require at least 8GB of memory,
-    // normally in laptops with 16GB, docker only uses 8GB, so the wf stalls
-    errorStrategy = {
-        task.exitStatus == 137 & params.database_set in [
-            'PlusPF-8', 'PlusPFP-8']? log.error("Error 137 while running kraken2_server, this may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
-        }
-    containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
-    input:
-        path database
-    output:
-        val true
-    script:
         def memory_mapping = params.kraken2_memory_mapping ? '--memory-mapping' : ''
     """
-    # we add one to requests to allow for stop signal
-    kraken2_server \
-        --port ${params.port} --host-ip ${params.host} \
-        --max-requests ${kraken_compute + 1} --thread-pool ${params.server_threads}\
-        --confidence ${params.kraken2_confidence}\
-        --db ./${database} ${memory_mapping}
+    kraken2 --db ${kraken_db} ${sample_fastq}\
+    --threads $params.threads \
+    --report "${sample_id}.kraken2.report.txt"\
+    --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
     """
 }
 
 
-// Filter reads, calculate some stats, and run kraken2 classification
-//
-// The per file statistics are calculated here rather than in a separate process
-// in order to more easily define the parallelism (otherwise an independent stats
-// job may queue up hundreds of jobs before kraken jobs, leaving the server consuming
-// resource but not actually doing anything).
-process kraken2_client {
+process run_bracken {
     label "wfmetagenomics"
-    containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
-    // retry if server responds out of resource
-    errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
-    maxForks kraken_compute
+    publishDir "${params.out_dir}/bracken", mode: 'copy', pattern: "*bracken*"
+    cpus 2
     input:
-        tuple val(meta), path(fastq), path(stats)
+        tuple val(meta), path("kraken2.report"), path("kraken2.assignments.tsv")
+        path(database)
+        path(taxonomy)
+        path "bracken_length.txt"
     output:
-        tuple val("${meta.alias}"), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.${task.index}.json"), path("kraken2.assignments.tsv")
+        tuple val(meta), path("${meta.alias}.kraken2_bracken.report"), emit: bracken_reports
+        tuple val(meta), path("${meta.alias}.json"), emit: bracken_json
     script:
         def sample_id = "${meta.alias}"
-    """
-    if [[ -f $stats ]]
-    then
-        stats_file="${stats}"
-    else
-        stats_file="${stats}/per-read-stats.tsv.gz"
-    fi
-
-    workflow-glue fastcat_histogram \
-        --sample_id "${sample_id}" \
-        \$stats_file "${sample_id}.${task.index}.json"
-
-    kraken2_client \
-        --port ${params.port} --host-ip ${params.host} \
-        --report report.txt \
-        --sequence $fastq > "kraken2.assignments.tsv"
-    tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
-    """
-}
-
-
-process stop_kraken_server {
-    label "wfmetagenomics"
-    containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
-    // this shouldn't happen, but we'll keep retrying
-    errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
-    input:
-        val stop
-    """
-    kraken2_client --port $params.port --shutdown
-    """
-}
-
-
-// Scan step for accumulating fastcat stats
-//
-// Nextflow scan does a silly thing where it feeds back the growing list of
-// historical outputs. We only ever need the most recent output (the "state").
-process progressive_stats {
-    label "wfmetagenomics"
-    maxForks 1
-    cpus 1
-    input: 
-        path fastcat_stats
-    output:
-        path("all_stats.${task.index}")
-    script:
-        new_input = fastcat_stats instanceof BlankSeparatedList ? fastcat_stats.first() : fastcat_stats
-        state = fastcat_stats instanceof BlankSeparatedList ? fastcat_stats.last() : "NOSTATE"
-        output = "all_stats.${task.index}"
-    """
-    touch "${state}"
-    workflow-glue add_jsons "${new_input}" "${state}" "${output}"
-    """
-}
-
-
-// Combine kraken reports scan step
-//
-// Our state here is a directory of aggregated kraken2 reports, one file per
-// sample. The state is named with the task.index so its unique, and also
-// with the sample_id just analysed.
-//
-// Every new input to the process is a kraken report for a single sample. We
-// don't want to update all aggregated reports, just the report for the sample
-// of the latest report received. Scan cannot handle a tuple as a piece of
-// state because the input channel is bodged to contain a list of the newest
-// input and the growing list -- so we have to grotesquely pass the sample_id
-// in a second channel (that is also accumulating).
-process progressive_kraken_reports {
-    label "wfmetagenomics"
-    maxForks 1 
-    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "kraken"}, overwrite: true
-    input:
-        path kreport
-        val sample_ids
-    output:
-        path("kraken.${task.index}.${sample_id}"), emit: reports
-        val(sample_id), emit: sample_id
-    script:
-        def new_input = kreport instanceof List ? kreport.first() : kreport
-        def state = kreport instanceof List ? kreport.last() : "NOSTATE"
-        sample_id = sample_ids instanceof List ? sample_ids.first() : sample_ids
-        new_state = "kraken.${task.index}.${sample_id}"
-        // n.b where this is used below the files will have been moved, hence new_state
-        old_input = "${new_state}/${sample_id}.kreport.txt"
-    """
-    if [[ "${task.index}" == "1" ]]; then
-        mkdir "${state}"
-    fi
-
-    cp -r "${state}" "${new_state}" 
-    touch "${old_input}"
-
-    workflow-glue combine_kreports_modified \
-        -r "${new_input}" "${old_input}" \
-        -o "${sample_id}.kreport.txt" --only-combined --no-headers
-    mv "${sample_id}.kreport.txt" "${new_state}/${sample_id}.kreport.txt"
-    """
-}
-
-
-// Calculate up-to-date bracken information for latest analysed sample.
-// 
-// The kraken.scan process gives a directory of aggregated kraken2 reports
-// together with the sample_id which was most recently updated. Here we rerun bracken
-// on that sample and output the results to an updating directory of per sample
-// bracken results.
-process progressive_bracken {
-    label "wfmetagenomics"
-    cpus 2
-    maxForks 1
-    publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "bracken"}, overwrite: true
-    input:
-        path(inputs)
-        val(sample_ids)
-        tuple path(database), path(taxonomy), path(bracken_length_file), val(taxonomic_rank)
-    output:
-        path("${new_state}"), emit: reports
-        val(sample_id), emit: sample_id
-        tuple path(database), path(taxonomy), path(bracken_length_file), val(taxonomic_rank)
-    script:
-        new_state = "bracken.${task.index}"
-        def kreports = inputs instanceof List ? inputs.first() : inputs
-        def state = inputs instanceof List ? inputs.last() : "NOSTATE"
-        sample_id = sample_ids instanceof List ? sample_ids.first(): sample_ids
         def awktab="awk -F '\t' -v OFS='\t'"
     """
     # run bracken on the latest kreports, is this writing some outputs
     # alongside the inputs? seems at least {}.kreport_bracken_species.txt
     # is written alongside the input
-    BRACKEN_LENGTH=\$(cat "${bracken_length_file}")
+    BRACKEN_LENGTH=\$(cat bracken_length.txt)
+
     workflow-glue run_bracken \
         "${database}" \
-        "${kreports}/${sample_id}.kreport.txt" \
+        kraken2.report \
         \$BRACKEN_LENGTH \
-        "${taxonomic_rank}" \
-        "${sample_id}.bracken_report.txt"
+        "${params.taxonomic_rank}" \
+        "${sample_id}.kraken2_bracken.report"
 
     # do some stuff...
-    ${awktab} '{ print \$2,\$6 }' "${sample_id}.bracken_report.txt" \
-        | ${awktab} 'NR!=1 {print}' \
-        | tee taxacounts.txt \
-        | ${awktab} '{ print \$1 }' > taxa.txt
+    ${awktab} '{ print \$2,\$6 }' "${sample_id}.kraken2_bracken.report" \
+    | ${awktab} 'NR!=1 {print}' \
+    | tee taxacounts.txt \
+    | ${awktab} '{ print \$1 }' > taxa.txt
     taxonkit lineage \
         -j ${task.cpus} \
         --data-dir $taxonomy \
         -R taxa.txt  > lineages.txt
     workflow-glue aggregate_lineages_bracken \
         -i "lineages.txt" -b "taxacounts.txt" \
-        -u "${kreports}/${sample_id}.kreport.txt" \
+        -u kraken2.report \
         -p "${sample_id}.kraken2" \
-        -r "${taxonomic_rank}" \
-
+        -r "${params.taxonomic_rank}"
+    
+    # add sample to the json file    
     file1=`cat *.json`
     echo "{"'"$sample_id"'": "\$file1"}" >> "bracken.json"
-
-    # collate the latest bracken outputs into state
-    if [[ "${task.index}" != "1" ]]; then
-        cp -r "${state}" "${new_state}"
-    else
-        # make fresh directory
-        mkdir "${new_state}"
-    fi;
-
-    # first output here is just for end user
-    mv "${kreports}/${sample_id}.kreport_bracken_species.txt" "${new_state}" || echo "No bracken report"
-    mv "bracken.json" "${new_state}/${sample_id}.json"
+    mv "bracken.json" "${sample_id}.json"
     """
 }
 
 // Concatenate kraken reports per read
-process concatAssignments {
+process output_kraken2_read_assignments {
     label "wfmetagenomics"
     input:
-        tuple (
-        val(sample_id),
-        path("classifications/kraken2.assignments.tsv")
-        )
+        tuple val(meta), path("${meta.alias}.kraken2.assignments.tsv")
         path taxonomy
     output:
         tuple(
-            val(sample_id),
+            val(meta),
             path("*_lineages.kraken2.assignments.tsv"), 
             emit: kraken2_reads_assignments
             )
     script:
-    def sample_id = "${sample_id}"
+        def sample_id = "${meta.alias}"
     """
-    cat classifications/* > all.sample.assignments.tsv
     # Run taxonkit to give users a more informative table
-    taxonkit reformat  -I 3  --data-dir "${taxonomy}" -f "{k}|{p}|{c}|{o}|{f}|{g}|{s}|{t}" -F all.sample.assignments.tsv > "${sample_id}_lineages.kraken2.assignments.tsv"
+    taxonkit reformat  -I 3  --data-dir "${taxonomy}" -f "{k}|{p}|{c}|{o}|{f}|{g}|{s}" -F "${sample_id}.kraken2.assignments.tsv" > "${sample_id}_lineages.kraken2.assignments.tsv"
     """
 
 }
 
 process makeReport {
     label "wfmetagenomics"
-    maxForks 1
-    cpus 1
     input:
-        path lineages
+        path "read_stats/per-read-stats*.tsv.gz"
         path abundance_table
-        tuple(path(stats), path("versions/*"), path("params.json"), val(taxonomic_rank))
+        path "lineages/*"
+        path "versions/*"
+        path "params.json"
+        val taxonomic_rank
         path amr
     output:
         path "*.html", emit: report_html
     script:
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
         String report_name = "${workflow_name}-report.html"
-        String amr_arg = amr.name != "OPTIONAL_FILE" ? "--amr ${amr}" : ""
+        def stats_args = params.wf.stats ? "--read_stats read_stats/*" : ""
+        amr = params.amr as Boolean ? "--amr ${amr}" : ""
     """
     workflow-glue report \
         "${report_name}" \
         --workflow_name ${workflow_name} \
         --versions versions \
         --params params.json \
-        --read_stats ${stats} \
-        --lineages "${lineages}" \
+        ${stats_args} \
+        --lineages lineages \
         --abundance_table "${abundance_table}" \
         --taxonomic_rank "${taxonomic_rank}" \
+        --pipeline "kraken2" \
         --abundance_threshold "${params.abundance_threshold}"\
         --n_taxa_barplot "${params.n_taxa_barplot}"\
-        $amr_arg
+        ${amr}
     """
 }
-
-
-// See https://github.com/nextflow-io/nextflow/issues/1636
-// This is the only way to publish files from a workflow whilst
-// decoupling the publish from the process steps.
-process output {
-    // publish inputs to output directory
-    label "wfmetagenomics"
-    publishDir (
-        params.out_dir,
-        mode: "copy",
-        saveAs: { dirname ? "$dirname/$fname" : fname }
-    )
-    input:
-        tuple path(fname), val(dirname)
-    output:
-        path fname
-    """
-    echo "Writing output files"
-    """
-}
-
 
 workflow kraken_pipeline {
     take:
@@ -394,102 +145,67 @@ workflow kraken_pipeline {
         bracken_length
         taxonomic_rank
     main:
-        opt_file = file("$projectDir/data/OPTIONAL_FILE")
-        // do we want to run a kraken server ourselves? 
-        if (!params.external_kraken2) {
-            kraken_server(database)
-        }
+        OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
-        // maybe split up large files
-        // sample_ids = samples.map { meta, reads, stats -> meta.alias }
-        batch_items = samples
-        if (params.batch_size != 0) {
-            batch_items = rebatchFastq(batch_items.transpose())
-                .transpose()
-        }
-        // filter host reads
-        common = run_common(batch_items)
+        // Run common
+        common = run_common(samples)
         software_versions = common.software_versions
         parameters = common.parameters
-        samples_filtered = common.samples
+        samples = common.samples
+        // Initial reads QC
+        per_read_stats = samples.map {it[2].resolve('per-read-stats.tsv.gz')}.collect()
+        | ifEmpty ( OPTIONAL_FILE )
         // Run Kraken2
-        kraken2_client(samples_filtered)
-    
-        // progressive stats -- scan doesn't like tuple :/
-        stats = progressive_stats.scan(
-            kraken2_client.out.map { id, report, json, assignments -> json },
-        )
-
-        kraken2_client.out.multiMap {
-            id, rep, json, assignments ->
-                sample_id: id
-                report: rep
-            }
-            .set { scan_input }
-
-        progressive_kraken_reports.scan(
-            scan_input.report, scan_input.sample_id)
+        kraken2_reports = run_kraken2(samples, database)
         
-        database
-            .combine(taxonomy)
-            .combine(bracken_length)
-            .combine(taxonomic_rank)
-            .first() // To ensure value channel for scan
-            .set {bracken_inputs}
+        // Run bracken
+        bracken_reports = run_bracken(kraken2_reports, database, taxonomy, bracken_length)
+        lineages = bracken_reports.bracken_json
 
-        progressive_bracken.scan(
-            progressive_kraken_reports.out.reports, progressive_kraken_reports.out.sample_id,
-            bracken_inputs)
+        // Abundance tabeles
+        abundance_tables = createAbundanceTables(
+            lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
+            taxonomic_rank, 'kraken2')
+
 
         // Process AMR
         if (params.amr) {
             run_amr = run_amr(
-                batch_items,
+                samples,
                 "${params.amr_db}",
                 "${params.amr_minid}",
                 "${params.amr_mincov}"
             )
             amr_reports = run_amr.reports
         } else {
-            // use first() to coerce this to a value channel
-	        amr_reports = Channel.fromPath("$projectDir/data/OPTIONAL_FILE", checkIfExists: true).first()
-	    }
+            amr_reports = Channel.empty()
+        }
 
-        // report step
-        // Nasty: we assume br.report and stats are similarly
-        // ordered. This is fine because everything has been through scan and
-        // is therefore necessarily ordered. This could be tidied up by passing
-        // through a job id but that seems unnecessary at this point.
-        basic_report_components = stats
-            .combine(software_versions)
-            .combine(parameters)
-            .combine(taxonomic_rank)
-        
-        abundance_tables = createAbundanceTables(
-            progressive_bracken.out.reports,
-            taxonomic_rank)
-        
+        // Reporting
         report = makeReport(
-            progressive_bracken.out.reports,
+            per_read_stats,
             abundance_tables.abundance_tsv,
-            basic_report_components,
-            amr_reports
+            lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
+            software_versions,
+            parameters,
+            taxonomic_rank,
+            amr_reports.ifEmpty(OPTIONAL_FILE)
         )
-        
-        // output updating files as part of this pipeline
+
         ch_to_publish = Channel.empty()
         | mix(
             software_versions,
             parameters,
             report.report_html,
-            abundance_tables.abundance_tsv
+            abundance_tables.abundance_tsv,
         )
         | map { [it, null] }
 
+        // output kraken read assignments + taxonomy info
         if (params.include_kraken2_assignments) {
-            kraken2_assignments = concatAssignments(
-                kraken2_client.out.map{ 
-                    id, report, json, assignments -> tuple(id, assignments) 
+            kraken2_assignments = output_kraken2_read_assignments(
+                kraken2_reports.map{ 
+                    id, report, assignments -> tuple(id, assignments) 
                 }.groupTuple(), taxonomy)
             ch_to_publish = ch_to_publish | mix (
             kraken2_assignments.kraken2_reads_assignments | map {
@@ -497,30 +213,9 @@ workflow kraken_pipeline {
             )
         }
 
-        ch_to_publish | output
-
-
-        // Stop server when all are processed
-        if (!params.external_kraken2) {
-            stop_kraken_server(kraken2_client.out.collect())
-        }
-
-        //  Stop file to input folder when read_limit stop condition is met.
-        if (params.watch_path && params.read_limit){
-            stopCondition(stats).first().subscribe {
-            def stop = file(params.fastq).resolve("STOP.fastq.gz")
-                log.info "Creating STOP file: '$stop'"
-            }
-        }
+         ch_to_publish | output
 
     emit:
         report.report_html  // just emit something
 }
 
-workflow.onComplete {
-    def stop = file(params.fastq).resolve("STOP.fastq.gz")
-    if (stop.exists()) {
-        stop.delete()
-        log.info "Deleted STOP file: '$stop'"
-    }
-}

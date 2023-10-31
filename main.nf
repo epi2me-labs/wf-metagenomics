@@ -5,7 +5,10 @@ nextflow.enable.dsl = 2
 
 include { fastq_ingress } from './lib/ingress'
 include { minimap_pipeline } from './subworkflows/minimap_pipeline'
+// standard kraken2
 include { kraken_pipeline } from './subworkflows/kraken_pipeline'
+include { real_time_pipeline } from './subworkflows/real_time_pipeline'
+
 include { prepare_databases } from "./modules/local/databases.nf"
 nextflow.preview.recursion=true
 
@@ -36,8 +39,11 @@ workflow {
     if (params.classifier == 'minimap2' && params.database) {
         throw new Exception("To use minimap2 with your custom database, you need to use `--reference` (instead of `--database`) and `--ref2taxid`.")
     }
-    if (params.classifier == 'kraken2' && params.reference) {
+    if ((params.classifier == 'kraken2' || params.real_time ) && params.reference) {
         throw new Exception("To use kraken2 with your custom database, you need to use `--database` (instead of `--reference`) and include the `bracken_dist` within it.")
+    }
+    if (params.classifier != 'kraken2' && params.real_time) {
+        throw new Exception("Real time subworkflow must use kraken2 classifier.")
     }
 
     // If user provides each database, set to 'custom' the params.database_set
@@ -103,12 +109,6 @@ workflow {
     // Handle getting kraken2 database files if kraken2 classifier selected
     if ("${params.classifier}" == "kraken2") {
         log.info("Kraken2 pipeline.")
-        if (params.sample_sheet != null) {
-            log.info("The `sample_sheet` parameter is not used in the kraken2 classifier mode.")
-        }
-        if (params.sample != null) {
-            log.info("The `sample` parameter is not used in the kraken2 classifier mode.")
-        }
         reference = null
         ref2taxid = null
         databases_kraken2 = prepare_databases(
@@ -116,27 +116,46 @@ workflow {
                 source_data_database
         )
         // check combination of params are set
-        if (params.watch_path){
+        if (params.real_time){
+            if (params.sample_sheet != null) {
+                log.info("The `sample_sheet` parameter is not used in the real time mode.")
+            }
+            if (params.sample != null) {
+                log.info("The `sample` parameter is not used in the real time mode.")
+            }
             if (!params.read_limit){
                 log.info("Workflow will run indefinitely as no read_limit is set.")
             }
             log.info("Workflow will stop processing files after ${params.read_limit} reads.")
         }
 
+        
+        // Distinguish between real time or not
         samples = fastq_ingress([
-        "input":params.fastq,
-        "sample":null,
-        "sample_sheet":null,
-        "analyse_unclassified":params.analyse_unclassified,
-        "stats": params.wf.stats,
-        "fastcat_extra_args": fastcat_extra_args.join(" "),
-        "watch_path": params.watch_path])
-        results = kraken_pipeline(
-            samples,
-            databases_kraken2.taxonomy,
-            databases_kraken2.database,
-            databases_kraken2.bracken_length,
-            databases_kraken2.taxonomic_rank)
+            "input":params.fastq,
+            "sample": params.real_time ? null : params.sample,
+            "sample_sheet": params.real_time ? null : params.sample_sheet,
+            "analyse_unclassified":params.analyse_unclassified,
+            "stats": params.wf.stats,
+            "fastcat_extra_args": fastcat_extra_args.join(" "),
+            "watch_path": params.real_time])
+        // Distinguish between real time or not
+       if (params.real_time) {
+            results = real_time_pipeline(
+                samples,
+                databases_kraken2.taxonomy,
+                databases_kraken2.database,
+                databases_kraken2.bracken_length,
+                databases_kraken2.taxonomic_rank)
+        } else {
+            results = kraken_pipeline(
+                samples,
+                databases_kraken2.taxonomy,
+                databases_kraken2.database,
+                databases_kraken2.bracken_length,
+                databases_kraken2.taxonomic_rank)
+        }
+
     }
 }
 

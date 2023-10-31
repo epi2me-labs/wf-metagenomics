@@ -30,7 +30,7 @@ def parse_lineages(lineages, pipeline):
     :param classifier (str): String indicating the approach.
     :return (dict): Taxa counts in json structure.
     """
-    if pipeline == 'kraken2':
+    if pipeline == 'real_time':
         path_to_json = os.path.join(lineages, os.listdir(lineages)[0])
     else:
         path_to_json = lineages
@@ -241,5 +241,5 @@ def argparser():
     parser.add_argument(
         "--taxonomic_rank", help="Taxonomic rank.")
     parser.add_argument(
-        "--pipeline", help="Classifier method used.")
+        "--pipeline", help="Choose one from: kraken2, minimap2 or real_time.")
     return parser

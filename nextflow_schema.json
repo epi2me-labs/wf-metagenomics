@@ -33,13 +33,6 @@
                     ],
                     "help_text": "Use kraken2 for fast classification and minimap2 for more finer resolution, see Readme for further info."
                 },
-                "batch_size": {
-                    "type": "integer",
-                    "default": 0,
-                    "title": "Size of each batch",
-                    "description": "Maximum number of sequence records to process in a batch.",
-                    "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 32000 is recommended to rebatch large files."
-                },
                 "analyse_unclassified": {
                     "type": "boolean",
                     "default": false,
@@ -69,18 +62,60 @@
             "description": "Options relating to the default real-time Kraken2 workflow.",
             "default": "",
             "properties": {
-                "watch_path": {
+                "real_time": {
                     "type": "boolean",
                     "title": "Enable real time processing",
                     "default": false,
                     "description": "Enable to continuously watch the input directory for new input files. Reads will be analysed as they appear",
                     "help_text": "This option enables the use of Nextflow\u2019s directory watching feature to constantly monitor input directories for new files. As soon as files are written by an external process Nextflow will begin analysing these files. The workflow will accumulate data over time to produce an updating report."
                 },
+                "batch_size": {
+                    "type": "integer",
+                    "default": 0,
+                    "title": "Size of each batch",
+                    "description": "Maximum number of sequence records to process in a batch.",
+                    "help_text": "Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 32000 is recommended to rebatch large files."
+                },
                 "read_limit": {
                     "type": "integer",
                     "title": "Number of reads analysed to stop the workflow",
                     "description": "Stop processing data when a particular number of reads have been analysed. By default the workflow will run indefinitely.",
                     "help_text": "Sets the upper bound on the number of reads that will be analysed before the workflow is automatically stopped and no more data is analysed."
+                },
+                "port": {
+                    "type": "integer",
+                    "default": 8080,
+                    "title": "Network port",
+                    "description": "Network port for communication between kraken2 server and clients (available in real time  pipeline).",
+                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate."
+                },
+                "host": {
+                    "type": "string",
+                    "default": "localhost",
+                    "title": "Network hostname (or IP address)",
+                    "description": "Network hostname (or IP address) for communication between kraken2 server and clients. (See also 'external_kraken2' parameter). (Available in real time  pipeline).",
+                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network hostname (or IP address) of the kraken server."
+                },
+                "external_kraken2": {
+                    "type": "boolean",
+                    "default": false,
+                    "title": "External kraken2 server",
+                    "description": "Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow. (Available in real time  pipeline).",
+                    "help_text": "By default the workflow assumes that it is running on a single host computer, and further that it should start its own kraken2 server. It may be desirable to start a kraken2 server outside of the workflow, in which case this option should be enabled. This option may be used in conjuction with the `host` option to specify that the kraken2 server is running on a remote computer. "
+                },
+                "server_threads": {
+                    "type": "integer",
+                    "default": 2,
+                    "title": "CPU threads used by the kraken2 server",
+                    "description": "Number of CPU threads used by the kraken2 server for classifying reads. (Available in the real_time pipeline).",
+                    "help_text": "For the real-time kraken2 workflow, this is the number of CPU threads used by the kraken2 server for classifying reads."
+                },
+                "kraken_clients": {
+                    "type": "integer",
+                    "default": 2,
+                    "title": "Clients used by the kraken2 server",
+                    "description": "Number of clients that can connect at once to the kraken-server for classifying reads. (Available in the real_time pipeline).",
+                    "help_text": "For the real-time kraken2 workflow, this is the number of clients sending reads to the server. It should not be set to more than 4 fewer than the executor CPU limit."
                 }
             }
         },
@@ -93,13 +128,13 @@
                     "type": "string",
                     "format": "file-path",
                     "title": "Sample sheet",
-                    "description": "A CSV file used to map barcodes to sample aliases. The sample sheet can be provided when the input data is a directory containing sub-directories with FASTQ files. Used only with the minimap2 classifier.",
+                    "description": "A CSV file used to map barcodes to sample aliases. The sample sheet can be provided when the input data is a directory containing sub-directories with FASTQ files. Disabled in the real time pipeline.",
                     "help_text": "The sample sheet is a CSV file with, minimally, columns named `barcode` , `sample_id`,  `alias`. Extra columns are allowed. A `type` column is required for certain workflows and should have the following values; `test_sample`, `positive_control`, `negative_control`, `no_template_control`."
                 },
                 "sample": {
                     "type": "string",
                     "title": "Sample name",
-                    "description": "A single sample name for non-multiplexed data. Permissible if passing a single .fastq(.gz) file or directory of .fastq(.gz) files."
+                    "description": "A single sample name for non-multiplexed data. Permissible if passing a single .fastq(.gz) file or directory of .fastq(.gz) files. Disabled in the real time pipeline."
                 }
             },
             "description": "Parameters that relate to samples such as sample sheets and sample names."
@@ -194,27 +229,6 @@
                     "description": "Set the length value bracken will use",
                     "minimum": 1,
                     "help_text": "Should be set to the length used to generate the kmer distribution file supplied in the kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 10000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300"
-                },
-                "port": {
-                    "type": "integer",
-                    "default": 8080,
-                    "title": "Network port",
-                    "description": "Network port for communication between kraken2 server and clients",
-                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate."
-                },
-                "host": {
-                    "type": "string",
-                    "default": "localhost",
-                    "title": "Network hostname (or IP address)",
-                    "description": "Network hostname (or IP address) for communication between kraken2 server and clients. (See also 'external_kraken2' parameter).",
-                    "help_text": "The workflow uses a server process to handle kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network hostname (or IP address) of the kraken server."
-                },
-                "external_kraken2": {
-                    "type": "boolean",
-                    "default": false,
-                    "title": "External kraken2 server",
-                    "description": "Whether a pre-existing kraken2 server should be used, rather than creating one as part of the workflow",
-                    "help_text": "By default the workflow assumes that it is running on a single host computer, and further that it should start its own kraken2 server. It may be desirable to start a kraken2 server outside of the workflow, in which case this option should be enabled. This option may be used in conjuction with the `host` option to specify that the kraken2 server is running on a remote computer. "
                 },
                 "kraken2_memory_mapping": {
                     "type": "boolean",
@@ -393,21 +407,7 @@
                     "default": 2,
                     "title": "Maximum number of CPU threads",
                     "description": "Maximum number of CPU threads to use per workflow task.",
-                    "help_text": "Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See server threads parameter for kraken specific threads."
-                },
-                "server_threads": {
-                    "type": "integer",
-                    "default": 2,
-                    "title": "CPU threads used by the kraken2 server",
-                    "description": "Number of CPU threads used by the kraken2 server for classifying reads.",
-                    "help_text": "For the real-time kraken2 workflow, this is the number of CPU threads used by the kraken2 server for classifying reads."
-                },
-                "kraken_clients": {
-                    "type": "integer",
-                    "default": 2,
-                    "title": "Clients used by the kraken2 server",
-                    "description": "Number of clients that can connect at once to the kraken-server for classifying reads.",
-                    "help_text": "For the real-time kraken2 workflow, this is the number of clients sending reads to the server. It should not be set to more than 4 fewer than the executor CPU limit."
+                    "help_text": "Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See server threads parameter for kraken specific threads in the real_time pipeline."
                 }
             }
         },
@@ -501,7 +501,7 @@
         }
     },
     "docs": {
-        "intro": "\n## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n### Kraken2 - Default\n\n[Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample which can be visualised in the report. The Kraken2 workflow mode can be run in real time. See quickstart below for more details.\n\n### Minimap2 \n\n[Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the --source parameter but the workflow is not tied to this database and can also be used with custom databases as required.\n\n",
+        "intro": "\n## Introduction\n\nwf-metagenomics offers two different approaches to assigning sequence reads to a species:\n\n### Kraken2 - Default\n\n[Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) to offer the fastest method for classification of reads. [Bracken](https://github.com/jenniferlu717/Bracken) is then used to give a good estimate of species level abundance in the sample which can be visualised in the report. The Kraken2 workflow mode can be run in real time. See quickstart below for more details.\n\n### Minimap2 \n\n[Minimap2](https://github.com/lh3/minimap2) provides the finest resolution analysis but, depending on the reference database used, at the expense of significantly more compute time. Currently the minimap2 mode does not support real-time.\n\nThe wf-metagenomics workflow by default uses the NCBI 16S + 18S rRNA database that will be downloaded at the start of an analysis, there are expanded metagenomic database options available with the `--database_set` parameter but the workflow is not tied to this database and can also be used with custom databases as required.\n\n",
         "links": "## Useful links\n\n* [nextflow](https://www.nextflow.io/)\n* [docker](https://www.docker.com/products/docker-desktop)"
     }
 }

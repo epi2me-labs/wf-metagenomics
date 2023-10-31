@@ -119,6 +119,7 @@ process createAbundanceTables {
         // lineages is a folder in the kraken2, but is a list of files in the minimap2 approach
         path "lineages/*"
         val taxonomic_rank
+        val pipeline
     output:
         path("abundance_table_*.tsv"), emit: abundance_tsv
 
@@ -126,7 +127,28 @@ process createAbundanceTables {
     workflow-glue abundance_tables \
         --lineages lineages \
         --taxonomic_rank "${taxonomic_rank}" \
-        --pipeline "${params.classifier}"
+        --pipeline "${pipeline}"
+    """
+}
+
+
+// See https://github.com/nextflow-io/nextflow/issues/1636
+// This is the only way to publish files from a workflow whilst
+// decoupling the publish from the process steps.
+process output {
+    // publish inputs to output directory
+    label "wfmetagenomics"
+    publishDir (
+        params.out_dir,
+        mode: "copy",
+        saveAs: { dirname ? "$dirname/$fname" : fname }
+    )
+    input:
+        tuple path(fname), val(dirname)
+    output:
+        path fname
+    """
+    echo "Writing output files"
     """
 }
 
