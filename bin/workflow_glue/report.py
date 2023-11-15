@@ -193,16 +193,8 @@ def main(args):
         if not counts_per_taxa_df.empty:
             # Filter by abundance threshold.
             # Distinguish between natural number cutoff or percentage.
-            if abundance_threshold >= 1:
-                counts_per_taxa_df_filtered = counts_per_taxa_df[
-                    counts_per_taxa_df['total'] > abundance_threshold]
-                counts_per_taxa_df_filtered = counts_per_taxa_df_filtered.dropna()
-            elif abundance_threshold < 1:
-                abundance_threshold_pc = abundance_threshold * round(
-                    counts_per_taxa_df['total'].sum())
-                counts_per_taxa_df_filtered = counts_per_taxa_df[
-                    counts_per_taxa_df['total'] > abundance_threshold_pc]
-                counts_per_taxa_df_filtered = counts_per_taxa_df_filtered.dropna()
+            counts_per_taxa_df_filtered = report_utils.filter_by_abundance(
+                counts_per_taxa_df, 'total', abundance_threshold)
             ranks_counts_filtered.append(counts_per_taxa_df_filtered)
             ranks_counts = counts_per_taxa_df  # save last table
     # Write report
@@ -255,6 +247,11 @@ def main(args):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     p(f"Abundance table for the {ranks_no_sk_k[i]} rank.")
+                    p(
+                        "Only taxa whose global abundance are above the ",
+                        html_tags.code("abundance_threshold"),
+                        " parameter will appear in the table."
+                    )
                     export_table = report_utils.split_taxonomy_string(
                         counts_per_taxa_per_rank_df, set_index=True)
                     # Move tax column to end to not spoil visualization
@@ -403,6 +400,10 @@ def main(args):
                             amr_section(data["results"], f"accordion_{sample_id}")
                         else:
                             p("No AMR genes detected in sample")
+
+    #
+    # 5. ALIGNMENT STATS
+    #
     if args.align_stats:
         samples_references = {}
         for s in samples:
@@ -410,26 +411,36 @@ def main(args):
                 args.align_stats, s)
         # make sure that the samples really have data.
         dataset_results = {k: v for k, v in samples_references.items() if v is not None}
-        logger.info(f"Report written to {samples_references.keys()}.")
         if len(dataset_results) >= 1:
             with report.add_section("Alignment Statistics", "References"):
                 tabs = Tabs()
                 # Show table with the detailed output.
-                with tabs.add_dropdown_menu("Dataset", change_header=False):
+                with tabs.add_dropdown_menu("Dataset", change_header=True):
+                    # It will apply on the last analyzed rank.
+                    taxa = [  # split the taxonomy string to the last value
+                        i.split(';')[-1] for i in counts_per_taxa_df_filtered['tax']]
                     for barcode, metrics in dataset_results.items():
+                        # Choose those species that have passed the abundance threshold.
+                        align_stats = metrics[0]
+                        align_stats_filtered = align_stats[align_stats[rank].isin(taxa)]
                         with tabs.add_dropdown_tab(barcode):
+                            p(
+                                "Only taxa present in the abundance table above the ",
+                                html_tags.code("abundance_threshold"),
+                                " parameter will appear in the table."
+                            )
                             DataTable.from_pandas(
-                                    metrics[0],
+                                    align_stats_filtered,
                                     export=True,
                                     file_name='wf-metagenomics-alignment'
                             )
                 # Show reference scatterplot of number of reads by coverage.
-                with tabs.add_dropdown_menu("Scatter", change_header=False):
+                with tabs.add_dropdown_menu("Scatter", change_header=True):
                     for barcode, metrics in dataset_results.items():
                         with tabs.add_dropdown_tab(barcode):
                             EZChart(metrics[1], 'epi2melabs')
                 # Show heatmap of relative positional coverage.
-                with tabs.add_dropdown_menu("Heatmap", change_header=False):
+                with tabs.add_dropdown_menu("Heatmap", change_header=True):
                     for barcode, metrics in dataset_results.items():
                         with tabs.add_dropdown_tab(barcode):
                             EZChart(metrics[2], 'epi2melabs')

@@ -351,8 +351,8 @@
                     "type": "number",
                     "default": 0,
                     "title": "Abundance threshold",
-                    "description": "Remove those taxa whose abundance is lower than the chosen value.",
-                    "help_text": "If it is a natural number it remove those taxa which less counts. To remove those taxa below a percent use a percent expressed as a decimal between 0-1."
+                    "description": "Remove those taxa whose abundance is equal or lower than the chosen value.",
+                    "help_text": "To remove those taxa whose abundance is equal or below to a percent use a percent expressed as a decimal between 0-1 (1 not inclusive). If a value of 1 or more is provided it will remove taxa which have less or the same counts than this number."
                 },
                 "n_taxa_barplot": {
                     "type": "integer",

@@ -158,11 +158,47 @@ def calculate_diversity_metrics(counts_per_taxa_df):
     return div
 
 
+def filter_by_abundance(
+        df, column_to_filter, abundance_threshold=0, column_to_group=None):
+    """Given a df, return a filtered dataframe after applying a threshold of abundances.
+
+    :param df (DataFrame): Dataframe with counts.
+    :param column_to_filter (string): name of the column in which apply the filter.
+    :param abundance_threshold (int or float, optional): If it is a natural number it
+        remove those rows with less counts. Decimal between 0-1 are treated as
+        percentages. Defaults to 0.
+    :param column_to_group (string): name of the column to make groups before filtering.
+
+    :return (DataFrame): Dataframe with rows that satisfy the threshold.
+    """
+    if abundance_threshold < 1:
+        abundance_threshold = abundance_threshold * round(
+            df[column_to_filter].sum())
+    # Group & filter them
+    if column_to_group:
+        # Subset just columns that are going to be used
+        # In case the df contains character/factor columns
+        interesting_cols = [
+            colname for colname in [
+                column_to_filter, column_to_group
+                ] if colname in df.columns]
+        mini_df = df[interesting_cols]
+        mini_df = mini_df.groupby(column_to_group).sum()
+        df_filtered = df[
+            df[column_to_group].isin(  # list of species that satisfy the threshold
+                mini_df.loc[mini_df[column_to_filter] > abundance_threshold].index
+            )]
+    else:
+        df_filtered = df[df[column_to_filter] > abundance_threshold]
+    df_filtered = df_filtered.dropna()
+    return df_filtered
+
 # PLOTS
 
 # The SeqSummary from ezcharts.components.fastcat cannot be used.
 # It groups data into bins, but from the real time analysis output
 # the input data is already grouped into bins.
+
 
 def read_quality_plot(seq_summary, min_qual=4, max_qual=30, title='Read quality'):
     """Create read quality summary plot."""
