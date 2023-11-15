@@ -82,8 +82,8 @@ process stopCondition {
 //   (not doing so gives gRPC server: "Server Threadpool Exhausted")
 // - we need potentially one extra request thread to allow stop request
 //   to be handled
-// - cannot start so many clients (or other processes) such that
-//   server never starts from Nextflow executor limit
+// - must make sure to not start so many clients (or other processes)
+//   such that the server never starts due to the Nextflow executor limit
 // - we'd like to leave some resource for downstream processes such that we
 //   get reporting updated frequently
 // - this might all be considered a bit inefficient - but we are set
@@ -94,7 +94,46 @@ kraken_compute = params.kraken_clients == 1 ? 1 : params.kraken_clients - 1
 
 process kraken_server {
     label "wfmetagenomics"
-    cpus params.threads
+    cpus {
+        // if the task executor is local, ensure that we cannot start the
+        // server with the same number of threads as the local executor limit.
+        // as it will not be possible to run a client at the same time and
+        // indefinitely block the workflow. in this case, we'll ensure that
+        // we can always run at least one kraken client (the default).
+        if (task.executor == "local") {
+            // attempt to count local max executor and fall back to local cpus
+            Integer max_local_threads = workflow.session.config?.executor?.$local?.cpus ?: \
+                Runtime.getRuntime().availableProcessors()
+
+            if (max_local_threads == 1) {
+                throw new Exception("Cannot run kraken_server and kraken_client at the same time as the local executor appears to be configured with only one CPU.")
+            }
+            else if (max_local_threads == 2) {
+                // run the server single threaded and expect one client
+                log.info("Automatically set kraken2 classification server threads to 1 to ensure a classification client can be run.")
+                1
+            }
+            else {
+                // remove one thread for at least one client, and another for other business
+                Integer server_threads = Math.min(params.server_threads, max_local_threads - 2)
+                if (server_threads != params.server_threads) {
+                    String msg = "Adjusted kraken2 classification server threads ${params.server_threads} -> ${server_threads} to ensure a classification client can be run."
+                    if (params.kraken_clients > 2) {
+                        // escalate to warn as fewer clients than desired are running
+                        log.warn(msg + "\nYou requested ${params.kraken_clients} kraken clients, but only one can be run. Decrease the number of kraken2 server threads to allow more clients, decrease the number of desired kraken clients, or run this workflow on a device with more CPUs.")
+                    }
+                    else {
+                        log.info(msg)
+                    }
+                }
+                server_threads
+            }
+        }
+        else {
+            // if we're not local, just give the user what they want
+            params.server_threads
+        }
+    }
     // short term solution: the following db require at least 8GB of memory,
     // normally in laptops with 16GB, docker only uses 8GB, so the wf stalls
     errorStrategy = {
