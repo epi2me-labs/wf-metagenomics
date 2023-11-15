@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Use store_dir without staging files from the web. Kraken2 can run offline if the databases have been previously stored.
 - Fastcat plots showing the stats in the report before removing host sequences when `--exclude_host` in the minimap2 pipeline.
+- Real time kraken workflow hanging indefinitely when attempting to start kraken server with too many threads.
 
 ### Added
 - Minimap  pipeline is also able to use store_dir to store databases and run offline if the databases have been previously stored.
@@ -20,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `--watch_path` is now called `--real_time` and enables the kraken2 pipeline to classify reads as they are written with watch_path.
 - The kraken2 workflow can now be used without `--real_time`, this will use the serverless kraken2 executable.
+- Barcode directories must now be named in the format `barcodeNN`, where NN is at least two digits (e.g. `barcode01`).
+- Barcode directories must now have the same number of characters (e.g. `barcode01` cannot be provided with `barcode001`).
 
 ## [v2.6.1]
 ### Fixed
