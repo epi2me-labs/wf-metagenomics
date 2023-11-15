@@ -11,11 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fastcat plots showing the stats in the report before removing host sequences when `--exclude_host` in the minimap2 pipeline.
 
 ### Added
-- Minimap  pipeline is also able to use store_dir to store databases and run offline if the databases have been previously stored.
+- Minimap pipeline is also able to use store_dir to store databases and run offline if the databases have been previously stored.
 - Kraken2 pipeline accepts a sample sheet if the real time option is disabled.
+- Only taxa present in the abundance table above the `--abundance_threshold` will appear in the alignment summary table (which is only generated when `--minimap2_by_reference` is enabled). 
 
 ### Removed
 - `--bracken_dist`: the bracken additional file for the database must be included in the database folder, as it is in the kraken2 indexes and when the database is generated.
+- Default local executor CPU and RAM limits
 
 ### Changed
 - `--watch_path` is now called `--real_time` and enables the kraken2 pipeline to classify reads as they are written with watch_path.
