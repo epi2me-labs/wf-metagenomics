@@ -41,6 +41,7 @@ process run_bracken {
         path(database)
         path(taxonomy)
         path "bracken_length.txt"
+        val(taxonomic_rank)
     output:
         tuple val(meta), path("${meta.alias}.kraken2_bracken.report"), emit: bracken_reports
         tuple val(meta), path("${meta.alias}.json"), emit: bracken_json
@@ -57,7 +58,7 @@ process run_bracken {
         "${database}" \
         kraken2.report \
         \$BRACKEN_LENGTH \
-        "${params.taxonomic_rank}" \
+        "${taxonomic_rank}" \
         "${sample_id}.kraken2_bracken.report"
 
     # do some stuff...
@@ -73,7 +74,7 @@ process run_bracken {
         -i "lineages.txt" -b "taxacounts.txt" \
         -u kraken2.report \
         -p "${sample_id}.kraken2" \
-        -r "${params.taxonomic_rank}"
+        -r "${taxonomic_rank}"
     
     # add sample to the json file    
     file1=`cat *.json`
@@ -159,7 +160,7 @@ workflow kraken_pipeline {
         kraken2_reports = run_kraken2(samples, database)
         
         // Run bracken
-        bracken_reports = run_bracken(kraken2_reports, database, taxonomy, bracken_length)
+        bracken_reports = run_bracken(kraken2_reports, database, taxonomy, bracken_length, taxonomic_rank)
         lineages = bracken_reports.bracken_json
 
         // Abundance tabeles

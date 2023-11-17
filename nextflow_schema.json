@@ -159,6 +159,15 @@
                     ],
                     "help_text": "This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options."
                 },
+                "store_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "title": "Store directory name",
+                    "description": "Where to store initial download of database.",
+                    "help_text": "database set selected will be downloaded as part of the workflow and saved in this location, on subsequent runs it will use this as the database. ",
+                    "hidden": true,
+                    "default": "store_dir"
+                },
                 "database": {
                     "type": "string",
                     "format": "path",
@@ -172,14 +181,6 @@
                     "title": "Taxonomy database",
                     "description": "Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory].",
                     "help_text": "By default NCBI taxonomy file will be downloaded and used."
-                },
-                "store_dir": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "title": "Store directory name",
-                    "description": "Where to store initial download of database.",
-                    "default": "store_dir",
-                    "help_text": "database set selected will be downloaded as part of the workflow and saved in this location, on subsequent runs it will use this as the database. "
                 },
                 "reference": {
                     "type": "string",

@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [v2.7.0]
 ### Fixed
 - Use store_dir without staging files from the web. Kraken2 can run offline if the databases have been previously stored.
 - Fastcat plots showing the stats in the report before removing host sequences when `--exclude_host` in the minimap2 pipeline.
