@@ -5,7 +5,7 @@ OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
 process download_reference_ref2taxid {
     label "wfmetagenomics"
     cpus 1
-    storeDir "${params.store_dir}/${database_name}"
+    storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
         val reference_url
@@ -55,7 +55,7 @@ process check_reference_ref2taxid {
 process unpack_download_kraken2_database {
     label "wfmetagenomics"
     cpus 1
-    storeDir "${params.store_dir}/${database_name}"
+    storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
         path database_local
@@ -91,7 +91,7 @@ process unpack_download_kraken2_database {
 
 process determine_bracken_length {
     label "wfmetagenomics"
-    storeDir "${params.store_dir}/${database_name}/${database_dir}"
+    storeDir {params.store_dir ? "${params.store_dir}/${database_name}/${database_dir}" : null }
     input:
         val database_name
         path database_dir
@@ -125,7 +125,7 @@ process determine_bracken_length {
 process download_unpack_taxonomy {
     label "wfmetagenomics"
     cpus 1
-    storeDir "${params.store_dir}/${database_name}"
+    storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
         path taxonomy_local
@@ -162,7 +162,7 @@ process download_unpack_taxonomy {
 
 //SILVA database
 process prepareSILVA {
-    storeDir "${params.store_dir}/${params.database_set}"
+    storeDir {params.store_dir ? "${params.store_dir}/${params.database_set}" : null }
     label "wfmetagenomics"
     cpus 2
     input:
@@ -209,7 +209,7 @@ workflow prepare_databases {
         } else if (params.classifier == "kraken2") {
             bracken_length = 1000
         } else {
-            bracken_length = 0 //not used
+            bracken_length = 1000 //not used
         }
         silva = prepareSILVA(bracken_length)
         reference_file = silva.reference
