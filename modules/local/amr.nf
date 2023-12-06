@@ -1,5 +1,7 @@
 process abricate{
     label "amr"
+    cpus 1
+    memory "8GB"
     input:
         tuple val(meta), path("input_reads.fastq.gz"), path("fastcat_stats/")
         val amr_db
@@ -17,6 +19,8 @@ process abricate{
 
 process abricate_json{
     label "wfmetagenomics"
+    cpus 1
+    memory "2GB"
     input:
         tuple val(meta), path("${meta.alias}_amr_results.tsv")
     output:
@@ -36,6 +40,8 @@ process abricate_json{
 process progressive_amr{
     label "wfmetagenomics" 
     maxForks 1
+    cpus 1
+    memory "2GB"
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "amr"}, overwrite: true
     input:
         path amr_report

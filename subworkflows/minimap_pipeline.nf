@@ -10,6 +10,18 @@ OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 process minimap {
     label "wfmetagenomics"
     cpus params.threads
+    memory {
+        // depend on the database and the number/size of samples to be processed
+        if ("${params.database_set}" == "ncbi_16s_18s" | "${params.database_set}" == "ncbi_16s_18s_ITS") {
+            "4GB"
+        } else{
+            def ref_size = reference.size()
+            ref_size > 2e9 ? "32 GB" : ref_size > 1e8 ? "16 GB" : "4 GB"
+        }
+    }
+    errorStrategy = {
+        task.exitStatus == 137 ? log.error("Error 137 may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
+    }
     input:
         tuple val(meta), path(concat_seqs), path(fastcat_stats)
         path reference
@@ -41,8 +53,7 @@ process minimap {
     minimap2 -t "${task.cpus}" ${split} -ax map-ont "${reference}" "${concat_seqs}" \
     | samtools view -h -F 2304 - \
     | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
-    | samtools sort -o "${sample_id}.bam" -
-    samtools index "${sample_id}.bam"
+    | samtools sort --write-index -o "${sample_id}.bam##idx##${sample_id}.bam.bai" -
     awk -F '\\t' '{print \$3}' "${sample_id}.minimap2.assignments.tsv" > taxids.tmp
     taxonkit \
         --data-dir "${taxonomy}" \
@@ -58,6 +69,7 @@ process minimap {
 process extractMinimap2Reads {
     label "wfmetagenomics"
     cpus 1
+    memory "8GB" //depends on the size of the BAM file.
     input:
         tuple val(meta), path("alignment.bam"), path("alignment.bai")
         path ref2taxid
@@ -88,7 +100,9 @@ process extractMinimap2Reads {
 // Process to compute the sequencing depth of each reference and their coverages.
 process getAlignmentStats {
     label "wfmetagenomics"
-    cpus params.threads
+    cpus Math.min(params.threads, 2)
+    //depends on number of references and their lengths. There are also custom databases of varying sizes.
+    memory "8GB"
     input:
         tuple val(meta), path("input.bam"), path("input.bam.bai")
         path ref2taxid
@@ -102,12 +116,12 @@ process getAlignmentStats {
     # Reference stats
     samtools coverage input.bam \
     | awk 'BEGIN { OFS="\t" } { if((\$4 != 0) && (\$6 != 0)) {print } }' \
-    | sort --parallel=${task.cpus} > "${sample_name}.reference_coverage.tsv"
+    | sort --parallel=${task.cpus - 1} > "${sample_name}.reference_coverage.tsv"
     # add taxonomy info
     if [ `zcat "${sample_name}.depth.tsv.gz" | head -n 1 | wc -c ` -ne 0 ]
     then
         cut -f1 "${sample_name}.reference_coverage.tsv" | sed '1d'| grep -f - $ref2taxid \
-        |  sort --parallel=${task.cpus} | cut -f2 \
+        |  sort --parallel=${task.cpus - 1} | cut -f2 \
         | taxonkit reformat --data-dir $taxonomy -f "{k}\t{K}\t{p}\t{c}\t{o}\t{f}\t{g}\t{s}" -F -I 1 \
         | sed '1 i\\taxid\tsuperkingdom\tkingdom\tphylum\tclass\torder\tfamily\tgenus\tspecies' \
         |paste "${sample_name}.reference_coverage.tsv" - \
@@ -122,6 +136,8 @@ process getAlignmentStats {
 
 process makeReport {
     label "wfmetagenomics"
+    cpus 1
+    memory "4GB" //depends on the number of different species/amr genes identified that tables may be bigger.
     input:
         path "read_stats/per-read-stats*.tsv.gz"
         path abundance_table

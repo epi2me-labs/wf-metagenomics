@@ -14,6 +14,7 @@ process rebatchFastq {
     label "wfmetagenomics"
     maxForks params.threads  // no point having more inputs than processing threads
     cpus 3
+    memory "2GB"
     input:
         tuple val(meta), path(fastq), path(stats)
     output:
@@ -53,6 +54,7 @@ process rebatchFastq {
 process stopCondition { 
     label "wfmetagenomics"
     cpus 1 
+    memory "1GB"
     publishDir params.fastq, mode: 'copy', pattern: "*"
     input:
         path json
@@ -94,6 +96,15 @@ kraken_compute = params.kraken_clients == 1 ? 1 : params.kraken_clients - 1
 
 process kraken_server {
     label "wfmetagenomics"
+    memory {
+        // depend on the database and the number/size of samples to be processed
+        if ("${params.database_set}" == "ncbi_16s_18s" | "${params.database_set}" == "ncbi_16s_18s_ITS") {
+            "2GB"
+        } else if ("${params.database_set}" == "Standard-8" | "${params.database_set}" == "PlusPF-8" | "${params.database_set}" == "PlusPFP-8"){
+            // PlusPF, PFP, Standard 8GB -> leave margin for n samples/sizes
+            "16GB"
+        }
+    }
     cpus {
         // if the task executor is local, ensure that we cannot start the
         // server with the same number of threads as the local executor limit.
@@ -138,7 +149,7 @@ process kraken_server {
     // normally in laptops with 16GB, docker only uses 8GB, so the wf stalls
     errorStrategy = {
         task.exitStatus == 137 & params.database_set in [
-            'PlusPF-8', 'PlusPFP-8']? log.error("Error 137 while running kraken2_server, this may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
+            'Standard-8', 'PlusPF-8', 'PlusPFP-8']? log.error("Error 137 while running kraken2_server, this may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
         }
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     input:
@@ -170,6 +181,8 @@ process kraken2_client {
     // retry if server responds out of resource
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
     maxForks kraken_compute
+    cpus 1
+    memory "2GB"
     input:
         tuple val(meta), path(fastq), path(stats)
     output:
@@ -199,6 +212,8 @@ process kraken2_client {
 
 process stop_kraken_server {
     label "wfmetagenomics"
+    cpus 1
+    memory "1GB"
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     // this shouldn't happen, but we'll keep retrying
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
@@ -218,6 +233,7 @@ process progressive_stats {
     label "wfmetagenomics"
     maxForks 1
     cpus 1
+    memory "2GB"
     input: 
         path fastcat_stats
     output:
@@ -248,6 +264,8 @@ process progressive_stats {
 process progressive_kraken_reports {
     label "wfmetagenomics"
     maxForks 1 
+    cpus 1
+    memory "2GB"
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "kraken"}, overwrite: true
     input:
         path kreport
@@ -287,6 +305,7 @@ process progressive_kraken_reports {
 process progressive_bracken {
     label "wfmetagenomics"
     cpus 2
+    memory "4GB"
     maxForks 1
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "bracken"}, overwrite: true
     input:
@@ -350,6 +369,9 @@ process progressive_bracken {
 // Concatenate kraken reports per read
 process concatAssignments {
     label "wfmetagenomics"
+    maxForks 1
+    cpus 2
+    memory "2GB"
     input:
         tuple (
             val(sample_id),
@@ -376,6 +398,7 @@ process makeReport {
     label "wfmetagenomics"
     maxForks 1
     cpus 1
+    memory "4GB" //depends on the number of different species identified that tables may be bigger.
     input:
         path lineages
         path abundance_table

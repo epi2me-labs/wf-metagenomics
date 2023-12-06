@@ -14,7 +14,22 @@ OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 process run_kraken2 {
     label 'wfmetagenomics'
     publishDir "${params.out_dir}/kraken2", mode: 'copy', pattern: "*kraken2*"
-    cpus 1
+    cpus params.threads
+    memory {
+        // depend on the database and the number/size of samples to be processed
+        if ("${params.database_set}" == "ncbi_16s_18s" | "${params.database_set}" == "ncbi_16s_18s_ITS") {
+            "4GB"
+        } else if ("${params.database_set}" == "Standard-8" | "${params.database_set}" == "PlusPF-8" | "${params.database_set}" == "PlusPFP-8"){
+            // PlusPF, PFP, Standard 8GB -> leave margin for n samples/sizes
+            "16GB"
+        } else{
+            "4GB" // custom databases
+        }
+    }
+    errorStrategy = {
+        task.exitStatus == 137 ? log.error("Error 137 may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
+        log.error("Consider to use --kraken2_memory_mapping to reduce the use of RAM memory.")
+    }
     input:
         tuple val(meta), path(sample_fastq), path(fastq_stats)
         path kraken_db
@@ -25,7 +40,7 @@ process run_kraken2 {
         def memory_mapping = params.kraken2_memory_mapping ? '--memory-mapping' : ''
     """
     kraken2 --db ${kraken_db} ${sample_fastq}\
-    --threads $params.threads \
+    --threads $task.cpus \
     --report "${sample_id}.kraken2.report.txt"\
     --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
     """
@@ -35,7 +50,8 @@ process run_kraken2 {
 process run_bracken {
     label "wfmetagenomics"
     publishDir "${params.out_dir}/bracken", mode: 'copy', pattern: "*bracken*"
-    cpus 2
+    cpus Math.min(params.threads - 2, 2)
+    memory "8GB" //it has failed with 4GB in one of the tests
     input:
         tuple val(meta), path("kraken2.report"), path("kraken2.assignments.tsv")
         path(database)
@@ -86,6 +102,8 @@ process run_bracken {
 // Concatenate kraken reports per read
 process output_kraken2_read_assignments {
     label "wfmetagenomics"
+    cpus 2
+    memory "4GB"
     input:
         tuple val(meta), path("${meta.alias}.kraken2.assignments.tsv")
         path taxonomy
@@ -106,6 +124,9 @@ process output_kraken2_read_assignments {
 
 process makeReport {
     label "wfmetagenomics"
+    cpus 1
+    // Report generation will generally use less memory than 4GB, but higher complexity data will use more.
+    memory "4GB" 
     input:
         path "read_stats/per-read-stats*.tsv.gz"
         path abundance_table

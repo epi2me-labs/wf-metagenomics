@@ -1,0 +1,84 @@
+{
+    "files": {
+      "workflow-report": {
+        "filepath": "./wf-metagenomics-report.html",
+        "title": "workflow report",
+        "description": "Report for all samples.",
+        "mime-type": "text/html",
+        "optional": false,
+        "type": "aggregated"
+      },
+      "abundance-table-rank": {
+        "filepath": "./abundance_table_{{ taxonomic_rank }}.tsv",
+        "title": "Abundance table with counts per taxa",
+        "description": "Per-taxa counts TSV, including all samples.",
+        "mime-type": "text/tab-separated-values",
+        "optional": false,
+        "type": "aggregated"
+      },
+      "bracken-report": {
+        "filepath": "./bracken/{{ alias }}.kraken2_bracken.report",
+        "title": "Bracken report file",
+        "description": "TSV file with the abundance of each taxa. See more info here: https://github.com/jenniferlu717/Bracken#output-kraken-style-bracken-report.",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "kraken-report": {
+        "filepath": "./kraken2/{{ alias }}.kraken2.report.txt",
+        "title": "Kraken2 taxonomic assignment per read (Kraken2 pipeline)",
+        "description": "Lineage-aggregated counts. See more info here: https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#sample-report-output-format.",
+        "mime-type": "text/txt",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "kraken-assignments": {
+        "filepath": "./kraken2/{{ alias }}.kraken2.assignments.tsv",
+        "title": "Kraken2 taxonomic asignment per read (Kraken2 pipeline)",
+        "description": "TSV file with the taxonomic assignment per read. See more info here: https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format.",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "host-bam": {
+        "filepath": "./host_bam/{{ alias }}.bam",
+        "title": "Host BAM file",
+        "description": "BAM file generated from mapping filtered input reads to the host reference.",
+        "mime-type": "application/gzip",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "host-bai": {
+        "filepath": "./host_bam/{{ alias }}.bai",
+        "title": "BAM index file of host reads",
+        "description": "BAM index file generated from mapping filtered input reads to the host reference.",
+        "mime-type": "application/octet-stream",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "minimap2-bam": {
+        "filepath": "./bam/{{ alias }}.bam",
+        "title": "BAM file (minimap2)",
+        "description": "BAM file generated from mapping filtered input reads to the reference.",
+        "mime-type": "application/gzip",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "minimap2-index": {
+        "filepath": "./bam/{{ alias }}.bai",
+        "title": "BAM index file (minimap2)",
+        "description": "Index file generated from mapping filtered input reads to the reference.",
+        "mime-type": "application/octet-stream",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "amr-report": {
+        "filepath": "./amr/{{ alias }}.json",
+        "title": "JSON file with identified AMR genes (amr)",
+        "description": "JSON file with abricate results. See more info here: https://github.com/tseemann/abricate#output.",
+        "mime-type": "text/json",
+        "optional": true,
+        "type": "per-sample"
+      }
+    }
+  }

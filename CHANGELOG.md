@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [v2.8.0]
+### Added
+- Standard 8GB kraken2 database.
+- Update docs.
+### Fixed
+- Heatmap generated when `--minimap2_by_reference` is enabled references with a mean coverage of less than 1% of the one with the largest value are omitted.
+
 ## [v2.7.0]
 ### Fixed
 - Use store_dir without staging files from the web. Kraken2 can run offline if the databases have been previously stored.
