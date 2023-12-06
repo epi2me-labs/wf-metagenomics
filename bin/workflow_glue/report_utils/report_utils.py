@@ -331,7 +331,7 @@ def depth_windows(depth_ref, ref_len, nwindows=100):
     return pd.Series(windows['depth'])
 
 
-def depth2heatmap(depth, reference, min_nreads=0.001):
+def depth2heatmap(depth, reference, min_nreads=0.01):
     """
     Calculate depth by windows for those references with a sequencing depth.
 
@@ -339,7 +339,7 @@ def depth2heatmap(depth, reference, min_nreads=0.001):
     :param reference (Pandas DataFrame): Output from samtools coverage with the taxonomy
         assigned to each reference.
     :param min_nreads (float, optional): Minimum percentage of depth required to plot
-        the reference in the heatmap. Defaults to 0.001.
+        the reference in the heatmap. Defaults to 0.01.
 
     :return plot.
     """
@@ -352,7 +352,7 @@ def depth2heatmap(depth, reference, min_nreads=0.001):
             row.name, 'endpos']), axis=1)
     # Apply an abundance cutoff for the heatmap.
     # Get references with depth greater than cutoff.
-    cutoff = min_nreads*(metrics.sum(axis=1).max())
+    cutoff = min_nreads*(metrics.mean(axis=1).max())
     mask = metrics.mean(axis=1) > cutoff
     metrics = metrics[mask.values]
     return metrics
@@ -426,5 +426,6 @@ def load_alignment_data(align_stats, sample, rank='species'):
         annot=False, cmap=cmap)
     plt_heatmap.tooltip = dict(position='top', trigger='item')
     plt_heatmap.yAxis.name = "Relative position"
+    plt_heatmap.xAxis.axisLabel = dict(rotate=90)
     # return table, scatter, heatmap
     return [align_df, plt_scatter, plt_heatmap]

@@ -4,6 +4,7 @@ import groovy.json.JsonBuilder
 process abricateVersion {
     label "amr"
     cpus 1
+    memory "1GB"
     input:
         path "input_versions.txt"
     output:
@@ -18,6 +19,7 @@ process abricateVersion {
 process getVersions {
     label "wfmetagenomics"
     cpus 1
+    memory "1GB"
     output:
         path "versions.txt"
     script:
@@ -35,6 +37,7 @@ process getVersions {
 process getParams {
     label "wfmetagenomics"
     cpus 1
+    memory "1GB"
     output:
         path "params.json"
     script:
@@ -48,6 +51,10 @@ process getParams {
 process exclude_host_reads {
     label "wfmetagenomics"
     cpus params.threads
+    memory {
+        def ref_size = host_reference.size()
+        ref_size > 2e9 ? "32 GB" : ref_size > 1e8 ? "16 GB" : "2 GB"
+    }
     input:
         tuple val(meta), path(concat_seqs), path(fastcat_stats)
         path host_reference
@@ -98,6 +105,8 @@ process exclude_host_reads {
 process output_host {
     // publish inputs to output directory
     label "wfmetagenomics"
+    cpus 1
+    memory "1GB"
     publishDir (
         params.out_dir,
         mode: "copy",
@@ -115,6 +124,8 @@ process output_host {
 // Process to collapse lineages info into abundance dataframes.
 process createAbundanceTables {
     label "wfmetagenomics"
+    cpus 1
+    memory "1GB"
     input:
         // lineages is a folder in the kraken2, but is a list of files in the minimap2 approach
         path "lineages/*"
@@ -138,6 +149,8 @@ process createAbundanceTables {
 process output {
     // publish inputs to output directory
     label "wfmetagenomics"
+    cpus 1
+    memory "1GB"
     publishDir (
         params.out_dir,
         mode: "copy",

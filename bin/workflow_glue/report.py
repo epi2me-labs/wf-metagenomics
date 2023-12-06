@@ -229,7 +229,7 @@ def main(args):
                         hue=ranks_no_sk_k[i], dodge=False)
                     plt.yAxis = dict(name='Relative abundance')
                     # rotate x axis labels to avoid overlaping with many barcodes
-                    plt.xAxis.axisLabel = dict(rotate=45)
+                    plt.xAxis.axisLabel = dict(rotate=90)
                     plt.legend = {
                         'orient': 'horizontal', 'left': 'center', 'top': 'bottom'}
                     plt.tooltip = {'trigger': 'axis', 'axisPointer': {'type': 'shadow'}}

@@ -5,6 +5,7 @@ OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
 process download_reference_ref2taxid {
     label "wfmetagenomics"
     cpus 1
+    memory "1GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
@@ -32,6 +33,8 @@ process download_reference_ref2taxid {
 // check that each reference in the FASTA file contains its corresponding taxid in the ref2taxid file
 process check_reference_ref2taxid {
     label "wfmetagenomics"
+    cpus 1
+    memory "1GB"
     input:
         path reference
         path ref2taxid
@@ -55,6 +58,7 @@ process check_reference_ref2taxid {
 process unpack_download_kraken2_database {
     label "wfmetagenomics"
     cpus 1
+    memory "1GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
@@ -91,6 +95,8 @@ process unpack_download_kraken2_database {
 
 process determine_bracken_length {
     label "wfmetagenomics"
+    cpus 1
+    memory "1GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}/${database_dir}" : null }
     input:
         val database_name
@@ -125,6 +131,7 @@ process determine_bracken_length {
 process download_unpack_taxonomy {
     label "wfmetagenomics"
     cpus 1
+    memory "1GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
@@ -165,6 +172,7 @@ process prepareSILVA {
     storeDir {params.store_dir ? "${params.store_dir}/${params.database_set}" : null }
     label "wfmetagenomics"
     cpus 2
+    memory "1GB"
     input:
         val bracken_length
     output:

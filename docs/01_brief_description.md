@@ -1,0 +1,1 @@
+Taxonomic classification of single reads from both amplicon-targeted and shotgun metagenomics sequencing.
