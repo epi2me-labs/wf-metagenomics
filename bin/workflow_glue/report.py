@@ -143,8 +143,7 @@ def main(args):
                         df_stats.columns = ['Sample_name', 'Number of reads']
                         plt = ezc.barplot(
                             data=df_stats, x='Sample_name', y='Number of reads')
-                        plt.title = {"text": "Number of reads per sample."}
-                        plt.tooltip = {'trigger': 'axis'}
+                        plt._fig.title.text = "Number of reads per sample."
                         EZChart(plt, THEME)
 
     #
@@ -225,20 +224,20 @@ def main(args):
                     for each sample.
                     """)
                     plt = ezc.barplot(
-                        d2plot_melt, x='samples', y='counts',
-                        hue=ranks_no_sk_k[i], dodge=False)
-                    plt.yAxis = dict(name='Relative abundance')
-                    # rotate x axis labels to avoid overlaping with many barcodes
-                    plt.xAxis.axisLabel = dict(rotate=90)
-                    plt.legend = {
-                        'orient': 'horizontal', 'left': 'center', 'top': 'bottom'}
-                    plt.tooltip = {'trigger': 'axis', 'axisPointer': {'type': 'shadow'}}
-                    # Not best option to avoid overlap, but echarts hasn't solved it yet
-                    # https://github.com/apache/echarts/issues/15654
-                    # https://github.com/apache/echarts/issues/14252
-                    plt.grid = {'bottom': '18%'}
-                    plt.title = {
-                        "text": f"{ranks_no_sk_k[i].capitalize()} rank"}
+                        d2plot_melt,
+                        x="samples",
+                        y="counts",
+                        hue=ranks_no_sk_k[i],
+                        dodge=False,
+                    )
+                    plt._fig.yaxis.axis_label = "Relative abundance"
+                    plt._fig.xaxis.major_label_orientation = 45
+                    # distribute names in 5 columns as per default 10 taxa are shown.
+                    # > 10 is difficult to distinguish colors.
+                    plt._fig.legend.ncols = 5
+                    plt._fig.legend.click_policy = "mute"
+                    plt._fig.title.text = f"{ranks_no_sk_k[i].capitalize()} rank"
+                    plt._fig.title.align = "center"
                     EZChart(plt, THEME)
         # 2.4. ABUNDANCE TABLE
     with report.add_section('Abundances', 'Abundances'):
@@ -359,18 +358,25 @@ def main(args):
                     ranks_counts = ranks_counts[
                         ~(ranks_counts['tax'].str.contains('Unknown'))]
                     df_sample_counts = ranks_counts.sort_values(
-                        by=barcode, ascending=False)[barcode]
-                    if df_sample_counts.sum() != 0:
+                        by=barcode, ascending=False
+                    )[barcode].to_frame()
+                    df_sample_counts.columns = ["freq"]
+                    if df_sample_counts["freq"].sum() != 0:
                         df_sample_counts.index = list(
-                                range(1, df_sample_counts.shape[0] + 1))
+                            range(1, df_sample_counts.shape[0] + 1)
+                        )
                         plt = ezc.barplot(
                             df_sample_counts.reset_index().rename(
-                                columns={'index': 'rank'}))
-                        plt.title = dict(text=barcode)
-                        # hiding x axis, just show the abundance distribution of the
-                        # taxa to have an idea of singletons, SAD distribution.
-                        plt.xAxis.axisLabel = {'show': False}
-                        plt.xAxis.axisTick = {'show': False}
+                                columns={"index": "rank"}
+                            ),
+                            x="rank",
+                            y="freq",
+                            dodge=False,
+                            color="#0079a4",
+                        )
+                        plt._fig.title.text = barcode
+                        plt._fig.title.align = "center"
+                        plt._fig.xaxis.visible = False
                         EZChart(plt, 'epi2melabs')
                         em("""This plot includes all the counts (except Unknown),
                         previous to apply any filter threshold based on abundances.
@@ -493,7 +499,7 @@ def argparser():
         "--abundance_threshold", default=1, type=float,
         help="Remove those taxa whose abundance is below this cut-off.")
     parser.add_argument(
-        "--n_taxa_barplot", default=8, type=int,
+        "--n_taxa_barplot", default=9, type=int,
         help="Number of taxa to be displayed in the barplot.")
     return parser
 

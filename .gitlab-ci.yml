@@ -25,7 +25,7 @@ aws-run:
             - ${CI_PROJECT_NAME}
             - .nextflow.log
         exclude: [] # give me everything pal
-    allow_failure: true
+    allow_failure: false
 
 
 docker-run:

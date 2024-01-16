@@ -78,7 +78,7 @@
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
 | abundance_threshold | number | Remove those taxa whose abundance is equal or lower than the chosen value. | To remove taxa with abundances lower than or equal to a relative value (compared to the total number of reads), use a decimal between 0-1 (1 not inclusive). To remove taxa with abundances lower than or equal to an absolute value, provide a number larger than 1. | 0 |
-| n_taxa_barplot | integer | Number of most abundance taxa to be displayed in the barplot. The rest of taxa will be grouped under the "Other" category. |  | 8 |
+| n_taxa_barplot | integer | Number of most abundant taxa to be displayed in the barplot. The rest of taxa will be grouped under the "Other" category. |  | 9 |
 
 
 ### Advanced Options
@@ -95,5 +95,6 @@
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
+| disable_ping | boolean | Enable to prevent sending a workflow ping. |  | False |
 
 

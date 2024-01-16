@@ -123,7 +123,7 @@ process output_kraken2_read_assignments {
 }
 
 process makeReport {
-    label "wfmetagenomics"
+    label "wf_common"
     cpus 1
     // Report generation will generally use less memory than 4GB, but higher complexity data will use more.
     memory "4GB" 
