@@ -395,7 +395,7 @@ process concatAssignments {
 }
 
 process makeReport {
-    label "wfmetagenomics"
+    label "wf_common"
     maxForks 1
     cpus 1
     memory "4GB" //depends on the number of different species identified that tables may be bigger.

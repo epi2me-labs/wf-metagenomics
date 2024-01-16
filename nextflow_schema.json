@@ -371,9 +371,9 @@
                 },
                 "n_taxa_barplot": {
                     "type": "integer",
-                    "default": 8,
+                    "default": 9,
                     "title": "Number of taxa to be displayed in the barplot",
-                    "description": "Number of most abundance taxa to be displayed in the barplot. The rest of taxa will be grouped under the \"Other\" category."
+                    "description": "Number of most abundant taxa to be displayed in the barplot. The rest of taxa will be grouped under the \"Other\" category."
                 }
             }
         },

@@ -135,7 +135,7 @@ process getAlignmentStats {
 
 
 process makeReport {
-    label "wfmetagenomics"
+    label "wf_common"
     cpus 1
     memory "4GB" //depends on the number of different species/amr genes identified that tables may be bigger.
     input:
