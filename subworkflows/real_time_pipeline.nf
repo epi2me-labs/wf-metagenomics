@@ -44,7 +44,7 @@ process rebatchFastq {
                 -s \$batch_part \
                 -r >(bgzip -c > "fastq/fastcat_stats/\$batch_part-per-read-stats.tsv.gz") \
                 -f "fastq/fastcat_stats/\$batch_part-per-file-stats.tsv" \
-                fastq/\$f
+                fastq/\$f --histograms \$batch_part-histograms
         fi
     done 
     """
