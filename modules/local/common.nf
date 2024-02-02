@@ -50,6 +50,7 @@ process getParams {
 
 process exclude_host_reads {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     cpus params.threads
     memory {
         def ref_size = host_reference.size()

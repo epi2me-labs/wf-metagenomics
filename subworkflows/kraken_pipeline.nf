@@ -13,6 +13,7 @@ OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 // Filter reads, calculate some stats, and run kraken2 classification
 process run_kraken2 {
     label 'wfmetagenomics'
+    tag "${meta.alias}"
     publishDir "${params.out_dir}/kraken2", mode: 'copy', pattern: "*kraken2*"
     cpus params.threads
     memory {
@@ -49,6 +50,7 @@ process run_kraken2 {
 
 process run_bracken {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     publishDir "${params.out_dir}/bracken", mode: 'copy', pattern: "*bracken*"
     cpus Math.min(params.threads - 2, 2)
     memory "8GB" //it has failed with 4GB in one of the tests
@@ -102,6 +104,7 @@ process run_bracken {
 // Concatenate kraken reports per read
 process output_kraken2_read_assignments {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     cpus 2
     memory "4GB"
     input:
