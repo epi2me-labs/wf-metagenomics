@@ -9,6 +9,7 @@ OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
 process minimap {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     cpus params.threads
     memory {
         // depend on the database and the number/size of samples to be processed
@@ -68,6 +69,7 @@ process minimap {
 
 process extractMinimap2Reads {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     cpus 1
     memory "8GB" //depends on the size of the BAM file.
     input:
@@ -100,6 +102,7 @@ process extractMinimap2Reads {
 // Process to compute the sequencing depth of each reference and their coverages.
 process getAlignmentStats {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     cpus Math.min(params.threads, 2)
     //depends on number of references and their lengths. There are also custom databases of varying sizes.
     memory "8GB"

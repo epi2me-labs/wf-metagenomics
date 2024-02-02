@@ -12,6 +12,7 @@ OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 // Rebundle fastqs (this is mostly in case we're given one big file)
 process rebatchFastq {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     maxForks params.threads  // no point having more inputs than processing threads
     cpus 3
     memory "2GB"
@@ -177,6 +178,7 @@ process kraken_server {
 // resource but not actually doing anything).
 process kraken2_client {
     label "wfmetagenomics"
+    tag "${meta.alias}"
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     // retry if server responds out of resource
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
@@ -263,6 +265,7 @@ process progressive_stats {
 // in a second channel (that is also accumulating).
 process progressive_kraken_reports {
     label "wfmetagenomics"
+    tag "${sample_id}"
     maxForks 1 
     cpus 1
     memory "2GB"
@@ -304,6 +307,7 @@ process progressive_kraken_reports {
 // bracken results.
 process progressive_bracken {
     label "wfmetagenomics"
+    tag "${sample_id}"
     cpus 2
     memory "4GB"
     maxForks 1
@@ -369,6 +373,7 @@ process progressive_bracken {
 // Concatenate kraken reports per read
 process concatAssignments {
     label "wfmetagenomics"
+    tag "${sample_id}"
     maxForks 1
     cpus 2
     memory "2GB"

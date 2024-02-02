@@ -1,5 +1,6 @@
 process abricate{
     label "amr"
+    tag "${meta.alias}"
     cpus 1
     memory "8GB"
     input:
@@ -38,7 +39,8 @@ process abricate_json{
 
 // Scan step similar to progressive kraken reports 
 process progressive_amr{
-    label "wfmetagenomics" 
+    label "wfmetagenomics"
+    tag "${sample_id}"
     maxForks 1
     cpus 1
     memory "2GB"
