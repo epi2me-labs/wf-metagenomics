@@ -1,6 +1,6 @@
 If your question is not answered here, please report any issues or suggestions on the [github issues](https://github.com/epi2me-labs/wf-metagenomics/issues) page or start a discussion on the [community](https://community.nanoporetech.com/). 
 
-+ *Which database is used per default?* - By default, the workflow uses the NCBI 16S + 18S rRNA database. It will be downloaded the first time the workflow is run and re-used in subsequent runs.
++ *Which database is used by default?* - By default, the workflow uses the Standard-8 in kraken2 pipelines and the NCBI 16S + 18S rRNA database in the minimap2 workflow. It will be downloaded the first time the workflow is run and re-used in subsequent runs.
 
 + *Are more databases available?* - Other metagenomic databases (listed below) can be selected with the `database_set` parameter, but the workflow can also be used with a custom database if required (see [here](https://labs.epi2me.io/how-to-meta-offline/) for details).
     * 16S, 18S, ITS

@@ -17,7 +17,7 @@
             "cpus": 6,
             "memory": "16GB"
         },
-        "run_time": "~15min for 1 million reads in total (24 barcodes) using Kraken2 and the ncbi_16s_18s database.",
+        "run_time": "~40min for 1 million reads in total (24 barcodes) using Kraken2 and the Standard-8 database (using a previously downloaded db).",
         "arm_support": true
     },
     "definitions": {
@@ -160,9 +160,9 @@
             "properties": {
                 "database_set": {
                     "type": "string",
-                    "default": "ncbi_16s_18s",
+                    "default": "Standard-8",
                     "title": "Choose a database",
-                    "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Workflow will require memory available to be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases requires more than 8Gb.",
+                    "description": "Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB.",
                     "enum": [
                         "ncbi_16s_18s",
                         "ncbi_16s_18s_28s_ITS",
