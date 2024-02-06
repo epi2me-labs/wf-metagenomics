@@ -37,7 +37,7 @@ Minimum requirements:
 + CPUs = 6
 + Memory = 16GB
 
-Approximate run time: ~15min for 1 million reads in total (24 barcodes) using Kraken2 and the ncbi_16s_18s database.
+Approximate run time: ~40min for 1 million reads in total (24 barcodes) using Kraken2 and the Standard-8 database (using a previously downloaded db).
 
 ARM processor support: True
 
@@ -152,7 +152,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
-| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Workflow will require memory available to be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases requires more than 8Gb. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | ncbi_16s_18s |
+| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | Standard-8 |
 | database | string | Not required but can be used to specifically override Kraken2 database [.tar.gz or Directory]. | By default uses database chosen in database_set parameter. |  |
 | taxonomy | string | Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory]. | By default NCBI taxonomy file will be downloaded and used. |  |
 | reference | string | Override the FASTA reference file selected by the database_set parameter. It can be a FASTA format reference sequence collection or a minimap2 MMI format index. | This option should be used in conjunction with the database parameter to specify a custom database. |  |
@@ -384,7 +384,7 @@ The report also includes the rarefaction curve per sample which displays the mea
 
 If your question is not answered here, please report any issues or suggestions on the [github issues](https://github.com/epi2me-labs/wf-metagenomics/issues) page or start a discussion on the [community](https://community.nanoporetech.com/). 
 
-+ *Which database is used per default?* - By default, the workflow uses the NCBI 16S + 18S rRNA database. It will be downloaded the first time the workflow is run and re-used in subsequent runs.
++ *Which database is used by default?* - By default, the workflow uses the Standard-8 in kraken2 pipelines and the NCBI 16S + 18S rRNA database in the minimap2 workflow. It will be downloaded the first time the workflow is run and re-used in subsequent runs.
 
 + *Are more databases available?* - Other metagenomic databases (listed below) can be selected with the `database_set` parameter, but the workflow can also be used with a custom database if required (see [here](https://labs.epi2me.io/how-to-meta-offline/) for details).
     * 16S, 18S, ITS

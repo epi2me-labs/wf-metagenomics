@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Default for `--n_taxa_barplot` increased from 8 to 9.
 - Replace the eCharts barplot with an equivalent Bokeh version.
+- `--database_set` parameter is now `Standard-8` when the `--classifier` parameter is set to `kraken2`.
 ### Added
 - Tags to keep track of the samples.
 

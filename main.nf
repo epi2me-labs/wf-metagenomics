@@ -75,12 +75,19 @@ workflow {
             keys = sources.keySet()
             throw new Exception("Source $params.database_set is invalid, must be one of $keys")
         }
-        if (source_name == "PlusPF-8" || source_name == "PlusPFP-8" || source_name == "Standard-8"){
+
+        def kraken_8GB_dbs = ["Standard-8", "PlusPF-8", "PlusPFP-8"]
+        def minimap_dbs = ["ncbi_16s_18s", "ncbi_16s_18s_28s_ITS", "SILVA_138_1"]
+
+        if (!minimap_dbs.contains(source_name) && params.classifier == 'minimap2' && !params.reference){
+            throw new Exception("Note: As the classifier parameter is set to `minimap2` the `database_set` parameter must be one of: $minimap_dbs. Use the `kraken2` classifier to access these databases: $kraken_8GB_dbs.")
+        }
+        if (kraken_8GB_dbs.contains(source_name)){
             log.info("Note: Memory available to the workflow must be slightly higher than size of the database $source_name index (8GB) or consider to use --kraken2_memory_mapping")
         }
     }
-    
-    
+
+
     if ("${params.classifier}" == "minimap2") {
         log.info("Minimap2 pipeline.")
             database = null
