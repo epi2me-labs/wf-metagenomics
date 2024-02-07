@@ -5,7 +5,7 @@ OPTIONAL = file("$projectDir/data/OPTIONAL_FILE")
 process download_reference_ref2taxid {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
@@ -34,7 +34,7 @@ process download_reference_ref2taxid {
 process check_reference_ref2taxid {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     input:
         path reference
         path ref2taxid
@@ -58,7 +58,7 @@ process check_reference_ref2taxid {
 process unpack_download_kraken2_database {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
@@ -96,7 +96,7 @@ process unpack_download_kraken2_database {
 process determine_bracken_length {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}/${database_dir}" : null }
     input:
         val database_name
@@ -131,7 +131,7 @@ process determine_bracken_length {
 process download_unpack_taxonomy {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     storeDir {params.store_dir ? "${params.store_dir}/${database_name}" : null }
     input:
         val database_name
@@ -172,7 +172,7 @@ process prepareSILVA {
     storeDir {params.store_dir ? "${params.store_dir}/${params.database_set}" : null }
     label "wfmetagenomics"
     cpus 2
-    memory "1GB"
+    memory "2GB"
     input:
         val bracken_length
     output:
@@ -233,6 +233,7 @@ workflow prepare_databases {
         if (params.classifier == 'kraken2') {
             bracken_length = determine_bracken_length(params.database_set, database_dir).bracken_length_txt
         }
+        database_set = params.database_set
     } else{
         taxonomic_rank = params.taxonomic_rank
         // TAXONOMY: kraken2 and minimap2
@@ -282,6 +283,7 @@ workflow prepare_databases {
                     } else {
                         ref2taxid_file = Channel.fromPath(file(params.ref2taxid, type: "file", checkIfExists:true)).first() 
                     }
+                    database_set = 'custom'
                     // check that the number of elements of the reference (if it is a fasta)
                     // matches the number of elements of the ref2taxid.
                     if (! params.reference.endsWith(".mmi")) {
@@ -303,6 +305,7 @@ workflow prepare_databases {
                 reference_file = reference.reference_file
                 refpath = reference_file.toString()
                 ref2taxid_file = reference.ref2taxid_file
+                database_set = params.database_set
             }
         }
         // KRAKEN2
@@ -345,7 +348,7 @@ workflow prepare_databases {
                     database_kraken2 = unpack_download_kraken2_database('custom', database_local_path, database_remote_path, database.simpleName, database_is_remote)
                     database_dir = database_kraken2.database_dir
                 }
-            database_set = 'custom'
+                database_set = 'custom'
             } else {
                 // Compress file: needs to unpack, includes bracken_dist (e.g. PlusPF-8, but also ncbi_16s_18s) - store in store_dir
                 database_remote_path = source_data_database.get("database", false)
@@ -370,5 +373,5 @@ workflow prepare_databases {
         reference = reference_file
         database = database_dir
         bracken_length = bracken_length
-        taxonomic_rank = taxonomic_rank 
+        taxonomic_rank = taxonomic_rank
 }

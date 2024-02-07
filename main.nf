@@ -160,7 +160,8 @@ workflow {
                 databases_kraken2.taxonomy,
                 databases_kraken2.database,
                 databases_kraken2.bracken_length,
-                databases_kraken2.taxonomic_rank)
+                databases_kraken2.taxonomic_rank
+            )
         }
 
     }

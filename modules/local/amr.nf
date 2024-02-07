@@ -2,7 +2,7 @@ process abricate{
     label "amr"
     tag "${meta.alias}"
     cpus 1
-    memory "8GB"
+    memory "7GB"
     input:
         tuple val(meta), path("input_reads.fastq.gz"), path("fastcat_stats/")
         val amr_db
