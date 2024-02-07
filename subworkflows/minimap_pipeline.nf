@@ -12,16 +12,8 @@ process minimap {
     tag "${meta.alias}"
     cpus params.threads
     memory {
-        // depend on the database and the number/size of samples to be processed
-        if ("${params.database_set}" == "ncbi_16s_18s" | "${params.database_set}" == "ncbi_16s_18s_ITS") {
-            "4GB"
-        } else{
-            def ref_size = reference.size()
-            ref_size > 2e9 ? "32 GB" : ref_size > 1e8 ? "16 GB" : "4 GB"
-        }
-    }
-    errorStrategy = {
-        task.exitStatus == 137 ? log.error("Error 137 may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
+        // depends on the database and the size of samples to be processed
+        "12GB"
     }
     input:
         tuple val(meta), path(concat_seqs), path(fastcat_stats)
@@ -71,7 +63,7 @@ process extractMinimap2Reads {
     label "wfmetagenomics"
     tag "${meta.alias}"
     cpus 1
-    memory "8GB" //depends on the size of the BAM file.
+    memory "7GB" //depends on the size of the BAM file.
     input:
         tuple val(meta), path("alignment.bam"), path("alignment.bai")
         path ref2taxid
@@ -103,9 +95,9 @@ process extractMinimap2Reads {
 process getAlignmentStats {
     label "wfmetagenomics"
     tag "${meta.alias}"
-    cpus Math.min(params.threads, 2)
+    cpus Math.max(params.threads, 2)
     //depends on number of references and their lengths. There are also custom databases of varying sizes.
-    memory "8GB"
+    memory "7GB"
     input:
         tuple val(meta), path("input.bam"), path("input.bam.bai")
         path ref2taxid

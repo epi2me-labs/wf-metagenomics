@@ -10,7 +10,7 @@ variables:
     # Only common file inputs and option values need to be given here
     # (not things such as -profile)
     NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-    NF_WORKFLOW_OPTS: "--fastq test_data/case01"
+    NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
     NF_IGNORE_PROCESSES: "rebatchFastq, output_kraken2_read_assignments"
     CI_FLAVOUR: "new"
     CWG_AWS_ENV_NAME: "stack"
@@ -18,7 +18,7 @@ variables:
 ## This test works with Standard-8 GB using a stored copy of Standard-8GB in S3.
 aws-run:
     variables:
-        NF_WORKFLOW_OPTS: "--fastq test_data/case01 --store_dir s3://$${XAWS_BUCKET}/${CI_PROJECT_NAME}/store"
+        NF_WORKFLOW_OPTS: "--fastq test_data/case01 --store_dir s3://$${XAWS_BUCKET}/${CI_PROJECT_NAME}/store --database_set Standard-8"
         NF_IGNORE_PROCESSES: "rebatchFastq"
     artifacts:
         when: always

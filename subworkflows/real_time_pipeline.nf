@@ -14,7 +14,7 @@ process rebatchFastq {
     label "wfmetagenomics"
     tag "${meta.alias}"
     maxForks params.threads  // no point having more inputs than processing threads
-    cpus 3
+    cpus 2
     memory "2GB"
     input:
         tuple val(meta), path(fastq), path(stats)
@@ -55,7 +55,7 @@ process rebatchFastq {
 process stopCondition { 
     label "wfmetagenomics"
     cpus 1 
-    memory "1GB"
+    memory "2GB"
     publishDir params.fastq, mode: 'copy', pattern: "*"
     input:
         path json
@@ -98,13 +98,7 @@ kraken_compute = params.kraken_clients == 1 ? 1 : params.kraken_clients - 1
 process kraken_server {
     label "wfmetagenomics"
     memory {
-        // depend on the database and the number/size of samples to be processed
-        if ("${params.database_set}" == "ncbi_16s_18s" | "${params.database_set}" == "ncbi_16s_18s_ITS") {
-            "2GB"
-        } else if ("${params.database_set}" == "Standard-8" | "${params.database_set}" == "PlusPF-8" | "${params.database_set}" == "PlusPFP-8"){
-            // PlusPF, PFP, Standard 8GB -> leave margin for n samples/sizes
-            "16GB"
-        }
+        "${hash_size + 1e9} B " // leave buffer of 2GB, it's just the db
     }
     cpus {
         // if the task executor is local, ensure that we cannot start the
@@ -148,13 +142,14 @@ process kraken_server {
     }
     // short term solution: the following db require at least 8GB of memory,
     // normally in laptops with 16GB, docker only uses 8GB, so the wf stalls
-    errorStrategy = {
+    errorStrategy {
         task.exitStatus == 137 & params.database_set in [
             'Standard-8', 'PlusPF-8', 'PlusPFP-8']? log.error("Error 137 while running kraken2_server, this may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
         }
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     input:
         path database
+        val hash_size
     output:
         val true
     script:
@@ -215,7 +210,7 @@ process kraken2_client {
 process stop_kraken_server {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     // this shouldn't happen, but we'll keep retrying
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
@@ -308,8 +303,8 @@ process progressive_kraken_reports {
 process progressive_bracken {
     label "wfmetagenomics"
     tag "${sample_id}"
-    cpus 2
-    memory "4GB"
+    cpus 1
+    memory "2GB"
     maxForks 1
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "bracken"}, overwrite: true
     input:
@@ -375,7 +370,7 @@ process concatAssignments {
     label "wfmetagenomics"
     tag "${sample_id}"
     maxForks 1
-    cpus 2
+    cpus 1
     memory "2GB"
     input:
         tuple (
@@ -403,7 +398,7 @@ process makeReport {
     label "wf_common"
     maxForks 1
     cpus 1
-    memory "4GB" //depends on the number of different species identified that tables may be bigger.
+    memory "2GB" //depends on the number of different species identified that tables may be bigger.
     input:
         path lineages
         path abundance_table
@@ -442,10 +437,7 @@ workflow real_time_pipeline {
         taxonomic_rank
     main:
         opt_file = file("$projectDir/data/OPTIONAL_FILE")
-        // do we want to run a kraken server ourselves? 
-        if (!params.external_kraken2) {
-            kraken_server(database)
-        }
+
 
         // maybe split up large files
         // sample_ids = samples.map { meta, reads, stats -> meta.alias }
@@ -454,12 +446,18 @@ workflow real_time_pipeline {
             batch_items = rebatchFastq(batch_items.transpose())
                 .transpose()
         }
+
         // filter host reads
         common = run_common(batch_items)
         software_versions = common.software_versions
         parameters = common.parameters
         samples_filtered = common.samples
         // Run Kraken2
+        // do we want to run a kraken server ourselves?
+        def database_main_file_size = database.resolve('hash.k2d').size()
+        if (!params.external_kraken2) {
+            kraken_server(database, database_main_file_size)
+        }
         kraken2_client(samples_filtered)
     
         // progressive stats -- scan doesn't like tuple :/

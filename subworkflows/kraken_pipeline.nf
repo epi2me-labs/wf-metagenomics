@@ -16,24 +16,19 @@ process run_kraken2 {
     tag "${meta.alias}"
     publishDir "${params.out_dir}/kraken2", mode: 'copy', pattern: "*kraken2*"
     cpus params.threads
+    // Set the memory required to the size of the database + 4GB overhead.
     memory {
-        // depend on the database and the number/size of samples to be processed
-        if ("${params.database_set}" == "ncbi_16s_18s" | "${params.database_set}" == "ncbi_16s_18s_ITS") {
-            "4GB"
-        } else if ("${params.database_set}" == "Standard-8" | "${params.database_set}" == "PlusPF-8" | "${params.database_set}" == "PlusPFP-8"){
-            // PlusPF, PFP, Standard 8GB -> leave margin for n samples/sizes
-            "16GB"
-        } else{
-            "4GB" // custom databases
-        }
+        "${hash_size + 4e9} B "
     }
-    errorStrategy = {
+
+    errorStrategy {
         task.exitStatus == 137 ? log.error("Error 137 may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
         log.error("Consider to use --kraken2_memory_mapping to reduce the use of RAM memory.")
     }
     input:
         tuple val(meta), path(sample_fastq), path(fastq_stats)
         path kraken_db
+        val hash_size
     output:
         tuple val(meta), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.kraken2.assignments.tsv"), emit: kraken2_reports
     script:
@@ -52,8 +47,8 @@ process run_bracken {
     label "wfmetagenomics"
     tag "${meta.alias}"
     publishDir "${params.out_dir}/bracken", mode: 'copy', pattern: "*bracken*"
-    cpus Math.min(params.threads - 2, 2)
-    memory "8GB" //it has failed with 4GB in one of the tests
+    cpus Math.max(params.threads - 2, 2)
+    memory "7GB"
     input:
         tuple val(meta), path("kraken2.report"), path("kraken2.assignments.tsv")
         path(database)
@@ -169,6 +164,7 @@ workflow kraken_pipeline {
         database
         bracken_length
         taxonomic_rank
+
     main:
         OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -181,7 +177,9 @@ workflow kraken_pipeline {
         per_read_stats = samples.map {it[2].resolve('per-read-stats.tsv.gz')}.collect()
         | ifEmpty ( OPTIONAL_FILE )
         // Run Kraken2
-        kraken2_reports = run_kraken2(samples, database)
+        // Find out size of the db. Cannot be done within the process
+        database_main_file_size = database.resolve('hash.k2d').size()
+        kraken2_reports = run_kraken2(samples, database, database_main_file_size)
         
         // Run bracken
         bracken_reports = run_bracken(kraken2_reports, database, taxonomy, bracken_length, taxonomic_rank)

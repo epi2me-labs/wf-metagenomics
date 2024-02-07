@@ -4,7 +4,7 @@ import groovy.json.JsonBuilder
 process abricateVersion {
     label "amr"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     input:
         path "input_versions.txt"
     output:
@@ -19,7 +19,7 @@ process abricateVersion {
 process getVersions {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     output:
         path "versions.txt"
     script:
@@ -37,7 +37,7 @@ process getVersions {
 process getParams {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     output:
         path "params.json"
     script:
@@ -52,9 +52,11 @@ process exclude_host_reads {
     label "wfmetagenomics"
     tag "${meta.alias}"
     cpus params.threads
+    // cannot use maxRetries based on exitcodes 137 
+    // due to the wf fail at the samtools step
     memory {
-        def ref_size = host_reference.size()
-        ref_size > 2e9 ? "32 GB" : ref_size > 1e8 ? "16 GB" : "2 GB"
+        // Memory usage is dependent on the database and the size of samples to be processed
+        "15GB"
     }
     input:
         tuple val(meta), path(concat_seqs), path(fastcat_stats)
@@ -107,7 +109,7 @@ process output_host {
     // publish inputs to output directory
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     publishDir (
         params.out_dir,
         mode: "copy",
@@ -126,7 +128,7 @@ process output_host {
 process createAbundanceTables {
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     input:
         // lineages is a folder in the kraken2, but is a list of files in the minimap2 approach
         path "lineages/*"
@@ -151,7 +153,7 @@ process output {
     // publish inputs to output directory
     label "wfmetagenomics"
     cpus 1
-    memory "1GB"
+    memory "2GB"
     publishDir (
         params.out_dir,
         mode: "copy",
