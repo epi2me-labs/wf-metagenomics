@@ -1,10 +1,10 @@
 import nextflow.util.BlankSeparatedList
 
 include { run_amr } from '../modules/local/amr'
-include { 
+include {
     run_common;
     createAbundanceTables;
-    output;
+    output as output_results;
 } from '../modules/local/common'
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -17,7 +17,7 @@ process rebatchFastq {
     cpus 2
     memory "2GB"
     input:
-        tuple val(meta), path(fastq), path(stats)
+        tuple val(meta), path(concat_seqs), path(stats)
     output:
         tuple(
             val(meta),
@@ -27,11 +27,11 @@ process rebatchFastq {
     script:
         def sample_id = "${meta.alias}"
     """
-    # Batch fasta file
-    seqkit split2 "${fastq}" \
-        -j ${task.cpus - 1} -s ${params.batch_size} \
-        -e .gz -o "${sample_id}" \
-        -O fastq
+    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
+        | seqkit split2 - \
+            -j ${task.cpus - 1} -s ${params.batch_size} \
+            -e .gz -o "${sample_id}" \
+            -O fastq
     # Batch stats file
     # run fastcat on each of the batch files:
     # don't need extra_args because the sequences have already passed fastcat during ingress
@@ -47,7 +47,7 @@ process rebatchFastq {
                 -f "fastq/fastcat_stats/\$batch_part-per-file-stats.tsv" \
                 fastq/\$f --histograms \$batch_part-histograms
         fi
-    done 
+    done
     """
 }
 
@@ -56,13 +56,17 @@ process stopCondition {
     label "wfmetagenomics"
     cpus 1 
     memory "2GB"
-    publishDir params.fastq, mode: 'copy', pattern: "*"
+    publishDir = [
+        path: { params.fastq ? params.fastq: params.bam },
+        mode: 'copy', pattern: "*"
+    ]
     input:
         path json
     output:
-        path "STOP.fastq.gz", optional: true, emit: stop
+        path "STOP.*", optional: true, emit: stop
     script:
         int threshold = params.read_limit
+        String input_path = params.fastq ? "fastq": "" // just pass something so that python can evaluate True or False
     """    
     #!/usr/bin/env python
     import json
@@ -72,8 +76,12 @@ process stopCondition {
         for k,v in state.items():
             total += v["total_reads"]
         if total >= $threshold:
-            with open("STOP.fastq.gz", "x") as f:
-                pass
+            if "$input_path":
+                with open("STOP.fastq.gz", "x") as f:
+                    pass
+            else:
+                with open("STOP.bam", "x") as f:
+                    pass
     """
 }
 
@@ -181,7 +189,7 @@ process kraken2_client {
     cpus 1
     memory "2GB"
     input:
-        tuple val(meta), path(fastq), path(stats)
+        tuple val(meta), path(concat_seqs), path(stats)
     output:
         tuple val("${meta.alias}"), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.${task.index}.json"), path("kraken2.assignments.tsv")
     script:
@@ -189,19 +197,20 @@ process kraken2_client {
     """
     if [[ -f $stats ]]
     then
-        stats_file="${stats}"
+        stats_file="${stats}" # batch case
     else
-        stats_file="${stats}/per-read-stats.tsv.gz"
+        stats_file=\$(ls "${stats}"/*.tsv.gz)
     fi
 
     workflow-glue fastcat_histogram \
         --sample_id "${sample_id}" \
         \$stats_file "${sample_id}.${task.index}.json"
 
-    kraken2_client \
-        --port ${params.port} --host-ip ${params.host} \
-        --report report.txt \
-        --sequence $fastq > "kraken2.assignments.tsv"
+    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
+        | kraken2_client \
+            --port ${params.port} --host-ip ${params.host} \
+            --report report.txt \
+            --sequence - > "kraken2.assignments.tsv"
     tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
 }
@@ -232,12 +241,12 @@ process progressive_stats {
     cpus 1
     memory "2GB"
     input: 
-        path fastcat_stats
+        path stats
     output:
         path("all_stats.${task.index}")
     script:
-        def new_input = fastcat_stats instanceof BlankSeparatedList ? fastcat_stats.first() : fastcat_stats
-        def state = fastcat_stats instanceof BlankSeparatedList ? fastcat_stats.last() : "NOSTATE"
+        def new_input = stats instanceof BlankSeparatedList ? stats.first() : stats
+        def state = stats instanceof BlankSeparatedList ? stats.last() : "NOSTATE"
         String output = "all_stats.${task.index}"
     """
     touch "${state}"
@@ -438,7 +447,6 @@ workflow real_time_pipeline {
     main:
         opt_file = file("$projectDir/data/OPTIONAL_FILE")
 
-
         // maybe split up large files
         // sample_ids = samples.map { meta, reads, stats -> meta.alias }
         batch_items = samples
@@ -493,7 +501,7 @@ workflow real_time_pipeline {
         // Process AMR
         if (params.amr) {
             run_amr = run_amr(
-                batch_items,
+                samples_filtered,
                 "${params.amr_db}",
                 "${params.amr_minid}",
                 "${params.amr_mincov}"
@@ -546,7 +554,7 @@ workflow real_time_pipeline {
             )
         }
 
-        ch_to_publish | output
+        ch_to_publish | output_results
 
 
         // Stop server when all are processed
@@ -557,7 +565,8 @@ workflow real_time_pipeline {
         //  Stop file to input folder when read_limit stop condition is met.
         if (params.real_time && params.read_limit){
             stopCondition(stats).first().subscribe {
-            def stop = file(params.fastq).resolve("STOP.fastq.gz")
+                def stop = params.fastq ? file(params.fastq).resolve("STOP.fastq.gz") : \
+                    file(params.bam).resolve("STOP.bam")
                 log.info "Creating STOP file: '$stop'"
             }
         }
@@ -567,9 +576,16 @@ workflow real_time_pipeline {
 }
 
 workflow.onComplete {
-    def stop = file(params.fastq).resolve("STOP.fastq.gz")
-    if (stop.exists()) {
-        stop.delete()
-        log.info "Deleted STOP file: '$stop'"
+    // Every closure defined with workflow.onComplete will run at the end of the main
+    // workflow (this is also true when it was defined below a sub-workflow in a
+    // different `.nf` file). We thus need to check the classifier again, as `params.fastq`/`params.bam`
+    // might be `null` in the minimap case.
+    if ((params.classifier == "kraken2") && params.real_time) {
+        def stop = params.fastq ? file(params.fastq).resolve("STOP.fastq.gz") : \
+            file(params.bam).resolve("STOP.bam")
+        if (stop.exists()) {
+            stop.delete()
+            log.info "Deleted STOP file: '$stop'"
+        }
     }
 }

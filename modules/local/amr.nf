@@ -4,16 +4,25 @@ process abricate{
     cpus 1
     memory "7GB"
     input:
-        tuple val(meta), path("input_reads.fastq.gz"), path("fastcat_stats/")
+        tuple val(meta), path(concat_seqs), path("stats/")
         val amr_db
         val amr_minid
         val amr_mincov
     output:
         tuple val(meta), path("${meta.alias}_amr_results.tsv")
     script:
+        String fastq_name = "${meta.alias}.fastq"
     """
-    gunzip -c input_reads.fastq.gz  > input_reads.fastq
-    abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fastq > ${meta.alias}_amr_results.tsv
+    if [[ ${concat_seqs} == *.bam ]]
+    then
+        samtools fastq -T 1 ${concat_seqs} > $fastq_name
+        # run abricate
+        abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov $fastq_name > ${meta.alias}_amr_results.tsv
+    else
+        # run abricate
+        gunzip -c ${concat_seqs}  > input_reads.fastq
+        abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fastq > ${meta.alias}_amr_results.tsv
+    fi
     """
 }
 
@@ -78,12 +87,12 @@ process progressive_amr{
 
 workflow run_amr {
     take:
-        fastq
+        input
         amr_db
         amr_minid
         amr_mincov
     main:
-        amr_results = abricate(fastq, amr_db, amr_minid, amr_mincov)
+        amr_results = abricate(input, amr_db, amr_minid, amr_mincov)
         amr_json = abricate_json(amr_results)
         amr_json.multiMap{ 
             meta, amr ->

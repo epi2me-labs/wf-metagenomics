@@ -3,7 +3,7 @@
 import groovy.json.JsonBuilder
 nextflow.enable.dsl = 2
 
-include { fastq_ingress } from './lib/ingress'
+include { fastq_ingress; xam_ingress } from './lib/ingress'
 include { minimap_pipeline } from './subworkflows/minimap_pipeline'
 // standard kraken2
 include { kraken_pipeline } from './subworkflows/kraken_pipeline'
@@ -31,6 +31,8 @@ workflow {
     if (params.min_len) { fastcat_extra_args << "-a $params.min_len" }
     if (params.max_len) { fastcat_extra_args << "-b $params.max_len" }
     if (params.min_read_qual) { fastcat_extra_args << "-q $params.min_read_qual" }
+    // If BAM files are output, keep runIDs in case they are reused in the wf to track them.
+    if (params.keep_bam) {fastcat_extra_args << "-H"}
 
     // Check source param is valid
     sources = params.database_sets
@@ -87,6 +89,33 @@ workflow {
         }
     }
 
+    // Input data
+    if (params.fastq) {
+            samples = fastq_ingress([
+                "input":params.fastq,
+                "sample": params.real_time ? null : params.sample,
+                "sample_sheet": params.real_time ? null : params.sample_sheet,
+                "analyse_unclassified":params.analyse_unclassified,
+                "stats": params.wf.stats,
+                "fastcat_extra_args": fastcat_extra_args.join(" "),
+                "watch_path": params.real_time
+            ])
+    } else {
+            // if we didn't get a `--fastq`, there must have been a `--bam` (as is codified
+            // by the schema)
+            samples = xam_ingress([
+                "input":params.bam,
+                "sample":params.sample,
+                "sample_sheet":params.sample_sheet,
+                "analyse_unclassified":params.analyse_unclassified,
+                "keep_unaligned": params.wf.keep_unaligned,
+                "stats": params.wf.stats,
+                "watch_path": params.real_time
+            ])
+    }
+
+
+    // Call the proper pipeline
 
     if ("${params.classifier}" == "minimap2") {
         log.info("Minimap2 pipeline.")
@@ -96,13 +125,6 @@ workflow {
                 source_data_taxonomy,
                 source_data_database
             )
-            samples = fastq_ingress([
-            "input":params.fastq,
-            "sample":params.sample,
-            "sample_sheet":params.sample_sheet,
-            "analyse_unclassified":params.analyse_unclassified,
-            "stats": params.wf.stats,
-            "fastcat_extra_args": fastcat_extra_args.join(" ")])
 
             results = minimap_pipeline(
                 samples,
@@ -136,16 +158,6 @@ workflow {
             log.info("Workflow will stop processing files after ${params.read_limit} reads.")
         }
 
-        
-        // Distinguish between real time or not
-        samples = fastq_ingress([
-            "input":params.fastq,
-            "sample": params.real_time ? null : params.sample,
-            "sample_sheet": params.real_time ? null : params.sample_sheet,
-            "analyse_unclassified":params.analyse_unclassified,
-            "stats": params.wf.stats,
-            "fastcat_extra_args": fastcat_extra_args.join(" "),
-            "watch_path": params.real_time])
         // Distinguish between real time or not
        if (params.real_time) {
             results = real_time_pipeline(

@@ -4,15 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## ["unreleased"]
+
+## [v2.9.0]
 ### Fixed
 - Minimum memory requirement for custom databases depends on the database size.
+### Added
+- Workflow now accepts BAM or FASTQ files as input (using the `--bam` or `--fastq` parameters, respectively).
+- Run ID's now included in the output BAM files.
+- Add nextflow tags to keep track of the samples along the different processes.
+- Output BAM files without host reads.
 ### Changed
 - Default for `--n_taxa_barplot` increased from 8 to 9.
 - Replace the eCharts barplot with an equivalent Bokeh version.
 - `--database_set` parameter is now `Standard-8` when the `--classifier` parameter is set to `kraken2`.
-### Added
-- Tags to keep track of the samples.
 
 ## [v2.8.0]
 ### Added

@@ -4,7 +4,7 @@ include { run_amr } from '../modules/local/amr'
 include {
     run_common;
     createAbundanceTables;
-    output;
+    output as output_results;
 } from "../modules/local/common"
 
 
@@ -26,7 +26,7 @@ process run_kraken2 {
         log.error("Consider to use --kraken2_memory_mapping to reduce the use of RAM memory.")
     }
     input:
-        tuple val(meta), path(sample_fastq), path(fastq_stats)
+        tuple val(meta), path(concat_seqs), path(fastq_stats)
         path kraken_db
         val hash_size
     output:
@@ -35,10 +35,19 @@ process run_kraken2 {
         def sample_id = "${meta.alias}"
         def memory_mapping = params.kraken2_memory_mapping ? '--memory-mapping' : ''
     """
-    kraken2 --db ${kraken_db} ${sample_fastq}\
-    --threads $task.cpus \
-    --report "${sample_id}.kraken2.report.txt"\
-    --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
+    if [[ ${concat_seqs} == *.bam ]]
+    then
+        samtools fastq -T '*' ${concat_seqs} | bgzip -@ $task.cpus > seqs.fastq.gz
+        kraken2 --db ${kraken_db} seqs.fastq.gz \
+            --threads $task.cpus \
+            --report "${sample_id}.kraken2.report.txt" \
+            --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
+    else
+        kraken2 --db ${kraken_db} ${concat_seqs} \
+            --threads $task.cpus \
+            --report "${sample_id}.kraken2.report.txt" \
+            --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
+    fi
     """
 }
 
@@ -167,14 +176,14 @@ workflow kraken_pipeline {
 
     main:
         OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
-
         // Run common
         common = run_common(samples)
         software_versions = common.software_versions
         parameters = common.parameters
         samples = common.samples
         // Initial reads QC
-        per_read_stats = samples.map {it[2].resolve('per-read-stats.tsv.gz')}.collect()
+        // bamstats and fastcat per-read stats files have different names
+        per_read_stats = samples.map {file(it[2].resolve('*.tsv.gz'))}.collect()
         | ifEmpty ( OPTIONAL_FILE )
         // Run Kraken2
         // Find out size of the db. Cannot be done within the process
@@ -236,7 +245,7 @@ workflow kraken_pipeline {
             )
         }
 
-         ch_to_publish | output
+         ch_to_publish | output_results
 
     emit:
         report.report_html  // just emit something
