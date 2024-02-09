@@ -357,11 +357,14 @@ def main(args):
                     # Remove Unknown
                     ranks_counts = ranks_counts[
                         ~(ranks_counts['tax'].str.contains('Unknown'))]
-                    df_sample_counts = ranks_counts.sort_values(
-                        by=barcode, ascending=False
-                    )[barcode].to_frame()
+                    df_sample_counts = (
+                        ranks_counts[barcode]
+                        .sort_values(ascending=False)
+                        .rename("freq")
+                        .to_frame()
+                    )
                     df_sample_counts.columns = ["freq"]
-                    if df_sample_counts["freq"].sum() != 0:
+                    if df_sample_counts["freq"].sum() > 0:
                         df_sample_counts.index = list(
                             range(1, df_sample_counts.shape[0] + 1)
                         )

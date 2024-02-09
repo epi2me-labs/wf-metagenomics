@@ -35,6 +35,12 @@
                     "help_text": "This accepts one of three cases: (i) the path to a single FASTQ file; (ii) the path to a top-level directory containing FASTQ files; (iii) the path to a directory containing one level of sub-directories which in turn contain FASTQ files. In the first and second case, a sample name can be supplied with `--sample`. In the last case, the data is assumed to be multiplexed with the names of the sub-directories as barcodes. In this case, a sample sheet can be provided with `--sample_sheet`.",
                     "demo_data": "test_data"
                 },
+                "bam": {
+                    "type": "string",
+                    "format": "path",
+                    "description": "BAM or unaligned BAM (uBAM) files to use in the analysis.",
+                    "help_text": "This accepts one of three cases: (i) the path to a single BAM file; (ii) the path to a top-level directory containing BAM files; (iii) the path to a directory containing one level of sub-directories which in turn contain BAM files. In the first and second case, a sample name can be supplied with `--sample`. In the last case, the data is assumed to be multiplexed with the names of the sub-directories as barcodes. In this case, a sample sheet can be provided with `--sample_sheet`."
+                },
                 "classifier": {
                     "type": "string",
                     "default": "kraken2",
@@ -60,11 +66,15 @@
                     "description": "A FASTA or MMI file of the host reference. Reads that align with this reference will be excluded from the analysis."
                 }
             },
-            "allOf": [
+            "oneOf": [
                 {
                     "required": [
-                        "fastq",
-                        "classifier"
+                        "fastq"
+                    ]
+                },
+                {
+                    "required": [
+                        "bam"
                     ]
                 }
             ]

@@ -57,7 +57,7 @@
         "type": "per-sample"
       },
       "minimap2-bam": {
-        "filepath": "./bam/{{ alias }}.bam",
+        "filepath": "./bam/{{ alias }}.reference.bam",
         "title": "BAM file (minimap2)",
         "description": "BAM file generated from mapping filtered input reads to the reference.",
         "mime-type": "application/gzip",

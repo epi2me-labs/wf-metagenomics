@@ -2,10 +2,11 @@ include { run_amr } from '../modules/local/amr'
 include {
     run_common;
     createAbundanceTables;
-    output;
+    output as output_results;
 } from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
+
 
 process minimap {
     label "wfmetagenomics"
@@ -16,7 +17,7 @@ process minimap {
         "12GB"
     }
     input:
-        tuple val(meta), path(concat_seqs), path(fastcat_stats)
+        tuple val(meta), path(concat_seqs), path(stats)
         path reference
         path ref2taxid
         path taxonomy
@@ -24,8 +25,8 @@ process minimap {
     output:
         tuple(
             val(meta),
-            path("*.bam"),
-            path("*.bam.bai"),
+            path("*.reference.bam"),
+            path("*.reference.bam.bai"),
             emit: bam)
         tuple(
             val(meta),
@@ -42,11 +43,13 @@ process minimap {
     script:
         def sample_id = "${meta.alias}"
         def split = params.split_prefix ? '--split-prefix tmp' : ''
+        def keep_runids = params.keep_bam ? '-y' : ''
     """
-    minimap2 -t "${task.cpus}" ${split} -ax map-ont "${reference}" "${concat_seqs}" \
-    | samtools view -h -F 2304 - \
-    | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "${ref2taxid}" \
-    | samtools sort --write-index -o "${sample_id}.bam##idx##${sample_id}.bam.bai" -
+    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
+        | minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont $reference - \
+        | samtools view -h -F 2304 - \
+        | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
+        | samtools sort --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
     awk -F '\\t' '{print \$3}' "${sample_id}.minimap2.assignments.tsv" > taxids.tmp
     taxonkit \
         --data-dir "${taxonomy}" \
@@ -181,16 +184,16 @@ workflow minimap_pipeline {
         lineages = Channel.empty()
         metadata = samples.map { it[0] }.toList()
 
-
         // Run common
         common = run_common(samples)
         software_versions = common.software_versions
         parameters = common.parameters
         samples = common.samples
         // Initial reads QC
-        per_read_stats = samples.map {it[2].resolve('per-read-stats.tsv.gz')}.collect()
+        // bamstats and fastcat per-read stats files have different names
+        per_read_stats = samples.map {file(it[2].resolve('*.tsv.gz'))}.collect()
+
         // Run Minimap2
-  
         mm2 = minimap(
                 samples
                 | map { [it[0], it[1], it[2] ?: OPTIONAL_FILE ] },
@@ -198,7 +201,7 @@ workflow minimap_pipeline {
                 ref2taxid,
                 taxonomy,
                 taxonomic_rank
-            )
+        )
         lineages = lineages.mix(mm2.lineage_json)
         // Add some statistics related to the mapping
         if (params.minimap2_by_reference) {
@@ -206,7 +209,6 @@ workflow minimap_pipeline {
         } else {
             alignment_reports = Channel.empty()
         }
-        
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
             taxonomic_rank, params.classifier)
@@ -259,11 +261,11 @@ workflow minimap_pipeline {
                 taxonomy
             )
             ch_to_publish = ch_to_publish | mix (
-            mm2_filt.extracted | map { meta, fastq -> [fastq, "filtered"]},
+            mm2_filt.extracted | map { meta, fastq -> [fastq, "reference"]},
             )
         }
 
-        ch_to_publish | output
+        ch_to_publish | output_results
     emit:
         report.report_html  // just emit something
 }

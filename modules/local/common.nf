@@ -64,65 +64,45 @@ process exclude_host_reads {
     output:
         tuple(
             val(meta),
-            path("*.filtered.unmapped.fastq"),
-            path("fastcat_stats_filtered"),
+            path("*.unmapped.fastq.gz"),
+            path("fastcat_stats_unmapped"),
             emit: fastq)
         tuple(
             val(meta),
             path("*.host.bam"),
             path("*.host.bam.bai"),
-            emit: host_bam)
+            emit: host_bam, optional:true)
+        tuple(
+            val(meta),
+            path("*.unmapped.bam"),
+            path("*.unmapped.bam.bai"),
+            emit: no_host_bam, optional:true)
     script:
         def sample_id = "${meta.alias}"
         def split = params.split_prefix ? '--split-prefix tmp' : ''
-        String fastcat_stats_outdir = "fastcat_stats_filtered"
-    // Map reads agains the host reference and take the unmapped reads for further analysis
+        String fastcat_stats_outdir = "fastcat_stats_unmapped"
+        // Include runids in the BAM files.
+        def keep_runids = params.keep_bam ? '-y' : ''
+    // Map reads against the host reference and take the unmapped reads for further analysis
     """
-    minimap2 -t "${task.cpus}" ${split} -ax map-ont -m 50 --secondary no "${host_reference}" "${concat_seqs}" \
-    | samtools view -h -b - | samtools sort -o "${sample_id}.all.bam" -
-    samtools index "${sample_id}.all.bam"
-
+    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
+        | minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont -m 50 --secondary=no "${host_reference}" - \
+        | samtools view -h -b - | samtools sort --write-index -o "${sample_id}.all.bam##idx##${sample_id}.all.bam.bai" -
     # get unmapped reads & convert bam to fastq again
-    samtools view -b -f 4 "${sample_id}.all.bam" \
-    | samtools fastq - > "${sample_id}.unmapped.fastq"
-
-    # return host reads bam
-    samtools view -b -F 4 "${sample_id}.all.bam" \
-    | samtools sort -o "${sample_id}.host.bam" -
-    samtools index "${sample_id}.host.bam"
+    samtools view -b -f 4 --write-index -o "${sample_id}.unmapped.bam##idx##${sample_id}.unmapped.bam.bai" --unoutput "${sample_id}.host.bam##idx##${sample_id}.host.bam.bai" "${sample_id}.all.bam"
+        samtools fastq -T '*' "${sample_id}.unmapped.bam" | bgzip > "${sample_id}.unmapped.fastq.gz"
 
     # run fastcat on selected reads
     mkdir $fastcat_stats_outdir
     fastcat \
-            -s ${meta["alias"]} \
-            -r $fastcat_stats_outdir/per-read-stats.tsv \
-            -f $fastcat_stats_outdir/per-file-stats.tsv \
-            "${sample_id}.unmapped.fastq" > "${sample_id}.filtered.unmapped.fastq"
-    bgzip $fastcat_stats_outdir/per-read-stats.tsv 
+        -s ${sample_id} \
+        -r $fastcat_stats_outdir/per-read-stats.tsv \
+        -f $fastcat_stats_outdir/per-file-stats.tsv \
+        "${sample_id}.unmapped.fastq.gz" > /dev/null
+    bgzip $fastcat_stats_outdir/per-read-stats.tsv
     """
 }
 
-// See https://github.com/nextflow-io/nextflow/issues/1636
-// This is the only way to publish files from a workflow whilst
-// decoupling the publish from the process steps.
-process output_host {
-    // publish inputs to output directory
-    label "wfmetagenomics"
-    cpus 1
-    memory "2GB"
-    publishDir (
-        params.out_dir,
-        mode: "copy",
-        saveAs: { dirname ? "$dirname/$fname" : fname }
-    )
-    input:
-        tuple path(fname), val(dirname)
-    output:
-        path fname
-    """
-    echo "Writing host files"
-    """
-}
 
 // Process to collapse lineages info into abundance dataframes.
 process createAbundanceTables {
@@ -181,6 +161,9 @@ workflow run_common {
         }
         parameters = getParams()
         if (params.exclude_host){
+            if (params.bam) {
+                log.info("Reads mapped against the host reference will be removed from the analysis.")
+            }
             host_reference = file(params.exclude_host, checkIfExists: true)
             reads = exclude_host_reads(samples, host_reference)
             samples = reads.fastq
@@ -188,8 +171,10 @@ workflow run_common {
             ch_to_publish = ch_to_publish | mix (
             reads.host_bam | map { meta, bam, bai -> [bam, "host_bam"]},
             reads.host_bam | map { meta, bam, bai -> [bai, "host_bam"]},
+            reads.no_host_bam | map { meta, bam, bai -> [bam, "no_host_bam"]},
+            reads.no_host_bam | map { meta, bam, bai -> [bai, "no_host_bam"]},
             )
-            ch_to_publish | output_host
+            ch_to_publish | output
         } else{
             samples
         }

@@ -9,6 +9,6 @@ Output files may be aggregated including information for all samples or provided
 | Kraken2 taxonomic asignment per read (Kraken2 pipeline) | ./kraken2/{{ alias }}.kraken2.assignments.tsv | TSV file with the taxonomic assignment per read. See more info here: https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format. | per-sample |
 | Host BAM file | ./host_bam/{{ alias }}.bam | BAM file generated from mapping filtered input reads to the host reference. | per-sample |
 | BAM index file of host reads | ./host_bam/{{ alias }}.bai | BAM index file generated from mapping filtered input reads to the host reference. | per-sample |
-| BAM file (minimap2) | ./bam/{{ alias }}.bam | BAM file generated from mapping filtered input reads to the reference. | per-sample |
+| BAM file (minimap2) | ./bam/{{ alias }}.reference.bam | BAM file generated from mapping filtered input reads to the reference. | per-sample |
 | BAM index file (minimap2) | ./bam/{{ alias }}.bai | Index file generated from mapping filtered input reads to the reference. | per-sample |
 | JSON file with identified AMR genes (amr) | ./amr/{{ alias }}.json | JSON file with abricate results. See more info here: https://github.com/tseemann/abricate#output. | per-sample |

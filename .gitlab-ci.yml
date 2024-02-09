@@ -43,9 +43,12 @@ docker-run:
     parallel:
         matrix:
             - MATRIX_NAME: [
-                "kraken2", "minimap2", "kraken2-real-time", "minimap2-sample-sheet",
-                "kraken2-baf", "minimap2-baf", "minimap2-filter", "kraken2-amr", "minimap2-amr",
-                "minimap2-exclude-host", "kraken2-exclude-host"
+                "kraken2", "minimap2", "minimap2-sample-sheet",
+                "kraken2-baf", "minimap2-baf", "minimap2-filter",
+                "kraken2-amr", "minimap2-amr",
+                "minimap2-exclude-host", "kraken2-exclude-host", "minimap2-exclude-host-bam",
+                "kraken2-bam", "minimap2-bam",
+                "kraken2-real-time", "kraken2-real-time-bam"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -84,7 +87,7 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2-baf"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10 --include_kraken2_assignments --sample bacteria_archea_fungi --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10 --include_kraken2_assignments --sample bacteria_archaea_fungi --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: "concatAssignments"
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
@@ -113,11 +116,37 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2-exclude-host"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04/reads.fastq.gz --exclude_host test_data/case04/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/reads.fastq.gz --exclude_host test_data/case04_exclude_host/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
+     - if: $MATRIX_NAME == "minimap2-exclude-host-bam"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--bam test_data/case04_exclude_host_bam/samples --exclude_host test_data/case04_exclude_host_bam/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
      - if: $MATRIX_NAME == "kraken2-exclude-host"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04/reads.fastq.gz --exclude_host test_data/case04/host.fasta.gz --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/reads.fastq.gz --exclude_host test_data/case04_exclude_host/host.fasta.gz --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
-         
+     # BAM INGRESS
+     # Compare counts with case01_no_duplicateIDs, must be the same
+     - if: $MATRIX_NAME == "kraken2-bam"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --include_kraken2_assignments --abundance_threshold 1"
+          NF_IGNORE_PROCESSES: ""
+     # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
+     # With the read limit we can stop the wf if the limit is reached.
+     # It creates a STOP.bam that will be a new input in the wf and make it stop.
+     # Use the creation of this file to test if watch_path is able to detect new input files.
+     - if: $MATRIX_NAME == "kraken2-real-time-bam"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/real_time_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --real_time --read_limit 6000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
+          NF_IGNORE_PROCESSES: "concatAssignments,rebatchFastq"
+     ## Regular test minimap2 - mapping stats
+     - if: $MATRIX_NAME == "minimap2-bam"
+       variables:
+          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads"   
