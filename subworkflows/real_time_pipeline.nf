@@ -199,9 +199,9 @@ process kraken2_client {
     then
         stats_file="${stats}" # batch case
     else
-        stats_file=\$(ls "${stats}"/*.tsv.gz)
+    # -L is needed because fastcat_stats is a symlink
+        stats_file=\$(find -L "${stats}" -name "*.tsv.gz" -exec ls {} +)
     fi
-
     workflow-glue fastcat_histogram \
         --sample_id "${sample_id}" \
         \$stats_file "${sample_id}.${task.index}.json"
@@ -357,8 +357,8 @@ process progressive_bracken {
         -p "${sample_id}.kraken2" \
         -r "${taxonomic_rank}" \
 
-    file1=`cat *.json`
-    echo "{"'"$sample_id"'": "\$file1"}" >> "bracken.json"
+    file1=\$(find -name '*.json' -exec cat {} +)
+    echo "{"'"$sample_id"'": \$file1}" >> "bracken.json"
 
     # collate the latest bracken outputs into state
     if [[ "${task.index}" != "1" ]]; then
@@ -384,7 +384,7 @@ process concatAssignments {
     input:
         tuple (
             val(sample_id),
-            path("classifications/kraken2.assignments.tsv")
+            path("classifications/?_kraken2.assignments.tsv")
         )
         path taxonomy
     output:
@@ -396,7 +396,7 @@ process concatAssignments {
     script:
     def sample_id = "${sample_id}"
     """
-    cat classifications/* > all.sample.assignments.tsv
+    find -L classifications -name '*_kraken2.assignments.tsv' -exec cat {} + > all.sample.assignments.tsv
     # Run taxonkit to give users a more informative table
     taxonkit reformat  -I 3  --data-dir "${taxonomy}" -f "{k}|{p}|{c}|{o}|{f}|{g}|{s}|{t}" -F all.sample.assignments.tsv > "${sample_id}_lineages.kraken2.assignments.tsv"
     """

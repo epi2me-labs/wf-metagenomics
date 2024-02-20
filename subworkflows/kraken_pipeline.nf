@@ -99,8 +99,8 @@ process run_bracken {
         -r "${taxonomic_rank}"
     
     # add sample to the json file    
-    file1=`cat *.json`
-    echo "{"'"$sample_id"'": "\$file1"}" >> "bracken.json"
+    file1=\$(find -name '*.json' -exec cat {} +)
+    echo "{"'"$sample_id"'": \$file1}" >> "bracken.json"
     mv "bracken.json" "${sample_id}.json"
     """
 }

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
+- Avoid argument list lengths that may be too long when using glob patterns.
 - The Kraken2 pipeline sometimes reporting wrong numbers for unclassified counts.
 
 ## [v2.9.0]
