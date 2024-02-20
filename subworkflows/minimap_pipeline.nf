@@ -55,8 +55,8 @@ process minimap {
         --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
         | workflow-glue aggregate_lineages -p "${sample_id}.minimap2" -r "${taxonomic_rank}"
-    file1=`cat *.json`
-    echo "{"'"$sample_id"'": "\$file1"}" >> temp
+    file1=\$(find -name '*.json' -exec cat {} +)
+    echo "{"'"$sample_id"'": \$file1}" >> temp
     cp "temp" "${sample_id}.json"
     """
 }
@@ -127,7 +127,6 @@ process getAlignmentStats {
         # compress tsv
         bgzip "${sample_name}.reference_coverage.tsv"
     fi
-
     """
 }
 
