@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Fixed
+- The Kraken2 pipeline sometimes reporting wrong numbers for unclassified counts.
+
 ## [v2.9.0]
 ### Fixed
 - Minimum memory requirement for custom databases depends on the database size.

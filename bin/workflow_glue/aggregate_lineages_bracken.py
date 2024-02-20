@@ -116,7 +116,9 @@ def main(args):
     with open(report) as f:
         report_file = f.readlines()
         for line in report_file:
-            if "unclassified" in line:
+            # the last field could be something like "Unclassified Marinobacter"; we
+            # thus check if the last field is exactly "unclassified"
+            if "unclassified" == line.split()[-1]:
                 unclassified_count = line.split()[1]
                 entries = update_or_create_unclassified(
                     entries, unclassified_count)
