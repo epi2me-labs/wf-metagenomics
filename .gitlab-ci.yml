@@ -66,8 +66,9 @@ docker-run:
      # Use the creation of this file to test if watch_path is able to detect new input files.
      - if: $MATRIX_NAME == "kraken2-real-time"
        variables:
+          NF_BEFORE_SCRIPT: "REAL_TIME_PORT=$$(shuf -i 8100-8900 -n 1)"
           NF_PROCESS_FILES: "subworkflows/real_time_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --read_limit 3000 --include_kraken2_assignments --batch_size 1000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --read_limit 3000 --include_kraken2_assignments --batch_size 1000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT}"
           NF_IGNORE_PROCESSES: ""
      ## Regular test minimap2 - mapping stats
      - if: $MATRIX_NAME == "minimap2"
@@ -141,8 +142,9 @@ docker-run:
      # Use the creation of this file to test if watch_path is able to detect new input files.
      - if: $MATRIX_NAME == "kraken2-real-time-bam"
        variables:
+          NF_BEFORE_SCRIPT: "REAL_TIME_PORT=$$(shuf -i 8100-8900 -n 1)"
           NF_PROCESS_FILES: "subworkflows/real_time_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --real_time --read_limit 6000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --real_time --read_limit 6000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT}"
           NF_IGNORE_PROCESSES: "concatAssignments,rebatchFastq"
      ## Regular test minimap2 - mapping stats
      - if: $MATRIX_NAME == "minimap2-bam"
