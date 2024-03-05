@@ -200,13 +200,6 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | n_taxa_barplot | integer | Number of most abundant taxa to be displayed in the barplot. The rest of taxa will be grouped under the "Other" category. |  | 9 |
 
 
-### Output Options
-
-| Nextflow parameter name  | Type | Description | Help | Default |
-|--------------------------|------|-------------|------|---------|
-| out_dir | string | Directory for output of all user-facing files. |  | output |
-
-
 ### Advanced Options
 
 | Nextflow parameter name  | Type | Description | Help | Default |
