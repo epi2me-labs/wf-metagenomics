@@ -35,19 +35,10 @@ process run_kraken2 {
         def sample_id = "${meta.alias}"
         def memory_mapping = params.kraken2_memory_mapping ? '--memory-mapping' : ''
     """
-    if [[ ${concat_seqs} == *.bam ]]
-    then
-        samtools fastq -T '*' ${concat_seqs} | bgzip -@ $task.cpus > seqs.fastq.gz
-        kraken2 --db ${kraken_db} seqs.fastq.gz \
-            --threads $task.cpus \
-            --report "${sample_id}.kraken2.report.txt" \
-            --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
-    else
-        kraken2 --db ${kraken_db} ${concat_seqs} \
-            --threads $task.cpus \
-            --report "${sample_id}.kraken2.report.txt" \
-            --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
-    fi
+    kraken2 --db ${kraken_db} ${concat_seqs} \
+        --threads $task.cpus \
+        --report "${sample_id}.kraken2.report.txt" \
+        --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
     """
 }
 

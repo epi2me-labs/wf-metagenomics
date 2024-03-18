@@ -85,9 +85,8 @@ process exclude_host_reads {
         def keep_runids = params.keep_bam ? '-y' : ''
     // Map reads against the host reference and take the unmapped reads for further analysis
     """
-    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
-        | minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont -m 50 --secondary=no "${host_reference}" - \
-        | samtools view -h -b - | samtools sort --write-index -o "${sample_id}.all.bam##idx##${sample_id}.all.bam.bai" -
+    minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont -m 50 --secondary=no "${host_reference}" $concat_seqs \
+    | samtools view -h -b - | samtools sort --write-index -o "${sample_id}.all.bam##idx##${sample_id}.all.bam.bai" -
     # get unmapped reads & convert bam to fastq again
     samtools view -b -f 4 --write-index -o "${sample_id}.unmapped.bam##idx##${sample_id}.unmapped.bam.bai" --unoutput "${sample_id}.host.bam##idx##${sample_id}.host.bam.bai" "${sample_id}.all.bam"
         samtools fastq -T '*' "${sample_id}.unmapped.bam" | bgzip > "${sample_id}.unmapped.fastq.gz"

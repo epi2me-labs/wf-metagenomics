@@ -134,7 +134,7 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2-bam"
        variables:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --include_kraken2_assignments --abundance_threshold 1"
+          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --include_kraken2_assignments --abundance_threshold 1 --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: ""
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
