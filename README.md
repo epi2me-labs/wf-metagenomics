@@ -200,6 +200,13 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | n_taxa_barplot | integer | Number of most abundant taxa to be displayed in the barplot. The rest of taxa will be grouped under the "Other" category. |  | 9 |
 
 
+### Output Options
+
+| Nextflow parameter name  | Type | Description | Help | Default |
+|--------------------------|------|-------------|------|---------|
+| out_dir | string | Directory for output of all user-facing files. |  | output |
+
+
 ### Advanced Options
 
 | Nextflow parameter name  | Type | Description | Help | Default |
@@ -208,13 +215,6 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | min_read_qual | number | Specify read quality lower limit. | Any reads with a quality lower than this limit will not be included in the analysis. |  |
 | max_len | integer | Specify read length upper limit | Any reads longer than this limit will not be included in the analysis. |  |
 | threads | integer | Maximum number of CPU threads to use per workflow task. | Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See server threads parameter for Kraken specific threads in the real_time pipeline. | 4 |
-
-
-### Miscellaneous Options
-
-| Nextflow parameter name  | Type | Description | Help | Default |
-|--------------------------|------|-------------|------|---------|
-| disable_ping | boolean | Enable to prevent sending a workflow ping. |  | False |
 
 
 

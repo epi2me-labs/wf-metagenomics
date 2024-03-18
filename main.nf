@@ -108,9 +108,10 @@ workflow {
                 "sample":params.sample,
                 "sample_sheet":params.sample_sheet,
                 "analyse_unclassified":params.analyse_unclassified,
+                "return_fastq": true,
                 "keep_unaligned": params.wf.keep_unaligned,
                 "stats": params.wf.stats,
-                "watch_path": params.real_time
+                "watch_path": params.real_time,
             ])
     }
 

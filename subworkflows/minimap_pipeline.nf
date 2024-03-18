@@ -45,11 +45,10 @@ process minimap {
         def split = params.split_prefix ? '--split-prefix tmp' : ''
         def keep_runids = params.keep_bam ? '-y' : ''
     """
-    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
-        | minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont $reference - \
-        | samtools view -h -F 2304 - \
-        | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
-        | samtools sort --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
+    minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont $reference $concat_seqs \
+    | samtools view -h -F 2304 - \
+    | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
+    | samtools sort --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
     awk -F '\\t' '{print \$3}' "${sample_id}.minimap2.assignments.tsv" > taxids.tmp
     taxonkit \
         --data-dir "${taxonomy}" \

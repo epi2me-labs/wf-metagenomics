@@ -13,16 +13,9 @@ process abricate{
     script:
         String fastq_name = "${meta.alias}.fastq"
     """
-    if [[ ${concat_seqs} == *.bam ]]
-    then
-        samtools fastq -T 1 ${concat_seqs} > $fastq_name
-        # run abricate
-        abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov $fastq_name > ${meta.alias}_amr_results.tsv
-    else
-        # run abricate
-        gunzip -c ${concat_seqs}  > input_reads.fastq
-        abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fastq > ${meta.alias}_amr_results.tsv
-    fi
+    # run abricate
+    gunzip -c ${concat_seqs}  > input_reads.fastq
+    abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fastq > ${meta.alias}_amr_results.tsv
     """
 }
 

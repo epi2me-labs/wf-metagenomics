@@ -27,11 +27,10 @@ process rebatchFastq {
     script:
         def sample_id = "${meta.alias}"
     """
-    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
-        | seqkit split2 - \
-            -j ${task.cpus - 1} -s ${params.batch_size} \
-            -e .gz -o "${sample_id}" \
-            -O fastq
+    seqkit split2 $concat_seqs \
+        -j ${task.cpus - 1} -s ${params.batch_size} \
+        -e .gz -o "${sample_id}" \
+        -O fastq
     # Batch stats file
     # run fastcat on each of the batch files:
     # don't need extra_args because the sequences have already passed fastcat during ingress
@@ -206,11 +205,10 @@ process kraken2_client {
         --sample_id "${sample_id}" \
         \$stats_file "${sample_id}.${task.index}.json"
 
-    ${concat_seqs.name.endsWith('.bam') ? "samtools fastq -T '*'" : "cat" } $concat_seqs \
-        | kraken2_client \
-            --port ${params.port} --host-ip ${params.host} \
-            --report report.txt \
-            --sequence - > "kraken2.assignments.tsv"
+    kraken2_client \
+        --port ${params.port} --host-ip ${params.host} \
+        --report report.txt \
+        --sequence $concat_seqs > "kraken2.assignments.tsv"
     tail -n +1 report.txt > "${sample_id}.kraken2.report.txt"
     """
 }
