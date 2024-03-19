@@ -115,7 +115,18 @@ workflow {
             ])
     }
 
-
+    // Discard empty samples
+    log.info(
+        "Note: Empty files or those files whose reads have been discarded after filtering based on " +
+        "read length and/or read quality will not appear in the report and will be excluded from subsequent analysis.")
+    samples = samples
+    | filter { meta, seqs, stats ->
+        valid = meta['n_seqs'] > 0
+        if (!valid) {
+            log.warn "Found empty file for sample '${meta["alias"]}'."
+        }
+        valid
+    }
     // Call the proper pipeline
 
     if ("${params.classifier}" == "minimap2") {
