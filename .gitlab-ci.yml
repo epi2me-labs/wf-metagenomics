@@ -60,6 +60,8 @@ docker-run:
           NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_kraken2_assignments --abundance_threshold 1 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: ""
+          AFTER_NEXTFLOW_CMD: >
+            grep "Found empty file for sample 'barcode05'" .nextflow.log
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
      # It creates a STOP.fastq.gz that will be a new input in the wf and make it stop.
