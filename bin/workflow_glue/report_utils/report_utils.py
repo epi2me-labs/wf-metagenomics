@@ -172,11 +172,12 @@ def filter_by_abundance(
     :return (DataFrame): Dataframe with rows that satisfy the threshold.
     """
     if abundance_threshold < 1:
-        abundance_threshold = abundance_threshold * round(
-            df[column_to_filter].sum())
+        abundance_threshold = round(
+            abundance_threshold * df[column_to_filter].sum())
     # Group & filter them
     if column_to_group:
         # Subset just columns that are going to be used
+        # E.g. not use lineages columns
         # In case the df contains character/factor columns
         interesting_cols = [
             colname for colname in [
