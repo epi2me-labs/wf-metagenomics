@@ -3,6 +3,7 @@
 
 import json
 
+from bokeh.models import HoverTool
 from dominate import tags as html_tags
 from dominate.tags import em, p
 import ezcharts as ezc
@@ -121,6 +122,9 @@ def main(args):
                         sample_reads = ezc.barplot(data=report_utils.per_sample_stats(
                             args.read_stats), x='sample_name', y='Number of reads')
                         sample_reads.title = {"text": "Number of reads per sample."}
+                        hover = sample_reads._fig.select(dict(type=HoverTool))
+                        # show top of the bar value
+                        hover.tooltips = [("Number of reads", "@top")]
                         EZChart(sample_reads, THEME)
     # kraken stats for the real time are not in tsv,
     # they came from json files with binned counts
@@ -144,6 +148,8 @@ def main(args):
                         plt = ezc.barplot(
                             data=df_stats, x='Sample_name', y='Number of reads')
                         plt._fig.title.text = "Number of reads per sample."
+                        hover = plt._fig.select(dict(type=HoverTool))
+                        hover.tooltips = [("Number of reads", "@top")]
                         EZChart(plt, THEME)
 
     #
@@ -216,12 +222,11 @@ def main(args):
                     # Plot
                     p(f"""
                     Barplot of the {n_taxa_barplot} most abundant taxa at the
-                    {ranks_no_sk_k[i]} rank.
+                    {ranks_no_sk_k[i]} rank in all the samples.
                     Any remaining taxa have been collapsed under the \'Other\' category
                     to facilitate the visualization.
                     The y-axis indicates the relative abundance of each taxon
-                    in percentages
-                    for each sample.
+                    in percentages for each sample.
                     """)
                     plt = ezc.barplot(
                         d2plot_melt,
@@ -235,9 +240,12 @@ def main(args):
                     # distribute names in 5 columns as per default 10 taxa are shown.
                     # > 10 is difficult to distinguish colors.
                     plt._fig.legend.ncols = 5
+                    # mute allows to soften the color of the chosen taxa in the legend.
                     plt._fig.legend.click_policy = "mute"
                     plt._fig.title.text = f"{ranks_no_sk_k[i].capitalize()} rank"
                     plt._fig.title.align = "center"
+                    hover = plt._fig.select(dict(type=HoverTool))
+                    hover.tooltips = [("Taxon", "$name"), ("Percent", "@$name %")]
                     EZChart(plt, THEME)
         # 2.4. ABUNDANCE TABLE
     with report.add_section('Abundances', 'Abundances'):
