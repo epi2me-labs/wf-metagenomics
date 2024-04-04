@@ -101,7 +101,7 @@ docker-run:
      - if: $MATRIX_NAME == "minimap2-filter"
        variables:
           NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --minimap2filter '2157,2759' --minimap2exclude --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --minimap2filter '2157,2759' --minimap2exclude --database_set ncbi_16s_18s --min_percent_identity 97 --min_ref_coverage 95"
           NF_IGNORE_PROCESSES: "getAlignmentStats"
       # AMR TESTS
       ## AMR tests using isolate test data (need to find better tests)

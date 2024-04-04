@@ -62,6 +62,8 @@
 | split_prefix | boolean | Enable if using a very large reference with minimap2 | If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2.  | False |
 | keep_bam | boolean | Copy bam files into the output directory. |  | False |
 | minimap2_by_reference | boolean | Add a table with the mean sequencing depth per reference, standard deviation and coefficient of variation. It adds a scatterplot of the sequencing depth vs. the coverage and a heatmap showing the depth per percentile to the report |  | False |
+| min_percent_identity | number | Minimum percentage of identity with the matched reference to define a sequence as classified; sequences with a value lower than this are defined as unclassified. |  | 90 |
+| min_ref_coverage | number | Minimum coverage value to define a sequence as classified; sequences with a coverage value lower than this are defined as unclassified. Use this option if you expect reads whose lengths are similar to the references' lengths. |  | 0 |
 
 
 ### Antimicrobial Resistance Options
