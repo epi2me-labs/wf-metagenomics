@@ -180,6 +180,8 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | split_prefix | boolean | Enable if using a very large reference with minimap2 | If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2.  | False |
 | keep_bam | boolean | Copy bam files into the output directory. |  | False |
 | minimap2_by_reference | boolean | Add a table with the mean sequencing depth per reference, standard deviation and coefficient of variation. It adds a scatterplot of the sequencing depth vs. the coverage and a heatmap showing the depth per percentile to the report |  | False |
+| min_percent_identity | number | Minimum percentage of identity with the matched reference to define a sequence as classified; sequences with a value lower than this are defined as unclassified. |  | 90 |
+| min_ref_coverage | number | Minimum coverage value to define a sequence as classified; sequences with a coverage value lower than this are defined as unclassified. Use this option if you expect reads whose lengths are similar to the references' lengths. |  | 0 |
 
 
 ### Antimicrobial Resistance Options
@@ -234,8 +236,10 @@ Output files may be aggregated including information for all samples or provided
 | Kraken2 taxonomic asignment per read (Kraken2 pipeline) | ./kraken2/{{ alias }}.kraken2.assignments.tsv | TSV file with the taxonomic assignment per read. See more info here: https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format. | per-sample |
 | Host BAM file | ./host_bam/{{ alias }}.bam | BAM file generated from mapping filtered input reads to the host reference. | per-sample |
 | BAM index file of host reads | ./host_bam/{{ alias }}.bai | BAM index file generated from mapping filtered input reads to the host reference. | per-sample |
-| BAM file (minimap2) | ./bam/{{ alias }}.reference.bam | BAM file generated from mapping filtered input reads to the reference. | per-sample |
-| BAM index file (minimap2) | ./bam/{{ alias }}.bai | Index file generated from mapping filtered input reads to the reference. | per-sample |
+| BAM file (minimap2) | ./bams/{{ alias }}.reference.bam | BAM file generated from mapping filtered input reads to the reference. | per-sample |
+| BAM index file (minimap2) | ./bams/{{ alias }}.reference.bam.bai | Index file generated from mapping filtered input reads to the reference. | per-sample |
+| BAM flagstat (minimap2) | ./bams/{{ alias }}.bamstats_results/bamstats.flagstat.tsv | Mapping results per reference | per-sample |
+| Minimap2 alignment statistics (minimap2) | ./bams/{{ alias }}.bamstats_results/bamstats.readstats.tsv.gz | Per read stats after aligning | per-sample |
 | JSON file with identified AMR genes (amr) | ./amr/{{ alias }}.json | JSON file with abricate results. See more info here: https://github.com/tseemann/abricate#output. | per-sample |
 
 

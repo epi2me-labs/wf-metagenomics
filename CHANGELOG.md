@@ -6,8 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Added
+- Statistics derived from minimap2 alignment are now in the output if the `keep_bam` option is enabled.
+- Reads below percentages of identity (`min_percent_identity`) and the reference covered (`min_ref_coverage`) are considered as unclassified in the minimap2 approach.
 ### Fixed
 - Show the percentage of each species when hovering over the taxonomy bar plot.
+### Changed
+- `bam` folder within output has been renamed to `bams`.
+
 
 ## [v2.9.3]
 ### Fixed

@@ -315,6 +315,22 @@
                     "default": false,
                     "title": "Compute coverage and sequencing depth of the references.",
                     "description": "Add a table with the mean sequencing depth per reference, standard deviation and coefficient of variation. It adds a scatterplot of the sequencing depth vs. the coverage and a heatmap showing the depth per percentile to the report"
+                },
+                "min_percent_identity": {
+                    "type": "number",
+                    "default": 90,
+                    "minimum": 0,
+                    "maximum": 100,
+                    "title": "Filter taxa based on the percent of identity with the references.",
+                    "description": "Minimum percentage of identity with the matched reference to define a sequence as classified; sequences with a value lower than this are defined as unclassified."
+                },
+                "min_ref_coverage": {
+                    "type": "number",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 100,
+                    "title": "Filter taxa based on the percent of coverage with the reference.",
+                    "description": "Minimum coverage value to define a sequence as classified; sequences with a coverage value lower than this are defined as unclassified. Use this option if you expect reads whose lengths are similar to the references' lengths."
                 }
             },
             "description": "Minimap2 classification options. Only relevant if classifier parameter is set to minimap2.",

@@ -57,7 +57,7 @@
         "type": "per-sample"
       },
       "minimap2-bam": {
-        "filepath": "./bam/{{ alias }}.reference.bam",
+        "filepath": "./bams/{{ alias }}.reference.bam",
         "title": "BAM file (minimap2)",
         "description": "BAM file generated from mapping filtered input reads to the reference.",
         "mime-type": "application/gzip",
@@ -65,10 +65,26 @@
         "type": "per-sample"
       },
       "minimap2-index": {
-        "filepath": "./bam/{{ alias }}.bai",
+        "filepath": "./bams/{{ alias }}.reference.bam.bai",
         "title": "BAM index file (minimap2)",
         "description": "Index file generated from mapping filtered input reads to the reference.",
         "mime-type": "application/octet-stream",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "minimap2-flagstats": {
+        "filepath": "./bams/{{ alias }}.bamstats_results/bamstats.flagstat.tsv",
+        "title": "BAM flagstat (minimap2)",
+        "description": "Mapping results per reference",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "minimap2-bamreadstats": {
+        "filepath": "./bams/{{ alias }}.bamstats_results/bamstats.readstats.tsv.gz",
+        "title": "Minimap2 alignment statistics (minimap2)",
+        "description": "Per read stats after aligning",
+        "mime-type": "application/gzip",
         "optional": true,
         "type": "per-sample"
       },

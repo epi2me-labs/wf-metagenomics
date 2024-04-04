@@ -27,6 +27,7 @@ process minimap {
             val(meta),
             path("*.reference.bam"),
             path("*.reference.bam.bai"),
+            path("*.bamstats_results"),
             emit: bam)
         tuple(
             val(meta),
@@ -44,12 +45,41 @@ process minimap {
         def sample_id = "${meta.alias}"
         def split = params.split_prefix ? '--split-prefix tmp' : ''
         def keep_runids = params.keep_bam ? '-y' : ''
+        def bamstats_threads = Math.max(1, task.cpus - 1)
+    // min_percent_identity and min_ref_coverage can be used within format_minimap2 or after the BAM is generated to not modify the raw BAM from the alignment.
+    // Filter from ${sample_id}.minimap2.assignments.tsv
     """
     minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont $reference $concat_seqs \
     | samtools view -h -F 2304 - \
     | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
     | samtools sort --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
-    awk -F '\\t' '{print \$3}' "${sample_id}.minimap2.assignments.tsv" > taxids.tmp
+
+    # run bamstats
+    mkdir "${meta.alias}.bamstats_results"
+    bamstats "${meta.alias}.reference.bam" -s $meta.alias -u \
+        -f ${meta.alias}.bamstats_results/bamstats.flagstat.tsv -t $bamstats_threads \
+        --histograms histograms \
+    | bgzip > ${meta.alias}.bamstats_results/bamstats.readstats.tsv.gz
+    rm -r histograms/
+
+    # Get readIDs that do not satisfy the minimum percentage of identity or ref_cov filters.
+    csvtk filter2 -t "${meta.alias}.bamstats_results/bamstats.readstats.tsv.gz" -f '\$ref_coverage < ${params.min_ref_coverage} || \$iden < ${params.min_percent_identity}' \
+        | csvtk cut -t -f name - \
+        | sed '1d' - > extra_unclassified_readsIDS.txt
+    # if there are reads to be reclassified
+    if [ -s extra_unclassified_readsIDS.txt ]; then
+        # Reclassified minimap2.assignments.tsv and move to unclassified those reads which haven't passed the filter
+        grep -w -f extra_unclassified_readsIDS.txt -F "${sample_id}.minimap2.assignments.tsv" \
+            | csvtk replace -t -H -f 3 -p '(.+)' -r 0 - > modified.minimap2.assignments.txt
+        # Avoid grep error when there are no hits and fails with set -eo pipefail
+        { grep -w -v -f extra_unclassified_readsIDS.txt -F "${sample_id}.minimap2.assignments.tsv" || true; }  \
+            | cat - modified.minimap2.assignments.txt > "${sample_id}.modified.minimap2.assignments.tsv"
+    else
+        mv "${sample_id}.minimap2.assignments.tsv" "${sample_id}.modified.minimap2.assignments.tsv"
+    fi
+
+    awk '{print \$3}' "${sample_id}.modified.minimap2.assignments.tsv" > taxids.tmp
+    # Add taxonomy
     taxonkit \
         --data-dir "${taxonomy}" \
         lineage -R taxids.tmp \
@@ -67,7 +97,7 @@ process extractMinimap2Reads {
     cpus 1
     memory "7GB" //depends on the size of the BAM file.
     input:
-        tuple val(meta), path("alignment.bam"), path("alignment.bai")
+        tuple val(meta), path("alignment.bam"), path("alignment.bai"), path("bamstats")
         path ref2taxid
         path taxonomy
     output:
@@ -101,13 +131,14 @@ process getAlignmentStats {
     //depends on number of references and their lengths. There are also custom databases of varying sizes.
     memory "7GB"
     input:
-        tuple val(meta), path("input.bam"), path("input.bam.bai")
+        tuple val(meta), path("input.bam"), path("input.bam.bai"), path("bamstats")
         path ref2taxid
         path taxonomy
     output:
         path "*.tsv.gz", emit: align_stats
     script:
         def sample_name = meta["alias"]
+    // TODO: remove samtools coverage and use bamstats results
     """
     samtools depth input.bam | bgzip -c > "${sample_name}.depth.tsv.gz" 
     # Reference stats
@@ -246,8 +277,8 @@ workflow minimap_pipeline {
 
         if (params.keep_bam) {
             ch_to_publish = ch_to_publish | mix (
-            mm2.bam | map { meta, bam, bai -> [bam, "bam"]},
-            mm2.bam | map { meta, bam, bai -> [bai, "bam"]},
+            mm2.bam | map { meta, bam, bai, stats -> [bam, bai, stats] }
+            | flatten | map { it -> [it, "bams"] }
             )
         }
 
