@@ -105,7 +105,11 @@ kraken_compute = params.kraken_clients == 1 ? 1 : params.kraken_clients - 1
 process kraken_server {
     label "wfmetagenomics"
     memory {
-        "${hash_size + 1e9} B " // leave buffer of 2GB, it's just the db
+        if (params.kraken2_memory_mapping) {
+             "${hash_size.intdiv(4) + 1e9} B " // use less memory if memory_mapping is used
+        } else { 
+            "${hash_size + 1e9} B "
+        }
     }
     cpus {
         // if the task executor is local, ensure that we cannot start the

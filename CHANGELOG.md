@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Fixed
+- Request less memory if `kraken2_memory_mapping` is used.
 - Show the percentage of each species when hovering over the taxonomy bar plot.
 
 ## [v2.9.3]
