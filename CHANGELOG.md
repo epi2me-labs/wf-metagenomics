@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [v2.9.4]
 ### Added
 - Statistics derived from minimap2 alignment are now in the output if the `keep_bam` option is enabled.
 - Reads below percentages of identity (`min_percent_identity`) and the reference covered (`min_ref_coverage`) are considered as unclassified in the minimap2 approach.
