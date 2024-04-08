@@ -18,9 +18,12 @@ process run_kraken2 {
     cpus params.threads
     // Set the memory required to the size of the database + 4GB overhead.
     memory {
-        "${hash_size + 4e9} B "
+        if (params.kraken2_memory_mapping) {
+            "${hash_size.intdiv(4) + 1e9} B " // use less memory if memory_mapping is used
+        } else {
+            "${hash_size + 4e9} B "
+        }
     }
-
     errorStrategy {
         task.exitStatus == 137 ? log.error("Error 137 may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
         log.error("Consider to use --kraken2_memory_mapping to reduce the use of RAM memory.")
