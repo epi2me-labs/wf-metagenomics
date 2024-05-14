@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """Create tables for the report."""
-import collections
 import json
 import os
 from pathlib import Path
 
+from bokeh.models import HoverTool
 import ezcharts as ezc
 from ezcharts.plots.distribution import histplot
 import numpy as np
@@ -122,25 +122,28 @@ def most_abundant_table(counts_per_taxa_df, n=10, percent=False):
     return d2plot
 
 
-def per_sample_stats(stats):
-    """Read from fastcat stats and return total reads per sample.
+def per_sample_reads(metadata):
+    """Plot total reads per sample from metadata.
 
-    :param stats (list): List with fastcat statistics.
-    :return (DataFrame): Reads per sample.
+    :param metadata (path).
+    :return (plot): Barplot with reads per sample.
     """
-    dfs = collections.Counter()
-    for fastcat_file in stats:
-        df = pd.read_csv(
-            fastcat_file,
-            sep="\t",
-            header=0
-            )
-        # save total number of reads per sample
-        dfs += collections.Counter(df['sample_name'])
-    df_allstats = pd.DataFrame.from_dict(
-        dfs, orient='index').reset_index()
-    df_allstats.columns = ['sample_name', 'Number of reads']
-    return df_allstats.sort_values(by=['sample_name'])
+    n_reads = {}
+    with open(metadata) as meta:
+        meta_list = json.load(meta)
+        for sample_meta in meta_list:
+            n_reads[sample_meta["alias"]] = sample_meta["n_seqs"]
+    df = pd.DataFrame.from_dict(
+        n_reads, orient='index', columns=['Number of reads']
+        ).reset_index().sort_values(by=['index']).rename(
+        columns={'index': 'sample'})
+    # Add barplot with reads per sample
+    plt = ezc.barplot(data=df, x='sample', y='Number of reads')
+    plt.title = {"text": "Number of reads per sample."}
+    hover = plt._fig.select(dict(type=HoverTool))
+    # show top of the bar value
+    hover.tooltips = [("Number of reads", "@top")]
+    return plt
 
 
 def calculate_diversity_metrics(counts_per_taxa_df):

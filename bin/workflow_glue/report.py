@@ -94,7 +94,7 @@ def main(args):
     logger = get_named_logger("Report")
     report = LabsReport(
         f"{args.workflow_name} Sequencing Report", args.workflow_name,
-        args.params, args.versions)
+        args.params, args.versions, args.wf_version)
     global SELECTED_RANKS
     SELECTED_RANKS = []
     for i in report_utils.RANKS:
@@ -106,26 +106,31 @@ def main(args):
     ranks_no_sk_k = SELECTED_RANKS[2:]
     abundance_threshold = args.abundance_threshold
     n_taxa_barplot = args.n_taxa_barplot
+
     #
     # 1. READ SUMMARY
     #
     if args.pipeline != 'real_time':
+        # Samples
+        with open(args.metadata) as metadata:
+            sample_details = [{
+                'sample': d['alias'],
+                'type': d['type'],
+                'barcode': d['barcode']
+            } for d in json.load(metadata)]
         if args.read_stats:
             with report.add_section("Read summary", "Read summary"):
-                SeqSummary(args.read_stats)
-                # Add metadata section
+                names = tuple(d['sample'] for d in sample_details)
+                stats = tuple(args.read_stats)
+                if len(stats) == 1:
+                    stats = stats[0]
+                    names = names[0]
+                SeqSummary(stats, sample_names=names)
             with report.add_section("Samples summary", "Samples summary"):
                 tabs = Tabs()
                 with tabs.add_tab('Reads'):
                     with Grid(columns=1):
-                        # Add barplot with reads per sample
-                        sample_reads = ezc.barplot(data=report_utils.per_sample_stats(
-                            args.read_stats), x='sample_name', y='Number of reads')
-                        sample_reads.title = {"text": "Number of reads per sample."}
-                        hover = sample_reads._fig.select(dict(type=HoverTool))
-                        # show top of the bar value
-                        hover.tooltips = [("Number of reads", "@top")]
-                        EZChart(sample_reads, THEME)
+                        EZChart(report_utils.per_sample_reads(args.metadata), THEME)
     # kraken stats for the real time are not in tsv,
     # they came from json files with binned counts
     # to be plotted directly as an histogram
@@ -473,8 +478,11 @@ def argparser():
         "--workflow_name", required=True,
         help="The name of the workflow.")
     parser.add_argument(
+        "--metadata", default='metadata.json', required=False,
+        help="sample metadata")
+    parser.add_argument(
         "--read_stats",  nargs='+', required=False,
-        help="Fastcat per-read stats (file or dir with files)."
+        help="Fastcat per-read stats, ordered as per entries in --metadata "
     )
     parser.add_argument(
         "--lineages", nargs='+', required=True,
@@ -512,6 +520,9 @@ def argparser():
     parser.add_argument(
         "--n_taxa_barplot", default=9, type=int,
         help="Number of taxa to be displayed in the barplot.")
+    parser.add_argument(
+        "--wf_version", default='unknown',
+        help="version of the executed workflow")
     return parser
 
 

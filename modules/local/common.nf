@@ -65,7 +65,7 @@ process exclude_host_reads {
         tuple(
             val(meta),
             path("*.unmapped.fastq.gz"),
-            path("fastcat_stats_unmapped"),
+            path("stats_unmapped"),
             emit: fastq)
         tuple(
             val(meta),
@@ -80,7 +80,7 @@ process exclude_host_reads {
     script:
         def sample_id = "${meta.alias}"
         def split = params.split_prefix ? '--split-prefix tmp' : ''
-        String fastcat_stats_outdir = "fastcat_stats_unmapped"
+        String fastcat_stats_outdir = "stats_unmapped"
         // Include runids in the BAM files.
         def keep_runids = params.keep_bam ? '-y' : ''
     // Map reads against the host reference and take the unmapped reads for further analysis
@@ -94,11 +94,11 @@ process exclude_host_reads {
     # run fastcat on selected reads
     mkdir $fastcat_stats_outdir
     fastcat \
-        -s ${sample_id} \
-        -r $fastcat_stats_outdir/per-read-stats.tsv \
+        -s "${sample_id}" \
         -f $fastcat_stats_outdir/per-file-stats.tsv \
+        --histograms histograms \
         "${sample_id}.unmapped.fastq.gz" > /dev/null
-    bgzip $fastcat_stats_outdir/per-read-stats.tsv
+    mv histograms/* $fastcat_stats_outdir
     """
 }
 
