@@ -90,15 +90,18 @@ workflow {
     }
 
     // Input data
+    // real time wf still requires per-read-stats as it computes its own aggregated statistics
+    // TODO: investigate chunk option for real time and use of histograms
     if (params.fastq) {
             samples = fastq_ingress([
                 "input":params.fastq,
                 "sample": params.real_time ? null : params.sample,
                 "sample_sheet": params.real_time ? null : params.sample_sheet,
                 "analyse_unclassified":params.analyse_unclassified,
-                "stats": params.wf.stats,
+                "stats": true,
                 "fastcat_extra_args": fastcat_extra_args.join(" "),
-                "watch_path": params.real_time
+                "watch_path": params.real_time,
+                "per_read_stats": params.real_time ? true : false
             ])
     } else {
             // if we didn't get a `--fastq`, there must have been a `--bam` (as is codified
@@ -109,11 +112,13 @@ workflow {
                 "sample_sheet":params.sample_sheet,
                 "analyse_unclassified":params.analyse_unclassified,
                 "return_fastq": true,
-                "keep_unaligned": params.wf.keep_unaligned,
-                "stats": params.wf.stats,
+                "keep_unaligned": true,
+                "stats": true,
                 "watch_path": params.real_time,
+                "per_read_stats": params.real_time ? true : false
             ])
     }
+    
 
     // Discard empty samples
     log.info(

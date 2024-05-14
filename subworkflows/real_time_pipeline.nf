@@ -1,3 +1,4 @@
+import groovy.json.JsonBuilder
 import nextflow.util.BlankSeparatedList
 
 include { run_amr } from '../modules/local/amr'
@@ -413,7 +414,7 @@ process makeReport {
     input:
         path lineages
         path abundance_table
-        tuple(path(stats), path("versions/*"), path("params.json"), val(taxonomic_rank))
+        tuple(path(stats), path("versions/*"), path("params.json"), val(taxonomic_rank), val(wf_version))
         path amr
     output:
         path "*.html", emit: report_html
@@ -427,6 +428,7 @@ process makeReport {
         --workflow_name ${workflow_name} \
         --versions versions \
         --params params.json \
+        --wf_version $wf_version \
         --read_stats ${stats} \
         --lineages "${lineages}" \
         --abundance_table "${abundance_table}" \
@@ -472,7 +474,7 @@ workflow real_time_pipeline {
     
         // progressive stats -- scan doesn't like tuple :/
         stats = progressive_stats.scan(
-            kraken2_client.out.map { id, report, json, assignments -> json },
+            kraken2_client.out.map { id, report, stats, assignments -> stats },
         )
 
         kraken2_client.out.multiMap {
@@ -523,6 +525,7 @@ workflow real_time_pipeline {
             .combine(software_versions)
             .combine(parameters)
             .combine(taxonomic_rank)
+            .combine([workflow.manifest.version])
         
         abundance_tables = createAbundanceTables(
             progressive_bracken.out.reports,

@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Changed
+- The workflow now uses the `fastcat` read length and quality histograms instead of the per-read stats in the report process.
+
 ## [v2.9.4]
 ### Added
 - Statistics derived from minimap2 alignment are now in the output if the `keep_bam` option is enabled.

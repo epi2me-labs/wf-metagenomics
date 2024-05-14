@@ -1,3 +1,4 @@
+import groovy.json.JsonBuilder
 include { run_amr } from '../modules/local/amr'
 include {
     run_common;
@@ -166,7 +167,9 @@ process makeReport {
     cpus 1
     memory "4GB" //depends on the number of different species/amr genes identified that tables may be bigger.
     input:
-        path "read_stats/per-read-stats*.tsv.gz"
+        val wf_version
+        val metadata
+        path(stats, stageAs: "stats_*")
         path abundance_table
         path "alignment_stats/*"
         path "lineages/*"
@@ -178,17 +181,20 @@ process makeReport {
         path "*.html", emit: report_html
     script:
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
+        String metadata = new JsonBuilder(metadata).toPrettyString()
         String report_name = "${workflow_name}-report.html"
-        def stats_args = params.wf.stats ? "--read_stats read_stats/*" : ""
         def align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
         def amr = params.amr as Boolean ? "--amr ${amr}" : ""
     """
+    echo '${metadata}' > metadata.json
     workflow-glue report \
         "${report_name}" \
         --workflow_name ${workflow_name} \
         --versions versions \
         --params params.json \
-        ${stats_args} \
+        --wf_version $wf_version \
+        --metadata metadata.json \
+        --read_stats $stats \
         --lineages lineages \
         --abundance_table "${abundance_table}" \
         --taxonomic_rank "${taxonomic_rank}" \
@@ -219,13 +225,19 @@ workflow minimap_pipeline {
         parameters = common.parameters
         samples = common.samples
         // Initial reads QC
-        // bamstats and fastcat per-read stats files have different names
-        per_read_stats = samples.map {file(it[2].resolve('*.tsv.gz'))}.collect()
+        // get metadata and stats files, keeping them ordered (could do with transpose I suppose)
+        samples.multiMap{ meta, path, stats ->
+            meta: meta
+            stats: stats
+        }.set { for_report }
+        metadata = for_report.meta.collect()
+        // create a file list of the stats, and signal if its empty or not
+        stats = for_report.stats.collect()
 
         // Run Minimap2
         mm2 = minimap(
                 samples
-                | map { [it[0], it[1], it[2] ?: OPTIONAL_FILE ] },
+                | map { [it[0], it[1], it[2] ] },
                 reference,
                 ref2taxid,
                 taxonomy,
@@ -256,7 +268,9 @@ workflow minimap_pipeline {
 
         // Reporting
         report = makeReport(
-            per_read_stats,
+            workflow.manifest.version,
+            metadata,
+            stats,
             abundance_tables.abundance_tsv,
             alignment_reports.ifEmpty(OPTIONAL_FILE),
             lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
