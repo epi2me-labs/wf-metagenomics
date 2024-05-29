@@ -139,6 +139,7 @@ def per_sample_reads(metadata):
         columns={'index': 'sample'})
     # Add barplot with reads per sample
     plt = ezc.barplot(data=df, x='sample', y='Number of reads')
+    plt._fig.xaxis.major_label_orientation = 45
     plt.title = {"text": "Number of reads per sample."}
     hover = plt._fig.select(dict(type=HoverTool))
     # show top of the bar value

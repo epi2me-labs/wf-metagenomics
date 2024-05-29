@@ -59,7 +59,7 @@
 |--------------------------|------|-------------|------|---------|
 | minimap2filter | string | Filter output of minimap2 by taxids inc. child nodes, E.g. "9606,1404" | Provide a list of taxids if you are only interested in certain ones in your minimap2 analysis outputs. |  |
 | minimap2exclude | boolean | Invert minimap2filter and exclude the given taxids instead | Exclude a list of taxids from analysis outputs. | False |
-| split_prefix | boolean | Enable if using a very large reference with minimap2 | If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2.  | False |
+| split_prefix | boolean | Enable if using a very large reference with minimap2 | If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2. | False |
 | keep_bam | boolean | Copy bam files into the output directory. |  | False |
 | minimap2_by_reference | boolean | Add a table with the mean sequencing depth per reference, standard deviation and coefficient of variation. It adds a scatterplot of the sequencing depth vs. the coverage and a heatmap showing the depth per percentile to the report |  | False |
 | min_percent_identity | number | Minimum percentage of identity with the matched reference to define a sequence as classified; sequences with a value lower than this are defined as unclassified. |  | 90 |
@@ -70,17 +70,17 @@
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
-| amr | boolean | Scan reads for antimicrobial resistance or virulence genes | Reads will be scanned using abricate and the chosen database (`--amr_db`) to identify any acquired antimicrobial resistance or virulence genes found present in the dataset. NOTE: It cannot identify mutational resistance genes | False |
+| amr | boolean | Scan reads for antimicrobial resistance or virulence genes | Reads will be scanned using abricate and the chosen database (`--amr_db`) to identify any acquired antimicrobial resistance or virulence genes found present in the dataset. NOTE: It cannot identify mutational resistance genes. | False |
 | amr_db | string | Database of antimicrobial resistance or virulence genes to use. |  | resfinder |
 | amr_minid | integer | Threshold of required identity to report a match between a gene in the database and fastq reads. Valid interval: 0-100 |  | 80 |
-| amr_mincov | integer | Minimum coverage (breadth-of) threshold required to report a match between a gene in the  database and fastq reads. Valid interval: 0-100 |  | 80 |
+| amr_mincov | integer | Minimum coverage (breadth-of) threshold required to report a match between a gene in the database and fastq reads. Valid interval: 0-100. |  | 80 |
 
 
 ### Report Options
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
-| abundance_threshold | number | Remove those taxa whose abundance is equal or lower than the chosen value. | To remove taxa with abundances lower than or equal to a relative value (compared to the total number of reads), use a decimal between 0-1 (1 not inclusive). To remove taxa with abundances lower than or equal to an absolute value, provide a number larger than 1. | 0 |
+| abundance_threshold | number | Remove those taxa whose abundance is equal or lower than the chosen value. | To remove taxa with abundances lower than or equal to a relative value (compared to the total number of reads) use a decimal between 0-1 (1 not inclusive). To remove taxa with abundances lower than or equal to an absolute value, provide a number larger or equal to 1. | 0 |
 | n_taxa_barplot | integer | Number of most abundant taxa to be displayed in the barplot. The rest of taxa will be grouped under the "Other" category. |  | 9 |
 
 
@@ -98,6 +98,6 @@
 | min_len | integer | Specify read length lower limit. | Any reads shorter than this limit will not be included in the analysis. | 0 |
 | min_read_qual | number | Specify read quality lower limit. | Any reads with a quality lower than this limit will not be included in the analysis. |  |
 | max_len | integer | Specify read length upper limit | Any reads longer than this limit will not be included in the analysis. |  |
-| threads | integer | Maximum number of CPU threads to use per workflow task. | Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See server threads parameter for Kraken specific threads in the real_time pipeline. | 4 |
+| threads | integer | Maximum number of CPU threads to use in each parallel workflow task. | Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. See server threads parameter for Kraken specific threads in the real_time pipeline. | 4 |
 
 

@@ -61,7 +61,7 @@
                 },
                 "exclude_host": {
                     "type": "string",
-                    "format": "path",
+                    "format": "file-path",
                     "title": "Exclude host reads",
                     "description": "A FASTA or MMI file of the host reference. Reads that align with this reference will be excluded from the analysis."
                 }
@@ -246,7 +246,7 @@
             "title": "Kraken2 Options",
             "type": "object",
             "fa_icon": "fas fa-university",
-            "help_text": "\nKraken2\nIt is possible to enable classification by Kraken2, \nand disable alignment which is a faster but coarser method of \nclassification reliant on the presence of a Kraken2 database.\n",
+            "help_text": "Kraken2: It is possible to enable classification by Kraken2, and disable alignment which is a faster but coarser method of classification reliant on the presence of a Kraken2 database.",
             "properties": {
                 "bracken_length": {
                     "type": "integer",
@@ -302,7 +302,7 @@
                     "title": "Enable multipart index",
                     "default": false,
                     "description": "Enable if using a very large reference with minimap2",
-                    "help_text": "If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2. "
+                    "help_text": "If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2."
                 },
                 "keep_bam": {
                     "type": "boolean",
@@ -334,7 +334,7 @@
                 }
             },
             "description": "Minimap2 classification options. Only relevant if classifier parameter is set to minimap2.",
-            "help_text": "Minimap2\nThe default strategy is using minimap2 to perform full\nalignments against .fasta formatted references sequences. "
+            "help_text": "Minimap2: The default strategy is using minimap2 to perform full alignments against .fasta formatted references sequences."
         },
         "amr_options": {
             "title": "Antimicrobial Resistance Options",
@@ -346,7 +346,7 @@
                     "title": "Enable search for antimicrobial resistance genes (AMR)",
                     "default": false,
                     "description": "Scan reads for antimicrobial resistance or virulence genes",
-                    "help_text": "Reads will be scanned using abricate and the chosen database (`--amr_db`) to identify any acquired antimicrobial resistance or virulence genes found present in the dataset. NOTE: It cannot identify mutational resistance genes"
+                    "help_text": "Reads will be scanned using abricate and the chosen database (`--amr_db`) to identify any acquired antimicrobial resistance or virulence genes found present in the dataset. NOTE: It cannot identify mutational resistance genes."
                 },
                 "amr_db": {
                     "type": "string",
@@ -379,7 +379,7 @@
                     "minimum": 0,
                     "maximum": 100,
                     "title": "AMR coverage (breadth-of) threshold",
-                    "description": "Minimum coverage (breadth-of) threshold required to report a match between a gene in the  database and fastq reads. Valid interval: 0-100"
+                    "description": "Minimum coverage (breadth-of) threshold required to report a match between a gene in the database and fastq reads. Valid interval: 0-100."
                 }
             }
         },
@@ -393,7 +393,7 @@
                     "default": 0,
                     "title": "Abundance threshold",
                     "description": "Remove those taxa whose abundance is equal or lower than the chosen value.",
-                    "help_text": "To remove taxa with abundances lower than or equal to a relative value (compared to the total number of reads), use a decimal between 0-1 (1 not inclusive). To remove taxa with abundances lower than or equal to an absolute value, provide a number larger than 1."
+                    "help_text": "To remove taxa with abundances lower than or equal to a relative value (compared to the total number of reads) use a decimal between 0-1 (1 not inclusive). To remove taxa with abundances lower than or equal to an absolute value, provide a number larger or equal to 1."
                 },
                 "n_taxa_barplot": {
                     "type": "integer",
@@ -446,9 +446,9 @@
                 "threads": {
                     "type": "integer",
                     "default": 4,
-                    "title": "Maximum number of CPU threads",
-                    "description": "Maximum number of CPU threads to use per workflow task.",
-                    "help_text": "Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. The total CPU resource used by the workflow is constrained by the executor configuration. See server threads parameter for Kraken specific threads in the real_time pipeline."
+                    "title": "Number of CPU threads per workflow task",
+                    "description": "Maximum number of CPU threads to use in each parallel workflow task.",
+                    "help_text": "Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. See server threads parameter for Kraken specific threads in the real_time pipeline."
                 }
             }
         },
@@ -457,7 +457,7 @@
             "type": "object",
             "fa_icon": "fas fa-file-import",
             "description": "Everything else.",
-            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs. Typically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
             "properties": {
                 "disable_ping": {
                     "type": "boolean",
