@@ -153,6 +153,7 @@ def main(args):
                         plt = ezc.barplot(
                             data=df_stats, x='Sample_name', y='Number of reads')
                         plt._fig.title.text = "Number of reads per sample."
+                        plt._fig.xaxis.major_label_orientation = 45
                         hover = plt._fig.select(dict(type=HoverTool))
                         hover.tooltips = [("Number of reads", "@top")]
                         EZChart(plt, THEME)
