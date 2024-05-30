@@ -85,11 +85,11 @@ process exclude_host_reads {
         def keep_runids = params.keep_bam ? '-y' : ''
     // Map reads against the host reference and take the unmapped reads for further analysis
     """
-    minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont -m 50 --secondary=no "${host_reference}" $concat_seqs \
-    | samtools view -h -b - | samtools sort --write-index -o "${sample_id}.all.bam##idx##${sample_id}.all.bam.bai" -
+    minimap2 -t $task.cpus --cap-kalloc 100m --cap-sw-mem 50m ${split} ${keep_runids} -ax map-ont -m 50 --secondary=no "${host_reference}" $concat_seqs \
+    | samtools sort -@ ${task.cpus - 1}  --write-index -o "${sample_id}.all.bam##idx##${sample_id}.all.bam.bai" -
     # get unmapped reads & convert bam to fastq again
-    samtools view -b -f 4 --write-index -o "${sample_id}.unmapped.bam##idx##${sample_id}.unmapped.bam.bai" --unoutput "${sample_id}.host.bam##idx##${sample_id}.host.bam.bai" "${sample_id}.all.bam"
-        samtools fastq -T '*' "${sample_id}.unmapped.bam" | bgzip > "${sample_id}.unmapped.fastq.gz"
+    samtools view -@ ${task.cpus - 1}  -b -f 4 --write-index -o "${sample_id}.unmapped.bam##idx##${sample_id}.unmapped.bam.bai" --unoutput "${sample_id}.host.bam##idx##${sample_id}.host.bam.bai" "${sample_id}.all.bam"
+        samtools fastq -@ ${task.cpus - 1} -T '*' "${sample_id}.unmapped.bam" | bgzip -@ $task.cpus > "${sample_id}.unmapped.fastq.gz"
 
     # run fastcat on selected reads
     mkdir $fastcat_stats_outdir
