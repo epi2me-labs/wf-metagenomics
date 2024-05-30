@@ -308,7 +308,7 @@
                     "type": "boolean",
                     "title": "Enable keep BAM files",
                     "default": false,
-                    "description": "Copy bam files into the output directory."
+                    "description": "Copy bam files into the output directory. It also creates the configuration and reduced reference files needed to load the alignments in IGV."
                 },
                 "minimap2_by_reference": {
                     "type": "boolean",

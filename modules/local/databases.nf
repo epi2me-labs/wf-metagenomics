@@ -41,13 +41,14 @@ process check_reference_ref2taxid {
     output:
         val true
     """
-    # just check if the reference is a fasta file. It can be a MMI index file.
-    if [ "\$(wc -l < "${ref2taxid}")" -eq "\$(grep '>' < "${reference}" | wc -l)" ]
-    then
+    # check if reference is compressed and use `zgrep` or `grep` accordingly
+    grep_cmd=\$([[ $reference == *.gz ]] && echo zgrep || echo grep)
+
+    if [[ \$(wc -l < "${ref2taxid}") -eq \$(\$grep_cmd -c '>' < "${reference}") ]]; then
         echo 'Match!'
     else
         echo "Error: The number of elements of the "${ref2taxid}" doesn't match the number of elements in the "${reference}"."
-        echo "Please provide the fitting "${ref2taxid}" for the "${reference}"."
+        echo "Please provide the corresponding "${ref2taxid}" for the "${reference}"."
         echo "Exiting".
         exit 1
     fi
@@ -303,7 +304,6 @@ workflow prepare_databases {
                 }
                 reference = download_reference_ref2taxid(params.database_set, reference_url, ref2taxid_url, file(reference_url).simpleName)
                 reference_file = reference.reference_file
-                refpath = reference_file.toString()
                 ref2taxid_file = reference.ref2taxid_file
                 database_set = params.database_set
             }

@@ -95,6 +95,38 @@
         "mime-type": "text/json",
         "optional": true,
         "type": "per-sample"
+      },
+      "reduced-reference": {
+        "filepath": "./igv_reference/reduced_reference.fasta.gz",
+        "title": "Reduced reference FASTA file",
+        "description": "Reference FASTA file containing only those sequences that have reads mapped against them.",
+        "mime-type": "application/gzip",
+        "optional": true,
+        "type": "aggregated"
+      },
+      "reduced-reference-index": {
+        "filepath": "./igv_reference/reduced_reference.fasta.gz.fai",
+        "title": "Index of the reduced reference FASTA file",
+        "description": "Index of the reference FASTA file containing only those sequences that have reads mapped against them.",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "aggregated"
+      },
+      "reduced-reference-gzi-index": {
+        "filepath": "./igv_reference/reduced_reference.fasta.gz.gzi",
+        "title": "GZI index of the reduced reference FASTA file",
+        "description": "Index of the reference FASTA file containing only those sequences that have reads mapped against them.",
+        "mime-type": "application/octet-stream",
+        "optional": true,
+        "type": "aggregated"
+      },
+      "igv-config": {
+        "filepath": "./igv.json",
+        "title": "JSON configuration file for IGV browser",
+        "description": "JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference.",
+        "mime-type": "text/json",
+        "optional": true,
+        "type": "aggregated"
       }
     }
   }

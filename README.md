@@ -178,7 +178,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | minimap2filter | string | Filter output of minimap2 by taxids inc. child nodes, E.g. "9606,1404" | Provide a list of taxids if you are only interested in certain ones in your minimap2 analysis outputs. |  |
 | minimap2exclude | boolean | Invert minimap2filter and exclude the given taxids instead | Exclude a list of taxids from analysis outputs. | False |
 | split_prefix | boolean | Enable if using a very large reference with minimap2 | If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2. | False |
-| keep_bam | boolean | Copy bam files into the output directory. |  | False |
+| keep_bam | boolean | Copy bam files into the output directory. It also creates the configuration and reduced reference files needed to load the alignments in IGV. |  | False |
 | minimap2_by_reference | boolean | Add a table with the mean sequencing depth per reference, standard deviation and coefficient of variation. It adds a scatterplot of the sequencing depth vs. the coverage and a heatmap showing the depth per percentile to the report |  | False |
 | min_percent_identity | number | Minimum percentage of identity with the matched reference to define a sequence as classified; sequences with a value lower than this are defined as unclassified. |  | 90 |
 | min_ref_coverage | number | Minimum coverage value to define a sequence as classified; sequences with a coverage value lower than this are defined as unclassified. Use this option if you expect reads whose lengths are similar to the references' lengths. |  | 0 |
@@ -241,6 +241,10 @@ Output files may be aggregated including information for all samples or provided
 | BAM flagstat (minimap2) | ./bams/{{ alias }}.bamstats_results/bamstats.flagstat.tsv | Mapping results per reference | per-sample |
 | Minimap2 alignment statistics (minimap2) | ./bams/{{ alias }}.bamstats_results/bamstats.readstats.tsv.gz | Per read stats after aligning | per-sample |
 | JSON file with identified AMR genes (amr) | ./amr/{{ alias }}.json | JSON file with abricate results. See more info here: https://github.com/tseemann/abricate#output. | per-sample |
+| Reduced reference FASTA file | ./igv_reference/reduced_reference.fasta.gz | Reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
+| Index of the reduced reference FASTA file | ./igv_reference/reduced_reference.fasta.gz.fai | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
+| GZI index of the reduced reference FASTA file | ./igv_reference/reduced_reference.fasta.gz.gzi | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
+| JSON configuration file for IGV browser | ./igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
 
 
 
@@ -301,6 +305,8 @@ nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --classifier m
 ```
 
 The creation of alignment statistics plots can be enabled with the `minimap2_by_reference` flag. Using this option produces a table and scatter plot in the report showing sequencing depth and coverage of each reference. The report also contains a heatmap indicating the sequencing depth over relative genomic coordinates for the references with the highest coverage (references with a mean coverage of less than 1% of the one with the largest value are omitted).
+
+In addition, the user can output BAM files in a folder called `bams` by using the option `keep_bam`. If the user provides a custom database, the workflow will also output the references with reads mappings, as well as an IGV configuration file. This configuration file allows the user to view the alignments in the EPI2ME Desktop Application in the Viewer tab. Note that the number of references can be reduced using the `abundance_threshold` option, which will select those references with a number of reads aligned higher than this value. Please, consider that the view of the alignment is highly dependent on the reference selected.
 
 ### 4. Identify Antimicrobial Resistance Genes (AMR) (optional)
 

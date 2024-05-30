@@ -1,5 +1,8 @@
 import groovy.json.JsonBuilder
+
+include { configure_igv } from '../lib/common'
 include { run_amr } from '../modules/local/amr'
+include { filter_references } from '../modules/local/igv_related'
 include {
     run_common;
     createAbundanceTables;
@@ -13,6 +16,7 @@ process minimap {
     label "wfmetagenomics"
     tag "${meta.alias}"
     cpus params.threads
+    // due to the wf fail at the samtools step
     memory {
         // depends on the database and the size of samples to be processed
         "12GB"
@@ -26,9 +30,10 @@ process minimap {
     output:
         tuple(
             val(meta),
-            path("*.reference.bam"),
-            path("*.reference.bam.bai"),
-            path("*.bamstats_results"),
+            path("${meta.alias}.reference.bam"),
+            path("${meta.alias}.reference.bam.bai"),
+            path("${meta.alias}.bamstats_results"),
+            env(n_unmapped),
             emit: bam)
         tuple(
             val(meta),
@@ -50,15 +55,15 @@ process minimap {
     // min_percent_identity and min_ref_coverage can be used within format_minimap2 or after the BAM is generated to not modify the raw BAM from the alignment.
     // Filter from ${sample_id}.minimap2.assignments.tsv
     """
-    minimap2 -t $task.cpus ${split} ${keep_runids} -ax map-ont $reference $concat_seqs \
+    minimap2 -t $task.cpus --cap-kalloc 100m --cap-sw-mem 50m ${split} ${keep_runids} -ax map-ont $reference $concat_seqs \
     | samtools view -h -F 2304 - \
     | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
-    | samtools sort --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
+    | samtools sort -@ ${task.cpus - 1} --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
 
     # run bamstats
     mkdir "${meta.alias}.bamstats_results"
     bamstats "${meta.alias}.reference.bam" -s $meta.alias -u \
-        -f ${meta.alias}.bamstats_results/bamstats.flagstat.tsv -t $bamstats_threads \
+        -f ${meta.alias}.bamstats_results/${meta.alias}.bamstats.flagstat.tsv -t $bamstats_threads \
         --histograms histograms \
     | bgzip > ${meta.alias}.bamstats_results/bamstats.readstats.tsv.gz
     rm -r histograms/
@@ -88,6 +93,11 @@ process minimap {
     file1=\$(find -name '*.json' -exec cat {} +)
     echo "{"'"$sample_id"'": \$file1}" >> temp
     cp "temp" "${sample_id}.json"
+    # get unmapped reads to add it to meta (unmapped == unclassified)
+    n_unmapped=\$(csvtk grep -t -f ref -p '*' "${meta.alias}.bamstats_results/${meta.alias}.bamstats.flagstat.tsv" \
+        | csvtk cut -t -f total - \
+        | sed "1d" -
+    )
     """
 }
 
@@ -98,7 +108,7 @@ process extractMinimap2Reads {
     cpus 1
     memory "7GB" //depends on the size of the BAM file.
     input:
-        tuple val(meta), path("alignment.bam"), path("alignment.bai"), path("bamstats")
+        tuple val(meta), path("alignment.bam"), path("alignment.bai"), path("bamstats"), val(n_unmapped)
         path ref2taxid
         path taxonomy
     output:
@@ -123,6 +133,7 @@ process extractMinimap2Reads {
         ${policy}
     """
 }
+
 
 // Process to compute the sequencing depth of each reference and their coverages.
 process getAlignmentStats {
@@ -149,7 +160,7 @@ process getAlignmentStats {
     # add taxonomy info
     if [ `zcat "${sample_name}.depth.tsv.gz" | head -n 1 | wc -c ` -ne 0 ]
     then
-        cut -f1 "${sample_name}.reference_coverage.tsv" | sed '1d'| grep -f - $ref2taxid \
+        cut -f1 "${sample_name}.reference_coverage.tsv" | sed '1d'| grep -w -f - $ref2taxid \
         |  sort --parallel=${task.cpus - 1} | cut -f2 \
         | taxonkit reformat --data-dir $taxonomy -f "{k}\t{K}\t{p}\t{c}\t{o}\t{f}\t{g}\t{s}" -F -I 1 \
         | sed '1 i\\taxid\tsuperkingdom\tkingdom\tphylum\tclass\torder\tfamily\tgenus\tspecies' \
@@ -165,7 +176,7 @@ process getAlignmentStats {
 process makeReport {
     label "wf_common"
     cpus 1
-    memory "4GB" //depends on the number of different species/amr genes identified that tables may be bigger.
+    memory 4.GB
     input:
         val wf_version
         val metadata
@@ -217,8 +228,6 @@ workflow minimap_pipeline {
         taxonomic_rank
     main:
         lineages = Channel.empty()
-        metadata = samples.map { it[0] }.toList()
-
         // Run common
         common = run_common(samples)
         software_versions = common.software_versions
@@ -243,16 +252,32 @@ workflow minimap_pipeline {
                 taxonomy,
                 taxonomic_rank
         )
+        // add unclassified to meta to use it to filter samples with all unclassified in igv
+        samples_classification = mm2.bam.map { meta, bam, bai, stats, unmapped->
+            [meta + [n_unclassified: unmapped as Integer], bam, bai, stats]
+        }
+
+        // take samples with classified sequences
+        bam_classified = samples_classification.filter { meta, bam, bai, stats ->
+            // a sample is unclassified if all reads are unclassified
+            meta.n_seqs > meta.n_unclassified
+        }
+
+        sample_names_classified = bam_classified
+        | map { meta, bam, bai, stats -> meta.alias }
+        | toSortedList
+
         lineages = lineages.mix(mm2.lineage_json)
         // Add some statistics related to the mapping
         if (params.minimap2_by_reference) {
-            alignment_reports = getAlignmentStats(mm2.bam, ref2taxid, taxonomy) | collect
+            alignment_reports = getAlignmentStats(bam_classified, ref2taxid, taxonomy) | collect
         } else {
             alignment_reports = Channel.empty()
         }
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
-            taxonomic_rank, params.classifier)
+            taxonomic_rank, params.classifier)      
+
         // Process AMR
         if (params.amr) {
             run_amr = run_amr(
@@ -279,7 +304,8 @@ workflow minimap_pipeline {
             taxonomic_rank,
             amr_reports.ifEmpty(OPTIONAL_FILE)
         )
-
+        
+        // Prepare IGV when the user wants the BAM files output.
         ch_to_publish = Channel.empty()
         | mix(
             software_versions,
@@ -290,9 +316,45 @@ workflow minimap_pipeline {
         | map { [it, null] }
 
         if (params.keep_bam) {
-            ch_to_publish = ch_to_publish | mix (
-            mm2.bam | map { meta, bam, bai, stats -> [bam, bai, stats] }
-            | flatten | map { it -> [it, "bams"] }
+            String publish_bam = "bams"
+            String publish_ref = "igv_reference"
+            // filter references
+            bamstats_flagstat = bam_classified
+            | map { meta, bam, bai, stats -> file(stats.resolve("*.bamstats.flagstat.tsv")) }
+            | collect
+
+            filtered_refs = filter_references(
+                reference,
+                bamstats_flagstat
+            )
+            // create IGV config file
+            // write files in file-names.txt
+            igv_files = filtered_refs
+                | map { list -> list.collect { "$publish_ref/${it.Name}" }}
+                | concat (
+                    sample_names_classified | map { list -> list.collect {
+                    [ "$publish_bam/${it}.reference.bam", "$publish_bam/${it}.reference.bam.bai" ]
+                    } }
+                )
+                | flatten
+                | collectFile(name: "file-names.txt", newLine: true, sort: false)
+
+            igv_conf = configure_igv(
+                igv_files,
+                Channel.of(null), // igv locus
+                [displayMode: "SQUISHED", colorBy: "strand"], // bam extra opts
+                Channel.of(null), // vcf extra opts
+                )
+
+            ch_to_publish = igv_conf
+            | map { [it, null] }
+            | mix (
+                filtered_refs.flatMap { ref, fai, gzi ->
+                    [ref, fai, gzi].collect { [it, publish_ref] }},
+                samples_classification.flatMap { meta, bam, bai, stats -> 
+                    [bam, bai, stats].collect{ [it, publish_bam] }
+                },
+                ch_to_publish,
             )
         }
 
@@ -304,7 +366,7 @@ workflow minimap_pipeline {
                 taxonomy
             )
             ch_to_publish = ch_to_publish | mix (
-            mm2_filt.extracted | map { meta, fastq -> [fastq, "reference"]},
+                mm2_filt.extracted | map { meta, fastq -> [fastq, "reference"]},
             )
         }
 

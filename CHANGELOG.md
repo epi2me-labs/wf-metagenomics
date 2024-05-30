@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - The workflow now uses the `fastcat` read length and quality histograms instead of the per-read stats in the report process.
+### Added
+- Output IGV configuration file if the `keep_bam` option is enabled and a custom reference is provided (in minimap2 mode).
+- Output reduced reference file if the `keep_bam` option is enabled (in minimap2 mode).
+- `abundance_threshold` reduces the number of references to be displayed in IGV.
 ### Fixed
+- Checking the correspondence between the reference and ref2taxid now also works with compressed references.
 - `exclude-host` can input a file in the EPI2ME Desktop Application.
-
 
 ## [v2.9.4]
 ### Added
@@ -21,7 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show the percentage of each species when hovering over the taxonomy bar plot.
 ### Changed
 - `bam` folder within output has been renamed to `bams`.
-
 
 ## [v2.9.3]
 ### Fixed

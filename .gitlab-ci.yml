@@ -9,7 +9,8 @@ variables:
     # The workflow should define `--out_dir`, the CI template sets this.
     # Only common file inputs and option values need to be given here
     # (not things such as -profile)
-    NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+    NF_PROCESS_FILES: >
+      subworkflows/kraken_pipeline.nf
     NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
     NF_IGNORE_PROCESSES: "rebatchFastq, output_kraken2_read_assignments"
     CI_FLAVOUR: "new"
@@ -57,7 +58,8 @@ docker-run:
      ## Regular test kraken2
      - if: $MATRIX_NAME == "kraken2"
        variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/kraken_pipeline.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_kraken2_assignments --abundance_threshold 1 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: ""
           AFTER_NEXTFLOW_CMD: >
@@ -69,73 +71,99 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2-real-time"
        variables:
           NF_BEFORE_SCRIPT: "REAL_TIME_PORT=$$(shuf -i 8100-8900 -n 1)"
-          NF_PROCESS_FILES: "subworkflows/real_time_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/real_time_pipeline.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --read_limit 3000 --include_kraken2_assignments --batch_size 1000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT}"
           NF_IGNORE_PROCESSES: ""
      ## Regular test minimap2 - mapping stats
      - if: $MATRIX_NAME == "minimap2"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s --keep_bam"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
      # Minimap2 - sample sheet - taxonomic_rank - taxa barplot - abundance_threshold
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case02 --classifier minimap2 --database_set ncbi_16s_18s --sample_sheet test_data/case02/sample_sheet.csv --taxonomic_rank G --n_taxa_barplot 10 --abundance_threshold 0.01"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats,configure_igv,filter_references"
      # BACTERIA-ARCHAEA-EUKARYA
      ## Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
      ## It also works as a test for single file - kraken_confidence - include_kraken2_assignments
      - if: $MATRIX_NAME == "kraken2-baf"
        variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/kraken_pipeline.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10 --include_kraken2_assignments --sample bacteria_archaea_fungi --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: "concatAssignments"
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --database_set ncbi_16s_18s --classifier minimap2 --keep_bam --minimap2_by_reference --abundance_threshold 10"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads"
       ## Exclude Archaea and Eukaryota from extracted reads (remaining reads should be just from Bacteria).
      - if: $MATRIX_NAME == "minimap2-filter"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --minimap2filter '2157,2759' --minimap2exclude --database_set ncbi_16s_18s --min_percent_identity 97 --min_ref_coverage 95"
-          NF_IGNORE_PROCESSES: "getAlignmentStats"
+          NF_IGNORE_PROCESSES: "getAlignmentStats,configure_igv,filter_references"
       # AMR TESTS
       ## AMR tests using isolate test data (need to find better tests)
      - if: $MATRIX_NAME == "kraken2-amr"
        variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/kraken_pipeline.nf
           NF_WORKFLOW_OPTS: "--fastq s3://ont-exd-int-s3-euwst1-epi2me-labs/wf-bacterial-genomes/test_data/isolates_fastq/barcode08 --amr -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
      - if: $MATRIX_NAME == "minimap2-amr"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq s3://ont-exd-int-s3-euwst1-epi2me-labs/wf-bacterial-genomes/test_data/isolates_fastq/barcode08 --classifier minimap2 --amr --database_set ncbi_16s_18s"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats,configure_igv,filter_references"
      # EXCLUDE HOST
      - if: $MATRIX_NAME == "minimap2-exclude-host"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/reads.fastq.gz --exclude_host test_data/case04_exclude_host/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/reads.fastq.gz --exclude_host test_data/case04_exclude_host/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats,configure_igv,filter_references"
      - if: $MATRIX_NAME == "minimap2-exclude-host-bam"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--bam test_data/case04_exclude_host_bam/samples --exclude_host test_data/case04_exclude_host_bam/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
+          NF_WORKFLOW_OPTS: "--bam test_data/case04_exclude_host_bam/samples --exclude_host test_data/case04_exclude_host_bam/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats,configure_igv,filter_references"
      - if: $MATRIX_NAME == "kraken2-exclude-host"
        variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/reads.fastq.gz --exclude_host test_data/case04_exclude_host/host.fasta.gz --database_set ncbi_16s_18s"
+          NF_PROCESS_FILES: >
+            subworkflows/kraken_pipeline.nf
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/reads.fastq.gz --exclude_host test_data/case04_exclude_host/host.fasta.gz --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
           NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
      # BAM INGRESS
      # Compare counts with case01_no_duplicateIDs, must be the same
      - if: $MATRIX_NAME == "kraken2-bam"
        variables:
-          NF_PROCESS_FILES: "subworkflows/kraken_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/kraken_pipeline.nf
           NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --include_kraken2_assignments --abundance_threshold 1 --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: ""
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
@@ -145,12 +173,16 @@ docker-run:
      - if: $MATRIX_NAME == "kraken2-real-time-bam"
        variables:
           NF_BEFORE_SCRIPT: "REAL_TIME_PORT=$$(shuf -i 8100-8900 -n 1)"
-          NF_PROCESS_FILES: "subworkflows/real_time_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/real_time_pipeline.nf
           NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --real_time --read_limit 6000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT}"
           NF_IGNORE_PROCESSES: "concatAssignments,rebatchFastq"
      ## Regular test minimap2 - mapping stats
      - if: $MATRIX_NAME == "minimap2-bam"
        variables:
-          NF_PROCESS_FILES: "subworkflows/minimap_pipeline.nf"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads"   
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"   
