@@ -44,7 +44,6 @@ def parse_lineages(lineages, pipeline):
 
 # PREPARE INPUT DATA
 
-
 def tax_tree(lineage_trees_dict):
     """From lineages json, create a dictionary with {sample:tree (counts per lineage)}.
 
@@ -107,12 +106,21 @@ def tax_tree(lineage_trees_dict):
                                     rank=(parent_node.rank + 1)
                                     )
                             elif 'Unclassified' not in original_parent_node.name:
-                                node = anytree.Node(
-                                    f'{parent_node.name}_{label}',
-                                    parent=parent_node,
-                                    count=taxon_data['count'],
-                                    rank=(parent_node.rank + 1)
-                                    )
+                                # dont' repeat label if it is already there
+                                if label in parent_node.name:
+                                    node = anytree.Node(
+                                        parent_node.name,
+                                        parent=parent_node,
+                                        count=taxon_data['count'],
+                                        rank=(parent_node.rank + 1)
+                                        )
+                                else:
+                                    node = anytree.Node(
+                                        f'{parent_node.name}_{label}',
+                                        parent=parent_node,
+                                        count=taxon_data['count'],
+                                        rank=(parent_node.rank + 1)
+                                        )
                             else:  # Do not do this for Unclassified
                                 node = anytree.Node(
                                     taxon,
@@ -130,11 +138,28 @@ def tax_tree(lineage_trees_dict):
                         # Return to original parent node
                         parent_node = original_parent_node
                 else:
-                    node = anytree.Node(
-                        taxon, parent=rootnode,
-                        count=taxon_data['count'],
-                        rank=rank_order[taxon_data['rank']]
-                        )
+                    # could happen that these nodes are directly species without parent
+                    # custom refs added to db: e.g.: synthetic Vaccinia virus
+                    if taxon_data['rank'] == 'superkingdom':
+                        node = anytree.Node(
+                            taxon, parent=rootnode,
+                            count=taxon_data['count'],
+                            rank=rank_order[taxon_data['rank']]
+                            )
+                    else:
+                        # add it as the higher rank and copy it in downstrain levels
+                        node = anytree.Node(
+                            taxon, parent=rootnode,
+                            count=taxon_data['count'],
+                            rank=rank_order['superkingdom']
+                            )
+                        # repeat the node
+                        taxon_data['children'] = {
+                            taxon: {
+                                "rank": taxon_data['rank'],
+                                "count": taxon_data['count'],
+                                "children": {}
+                            }}
                 if isinstance(taxon_data['children'], dict):
                     itertaxa(taxon_data['children'], parent=taxon, parent_node=node)
 
