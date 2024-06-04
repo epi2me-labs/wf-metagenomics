@@ -4,11 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-### Fixed
-- Complete previous taxonomic rank when there are no parent nodes.
 
-## [Unreleased]
+## [v2.10.0]
 ### Changed
 - The workflow now uses the `fastcat` read length and quality histograms instead of the per-read stats in the report process.
 ### Added
@@ -16,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Output reduced reference file if the `keep_bam` option is enabled (in minimap2 mode).
 - `abundance_threshold` reduces the number of references to be displayed in IGV.
 ### Fixed
+- Complete previous taxonomic rank when there are no parent nodes.
 - Checking the correspondence between the reference and ref2taxid now also works with compressed references.
 - `exclude-host` can input a file in the EPI2ME Desktop Application.
 
