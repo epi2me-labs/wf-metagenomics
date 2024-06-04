@@ -9,9 +9,10 @@ variables:
     # The workflow should define `--out_dir`, the CI template sets this.
     # Only common file inputs and option values need to be given here
     # (not things such as -profile)
+    NF_BEFORE_SCRIPT: mkdir -p ${CI_PROJECT_NAME}/data/ && wget -q -O ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz && tar -xzvf ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz -C ${CI_PROJECT_NAME}/data/
+    NF_WORKFLOW_OPTS: "--fastq ${CI_PROJECT_NAME}/data/wf-metagenomics-demo/test_data/ -executor.\\$$local.memory 16GB --store_dir s3://$${XAWS_BUCKET}/${CI_PROJECT_NAME}/store --database_set Standard-8"
     NF_PROCESS_FILES: >
       subworkflows/kraken_pipeline.nf
-    NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
     NF_IGNORE_PROCESSES: "rebatchFastq, output_kraken2_read_assignments"
     CI_FLAVOUR: "new"
     CWG_AWS_ENV_NAME: "stack"
@@ -48,7 +49,7 @@ docker-run:
                 "kraken2-baf", "minimap2-baf", "minimap2-filter",
                 "kraken2-amr", "minimap2-amr",
                 "minimap2-exclude-host", "kraken2-exclude-host", "minimap2-exclude-host-bam",
-                "kraken2-bam", "minimap2-bam",
+                "kraken2-bam", "minimap2-bam", "minimap2-igv",
                 "kraken2-real-time", "kraken2-real-time-bam"
             ]
     rules:
@@ -185,4 +186,23 @@ docker-run:
             lib/common.nf
             modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"   
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"
+     ## Test with IGV and also custom databases in minimap2
+     - if: $MATRIX_NAME == "minimap2-igv"
+       variables:
+          NF_BEFORE_SCRIPT: mkdir -p ${CI_PROJECT_NAME}/data/ && wget -q -O ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz && tar -xzvf ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz -C ${CI_PROJECT_NAME}/data/
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
+            modules/local/databases.nf
+          NF_WORKFLOW_OPTS: >
+            --fastq "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/test_data/"
+            -executor.\$$local.memory 16GB
+            --classifier minimap2
+            --minimap2_by_reference
+            --reference "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/genomes.fna.gz"
+            --ref2taxid "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/ref2taxid.tsv"
+            --keep_bam
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,download_reference_ref2taxid,prepareSILVA,unpack_download_kraken2_database,determine_bracken_length"
+
