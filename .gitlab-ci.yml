@@ -30,6 +30,17 @@ aws-run:
         exclude: [] # give me everything pal
     allow_failure: false
 
+## This test avoids using the Standard-8GB. The use of this database is tested in aws-run
+singularity-run:
+    variables:
+        NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set ncbi_16s_18s"
+        NF_IGNORE_PROCESSES: "rebatchFastq"
+
+## This test avoids using the Standard-8GB. The use of this database is tested in aws-run
+macos-run:
+    variables:
+        NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set ncbi_16s_18s"
+        NF_IGNORE_PROCESSES: "rebatchFastq"
 
 docker-run:
 
