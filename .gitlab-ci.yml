@@ -10,7 +10,7 @@ variables:
     # Only common file inputs and option values need to be given here
     # (not things such as -profile)
     NF_BEFORE_SCRIPT: mkdir -p ${CI_PROJECT_NAME}/data/ && wget -q -O ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz && tar -xzvf ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz -C ${CI_PROJECT_NAME}/data/
-    NF_WORKFLOW_OPTS: "--fastq ${CI_PROJECT_NAME}/data/wf-metagenomics-demo/test_data/ -executor.\\$$local.memory 16GB --store_dir s3://$${XAWS_BUCKET}/${CI_PROJECT_NAME}/store --database_set Standard-8"
+    NF_WORKFLOW_OPTS: "--fastq ${CI_PROJECT_NAME}/data/wf-metagenomics-demo/test_data/ -executor.\\$$local.memory 16GB --database_set Standard-8"
     NF_PROCESS_FILES: >
       subworkflows/kraken_pipeline.nf
     NF_IGNORE_PROCESSES: "rebatchFastq, output_kraken2_read_assignments"
