@@ -1,0 +1,8 @@
+# CASE06: AMR + REAL TIME
+This is to recreate a case with many samples and AMR genes in real time.
+- Composition: Case 01/barcode01 which are 16S sequences and don't have AMR genes + 3 modified AMR genes.
+- Expected results: Case01/barcode01/reads.fq.gz + 5 extra unclassified (using ncbi_16s_18s db) [1 previous + 4 amr reads].
+- Expected results for bacorde01 & barcode10: As they contain 3 fastq chunks, 5x3=15 unclassified and 319 Listeria.
+- Usage: Use nextflow_custom.config to set the rest of params
+- Note: Bash script simulate_sample.sh is adapted to our internal tests. Modify paths (INITIAL_PATH) to make it usable in other situations.
+

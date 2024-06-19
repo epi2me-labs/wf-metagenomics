@@ -61,7 +61,7 @@ docker-run:
                 "kraken2-amr", "minimap2-amr",
                 "minimap2-exclude-host", "kraken2-exclude-host", "minimap2-exclude-host-bam",
                 "kraken2-bam", "minimap2-bam", "minimap2-igv",
-                "kraken2-real-time", "kraken2-real-time-bam"
+                "kraken2-real-time", "kraken2-real-time-bam", "amr-real-time"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -216,4 +216,21 @@ docker-run:
             --ref2taxid "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/ref2taxid.tsv"
             --keep_bam
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,download_reference_ref2taxid,prepareSILVA,unpack_download_kraken2_database,determine_bracken_length"
-
+     ## Test real time simulating new fq files on the fly
+     - if: $MATRIX_NAME == "amr-real-time"
+       variables:
+          # simulate_samples.sh create the samples on the fly
+          NF_BEFORE_SCRIPT: "mkdir -p ${CI_PROJECT_NAME}/data/ && bash util/simulate_sample.sh ${CI_PROJECT_NAME}/data/ test_data/case06_amr/reads.fq &> ${CI_PROJECT_NAME}/data/simulate_realtime.log &"
+          NF_PROCESS_FILES: >
+            subworkflows/real_time_pipeline.nf
+            lib/common.nf
+            modules/local/databases.nf
+          NF_WORKFLOW_OPTS: >
+            -c test_data/case06_amr/nextflow_custom.config
+            --fastq="$CI_PROJECT_NAME/data/test_data/"
+            -executor.\$$local.memory 16GB
+            --amr true
+            --real_time true
+            --database_set "ncbi_16s_18s"
+            --read_limit 10000
+          NF_IGNORE_PROCESSES: "concatAssignments,rebatchFastq,download_reference_ref2taxid,prepareSILVA,check_reference_ref2taxid,configure_igv"

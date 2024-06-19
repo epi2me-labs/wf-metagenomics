@@ -33,3 +33,7 @@ If your question is not answered here, please report any issues or suggestions o
     |```ncbi```| [NCBI AMRFinderPlus](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA313047)|
     |```megares```| [MEGAres](https://www.meglab.org/megares/)|
     |```ecoh```| [E. coli AMR DB from SRST2](https://github.com/katholt/srst2/tree/master/data)|
+
++ *What does the `test_data` folder contain?* - This folder contains several small datasets, real and simulated, for testing the workflow with different parameters and use cases.
+
++ *Is it possible to run the real time approach in the cloud?* - No, the real time pipeline is not yet available to be run in the cloud.

@@ -3,7 +3,7 @@
     "$id": "https://raw.githubusercontent.com/epi2me-labs/wf-metagenomics/master/nextflow_schema.json",
     "title": "epi2me-labs/wf-metagenomics",
     "workflow_title": "Metagenomics workflow",
-    "description": "Taxonomic classification of single reads from both amplicon-targeted and shotgun metagenomics sequencing.",
+    "description": "Taxonomic classification from shotgun metagenomics sequencing.",
     "demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz",
     "aws_demo_url": "https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo/aws.nextflow.config",
     "url": "https://github.com/epi2me-labs/wf-metagenomics",
