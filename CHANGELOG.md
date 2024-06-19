@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [v2.10.1]
+### Fixed
+- Fix the json.decoder.JSONDecodeError when running with `--amr`.
+
 ## [v2.10.0]
 ### Changed
 - The workflow now uses the `fastcat` read length and quality histograms instead of the per-read stats in the report process.
