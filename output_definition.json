@@ -19,7 +19,7 @@
       "bracken-report": {
         "filepath": "./bracken/{{ alias }}.kraken2_bracken.report",
         "title": "Bracken report file",
-        "description": "TSV file with the abundance of each taxa. See more info here: https://github.com/jenniferlu717/Bracken#output-kraken-style-bracken-report.",
+        "description": "TSV file with the abundance of each taxa. More info about [bracken report](https://github.com/jenniferlu717/Bracken#output-kraken-style-bracken-report).",
         "mime-type": "text/tab-separated-values",
         "optional": true,
         "type": "per-sample"
@@ -27,7 +27,7 @@
       "kraken-report": {
         "filepath": "./kraken2/{{ alias }}.kraken2.report.txt",
         "title": "Kraken2 taxonomic assignment per read (Kraken2 pipeline)",
-        "description": "Lineage-aggregated counts. See more info here: https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#sample-report-output-format.",
+        "description": "Lineage-aggregated counts. More info about [kraken2 report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#sample-report-output-format).",
         "mime-type": "text/txt",
         "optional": true,
         "type": "per-sample"
@@ -35,7 +35,7 @@
       "kraken-assignments": {
         "filepath": "./kraken2/{{ alias }}.kraken2.assignments.tsv",
         "title": "Kraken2 taxonomic asignment per read (Kraken2 pipeline)",
-        "description": "TSV file with the taxonomic assignment per read. See more info here: https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format.",
+        "description": "TSV file with the taxonomic assignment per read. More info about [kraken2 assignments report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format).",
         "mime-type": "text/tab-separated-values",
         "optional": true,
         "type": "per-sample"
@@ -91,7 +91,7 @@
       "amr-report": {
         "filepath": "./amr/{{ alias }}.json",
         "title": "JSON file with identified AMR genes (amr)",
-        "description": "JSON file with abricate results. See more info here: https://github.com/tseemann/abricate#output.",
+        "description": "JSON file with abricate results. More info about [abricate output](https://github.com/tseemann/abricate#output).",
         "mime-type": "text/json",
         "optional": true,
         "type": "per-sample"

@@ -6,8 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
-### Changed
-- Reconcile template 5.2.1
+### Fixed
+- Switch to markdown links in the outputs table in the README.
 
 ## [v2.10.1]
 ### Fixed

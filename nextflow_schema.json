@@ -274,7 +274,7 @@
                     "default": 0.0,
                     "title": "Confidence score threshold",
                     "description": "Kraken2 Confidence score threshold. Default: 0.0. Valid interval: 0-1",
-                    "help_text": "Apply a threshold to determine if a sequence is classified or unclassified. Please visit the following link for further details about how it works: https://github.com/DerrickWood/kraken2/wiki/Manual#confidence-scoring."
+                    "help_text": "Apply a threshold to determine if a sequence is classified or unclassified. See the [kraken2 manual section on confidence scoring](https://github.com/DerrickWood/kraken2/wiki/Manual#confidence-scoring) for further details about how it works."
                 }
             },
             "description": "Kraken2 classification options. Only relevant if classifier parameter is set to kraken2"
