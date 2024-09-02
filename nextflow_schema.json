@@ -415,6 +415,12 @@
                     "default": "output",
                     "title": "Output folder name",
                     "description": "Directory for output of all user-facing files."
+                },
+                "igv": {
+                    "type": "boolean",
+                    "default": false,
+                    "title": "IGV",
+                    "description": "Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well."
                 }
             }
         },

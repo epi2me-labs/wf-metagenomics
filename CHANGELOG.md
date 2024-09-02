@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Fixed
 - Switch to markdown links in the outputs table in the README.
+### Added
+- `igv` option to enable IGV in the EPI2ME Desktop Application.
+### Changed
+- `keep_bam` is now only required to output BAM files.
 
 ## [v2.10.1]
 ### Fixed
