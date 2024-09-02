@@ -27,6 +27,7 @@ process minimap {
         path ref2taxid
         path taxonomy
         val taxonomic_rank
+        val keep_bam
     output:
         tuple(
             val(meta),
@@ -50,7 +51,7 @@ process minimap {
     script:
         def sample_id = "${meta.alias}"
         def split = params.split_prefix ? '--split-prefix tmp' : ''
-        def keep_runids = params.keep_bam ? '-y' : ''
+        def keep_runids = keep_bam ? '-y' : ''
         def bamstats_threads = Math.max(1, task.cpus - 1)
     // min_percent_identity and min_ref_coverage can be used within format_minimap2 or after the BAM is generated to not modify the raw BAM from the alignment.
     // Filter from ${sample_id}.minimap2.assignments.tsv
@@ -226,6 +227,7 @@ workflow minimap_pipeline {
         ref2taxid
         taxonomy
         taxonomic_rank
+        keep_bam
     main:
         lineages = Channel.empty()
         // Run common
@@ -233,6 +235,8 @@ workflow minimap_pipeline {
         software_versions = common.software_versions
         parameters = common.parameters
         samples = common.samples
+
+        
         // Initial reads QC
         // get metadata and stats files, keeping them ordered (could do with transpose I suppose)
         samples.multiMap{ meta, path, stats ->
@@ -250,7 +254,8 @@ workflow minimap_pipeline {
                 reference,
                 ref2taxid,
                 taxonomy,
-                taxonomic_rank
+                taxonomic_rank,
+                keep_bam
         )
         // add unclassified to meta to use it to filter samples with all unclassified in igv
         samples_classification = mm2.bam.map { meta, bam, bai, stats, unmapped->
@@ -262,10 +267,6 @@ workflow minimap_pipeline {
             // a sample is unclassified if all reads are unclassified
             meta.n_seqs > meta.n_unclassified
         }
-
-        sample_names_classified = bam_classified
-        | map { meta, bam, bai, stats -> meta.alias }
-        | toSortedList
 
         lineages = lineages.mix(mm2.lineage_json)
         // Add some statistics related to the mapping
@@ -305,6 +306,10 @@ workflow minimap_pipeline {
             amr_reports.ifEmpty(OPTIONAL_FILE)
         )
         
+        // Define output folder structure
+        String publish_bam = "bams"
+        String publish_ref = "igv_reference"
+
         // Prepare IGV when the user wants the BAM files output.
         ch_to_publish = Channel.empty()
         | mix(
@@ -315,9 +320,16 @@ workflow minimap_pipeline {
         )
         | map { [it, null] }
 
-        if (params.keep_bam) {
-            String publish_bam = "bams"
-            String publish_ref = "igv_reference"
+
+        if (keep_bam) {
+            ch_to_publish = ch_to_publish
+            | concat(samples_classification.flatMap { meta, bam, bai, stats -> 
+                    [bam, bai, stats].collect{ [it, publish_bam] }
+                }
+            )
+        }
+
+        if (params.igv) {
             // filter references
             bamstats_flagstat = bam_classified
             | map { meta, bam, bai, stats -> file(stats.resolve("*.bamstats.flagstat.tsv")) }
@@ -327,14 +339,21 @@ workflow minimap_pipeline {
                 reference,
                 bamstats_flagstat
             )
-            // create IGV config file
+            // create IGV config file: use absolute paths in the igv.JSON
             // write files in file-names.txt
+
+            current_dir = "${file('.').toUriString()}"
             igv_files = filtered_refs
-                | map { list -> list.collect { "$publish_ref/${it.Name}" }}
+                | map { list -> list.collect { "$current_dir/$params.out_dir/$publish_ref/${it.Name}" }}
                 | concat (
-                    sample_names_classified | map { list -> list.collect {
-                    [ "$publish_bam/${it}.reference.bam", "$publish_bam/${it}.reference.bam.bai" ]
-                    } }
+                    bam_classified
+                    | flatMap {
+                         meta, bam, bai, stats -> [
+                            "$current_dir/$params.out_dir/$publish_bam/${meta.alias}.reference.bam",
+                            "$current_dir/$params.out_dir/$publish_bam/${meta.alias}.reference.bam.bai",
+                        ]
+                    }
+                    | collect
                 )
                 | flatten
                 | collectFile(name: "file-names.txt", newLine: true, sort: false)
@@ -348,15 +367,13 @@ workflow minimap_pipeline {
 
             ch_to_publish = igv_conf
             | map { [it, null] }
-            | mix (
+            | concat (
                 filtered_refs.flatMap { ref, fai, gzi ->
                     [ref, fai, gzi].collect { [it, publish_ref] }},
-                samples_classification.flatMap { meta, bam, bai, stats -> 
-                    [bam, bai, stats].collect{ [it, publish_bam] }
-                },
                 ch_to_publish,
             )
         }
+
 
         // Extract (or exclude) reads belonging (or not) to the chosen taxids.
         if (params.minimap2filter) {

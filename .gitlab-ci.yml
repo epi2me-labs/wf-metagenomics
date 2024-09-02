@@ -95,7 +95,7 @@ docker-run:
             lib/common.nf
             modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s --keep_bam"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"
      # Minimap2 - sample sheet - taxonomic_rank - taxa barplot - abundance_threshold
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
@@ -121,7 +121,7 @@ docker-run:
             lib/common.nf
             modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --database_set ncbi_16s_18s --classifier minimap2 --keep_bam --minimap2_by_reference --abundance_threshold 10"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"
       ## Exclude Archaea and Eukaryota from extracted reads (remaining reads should be just from Bacteria).
      - if: $MATRIX_NAME == "minimap2-filter"
        variables:
@@ -214,7 +214,7 @@ docker-run:
             --minimap2_by_reference
             --reference "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/genomes.fna.gz"
             --ref2taxid "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/ref2taxid.tsv"
-            --keep_bam
+            --igv
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,download_reference_ref2taxid,prepareSILVA,unpack_download_kraken2_database,determine_bracken_length"
      ## Test real time simulating new fq files on the fly
      - if: $MATRIX_NAME == "amr-real-time"

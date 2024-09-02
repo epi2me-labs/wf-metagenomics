@@ -32,7 +32,8 @@ workflow {
     if (params.max_len) { fastcat_extra_args << "-b $params.max_len" }
     if (params.min_read_qual) { fastcat_extra_args << "-q $params.min_read_qual" }
     // If BAM files are output, keep runIDs in case they are reused in the wf to track them.
-    if (params.keep_bam) {fastcat_extra_args << "-H"}
+    boolean keep_bam = (params.keep_bam || params.igv)
+    if (keep_bam) {fastcat_extra_args << "-H"}
 
     // Check source param is valid
     sources = params.database_sets
@@ -148,7 +149,8 @@ workflow {
                 databases_minimap2.reference,
                 databases_minimap2.ref2taxid,
                 databases_minimap2.taxonomy,
-                databases_minimap2.taxonomic_rank
+                databases_minimap2.taxonomic_rank,
+                keep_bam
                 )
     }
 
