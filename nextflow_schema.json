@@ -297,13 +297,6 @@
                     "description": "Invert minimap2filter and exclude the given taxids instead",
                     "help_text": "Exclude a list of taxids from analysis outputs."
                 },
-                "split_prefix": {
-                    "type": "boolean",
-                    "title": "Enable multipart index",
-                    "default": false,
-                    "description": "Enable if using a very large reference with minimap2",
-                    "help_text": "If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2."
-                },
                 "keep_bam": {
                     "type": "boolean",
                     "title": "Enable keep BAM files",

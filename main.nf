@@ -135,23 +135,34 @@ workflow {
     }
     // Call the proper pipeline
 
+    // Set minimap2 common options
+    ArrayList common_minimap2_opts = [
+        "-ax map-ont",
+        "--cap-kalloc 100m",
+        "--cap-sw-mem 50m",
+    ]
+
+
     if ("${params.classifier}" == "minimap2") {
         log.info("Minimap2 pipeline.")
-            database = null
-            kmer_dist = null
-            databases_minimap2 = prepare_databases(
-                source_data_taxonomy,
-                source_data_database
+        database = null
+        kmer_dist = null
+        if (keep_bam) {
+            common_minimap2_opts = common_minimap2_opts + ["-y"]
+        }
+        databases_minimap2 = prepare_databases(
+            source_data_taxonomy,
+            source_data_database
+        )
+        results = minimap_pipeline(
+            samples,
+            databases_minimap2.reference,
+            databases_minimap2.ref2taxid,
+            databases_minimap2.taxonomy,
+            databases_minimap2.taxonomic_rank,
+            common_minimap2_opts,
+            keep_bam
             )
-
-            results = minimap_pipeline(
-                samples,
-                databases_minimap2.reference,
-                databases_minimap2.ref2taxid,
-                databases_minimap2.taxonomy,
-                databases_minimap2.taxonomic_rank,
-                keep_bam
-                )
     }
 
     // Handle getting kraken2 database files if kraken2 classifier selected
@@ -184,14 +195,17 @@ workflow {
                 databases_kraken2.taxonomy,
                 databases_kraken2.database,
                 databases_kraken2.bracken_length,
-                databases_kraken2.taxonomic_rank)
+                databases_kraken2.taxonomic_rank,
+                common_minimap2_opts
+            )
         } else {
             results = kraken_pipeline(
                 samples,
                 databases_kraken2.taxonomy,
                 databases_kraken2.database,
                 databases_kraken2.bracken_length,
-                databases_kraken2.taxonomic_rank
+                databases_kraken2.taxonomic_rank,
+                common_minimap2_opts
             )
         }
 

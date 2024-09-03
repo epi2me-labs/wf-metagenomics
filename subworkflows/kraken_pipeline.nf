@@ -173,11 +173,12 @@ workflow kraken_pipeline {
         database
         bracken_length
         taxonomic_rank
+        common_minimap2_opts
 
     main:
         OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
         // Run common
-        common = run_common(samples)
+        common = run_common(samples, common_minimap2_opts)
         software_versions = common.software_versions
         parameters = common.parameters
         samples = common.samples
