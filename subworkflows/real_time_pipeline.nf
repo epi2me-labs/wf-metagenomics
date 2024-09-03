@@ -448,6 +448,7 @@ workflow real_time_pipeline {
         database
         bracken_length
         taxonomic_rank
+        common_minimap2_opts
     main:
         opt_file = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -460,7 +461,7 @@ workflow real_time_pipeline {
         }
 
         // filter host reads
-        common = run_common(batch_items)
+        common = run_common(batch_items, common_minimap2_opts)
         software_versions = common.software_versions
         parameters = common.parameters
         samples_filtered = common.samples

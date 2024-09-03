@@ -61,6 +61,7 @@ process exclude_host_reads {
     input:
         tuple val(meta), path(concat_seqs), path(fastcat_stats)
         path host_reference
+        val common_minimap2_opts
     output:
         tuple(
             val(meta),
@@ -79,13 +80,13 @@ process exclude_host_reads {
             emit: no_host_bam, optional:true)
     script:
         def sample_id = "${meta.alias}"
-        def split = params.split_prefix ? '--split-prefix tmp' : ''
+        // use the file size to determine if minimap2 split-prefix is required. this is slightly conservative as newlines and headers will count against the reference size.
+        def common_minimap2_opts = (host_reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
+        common_minimap2_opts = common_minimap2_opts.join(" ")
         String fastcat_stats_outdir = "stats_unmapped"
-        // Include runids in the BAM files.
-        def keep_runids = params.keep_bam ? '-y' : ''
     // Map reads against the host reference and take the unmapped reads for further analysis
     """
-    minimap2 -t $task.cpus --cap-kalloc 100m --cap-sw-mem 50m ${split} ${keep_runids} -ax map-ont -m 50 --secondary=no "${host_reference}" $concat_seqs \
+    minimap2 -t $task.cpus ${common_minimap2_opts} -m 50 --secondary=no "${host_reference}" $concat_seqs \
     | samtools sort -@ ${task.cpus - 1}  --write-index -o "${sample_id}.all.bam##idx##${sample_id}.all.bam.bai" -
     # get unmapped reads & convert bam to fastq again
     samtools view -@ ${task.cpus - 1}  -b -f 4 --write-index -o "${sample_id}.unmapped.bam##idx##${sample_id}.unmapped.bam.bai" --unoutput "${sample_id}.host.bam##idx##${sample_id}.host.bam.bai" "${sample_id}.all.bam"
@@ -151,6 +152,7 @@ process output {
 workflow run_common {
     take:
         samples
+        common_minimap2_opts
     main:
         common_versions = getVersions()
         if (params.amr){
@@ -164,7 +166,10 @@ workflow run_common {
                 log.info("Reads mapped against the host reference will be removed from the analysis.")
             }
             host_reference = file(params.exclude_host, checkIfExists: true)
-            reads = exclude_host_reads(samples, host_reference)
+            reads = exclude_host_reads(samples,
+                host_reference,
+                common_minimap2_opts
+            )
             samples = reads.fastq
             ch_to_publish = Channel.empty()
             ch_to_publish = ch_to_publish | mix (

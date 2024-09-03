@@ -198,7 +198,6 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 |--------------------------|------|-------------|------|---------|
 | minimap2filter | string | Filter output of minimap2 by taxids inc. child nodes, E.g. "9606,1404" | Provide a list of taxids if you are only interested in certain ones in your minimap2 analysis outputs. |  |
 | minimap2exclude | boolean | Invert minimap2filter and exclude the given taxids instead | Exclude a list of taxids from analysis outputs. | False |
-| split_prefix | boolean | Enable if using a very large reference with minimap2 | If reference fasta large enough to require multipart index, set to true to use split-prefix option with minimap2. | False |
 | keep_bam | boolean | Copy bam files into the output directory. It also creates the configuration and reduced reference files needed to load the alignments in IGV. |  | False |
 | minimap2_by_reference | boolean | Add a table with the mean sequencing depth per reference, standard deviation and coefficient of variation. It adds a scatterplot of the sequencing depth vs. the coverage and a heatmap showing the depth per percentile to the report |  | False |
 | min_percent_identity | number | Minimum percentage of identity with the matched reference to define a sequence as classified; sequences with a value lower than this are defined as unclassified. |  | 90 |

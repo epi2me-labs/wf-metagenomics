@@ -27,7 +27,7 @@ process minimap {
         path ref2taxid
         path taxonomy
         val taxonomic_rank
-        val keep_bam
+        val common_minimap2_opts
     output:
         tuple(
             val(meta),
@@ -50,13 +50,13 @@ process minimap {
             emit: lineage_json)
     script:
         def sample_id = "${meta.alias}"
-        def split = params.split_prefix ? '--split-prefix tmp' : ''
-        def keep_runids = keep_bam ? '-y' : ''
+        def common_minimap2_opts = (reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
+        common_minimap2_opts = common_minimap2_opts.join(" ")
         def bamstats_threads = Math.max(1, task.cpus - 1)
     // min_percent_identity and min_ref_coverage can be used within format_minimap2 or after the BAM is generated to not modify the raw BAM from the alignment.
     // Filter from ${sample_id}.minimap2.assignments.tsv
     """
-    minimap2 -t $task.cpus --cap-kalloc 100m --cap-sw-mem 50m ${split} ${keep_runids} -ax map-ont $reference $concat_seqs \
+    minimap2 -t $task.cpus ${common_minimap2_opts} $reference $concat_seqs \
     | samtools view -h -F 2304 - \
     | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
     | samtools sort -@ ${task.cpus - 1} --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
@@ -227,11 +227,14 @@ workflow minimap_pipeline {
         ref2taxid
         taxonomy
         taxonomic_rank
+        common_minimap2_opts
         keep_bam
     main:
         lineages = Channel.empty()
         // Run common
-        common = run_common(samples)
+        common = run_common(
+            samples,
+            common_minimap2_opts)
         software_versions = common.software_versions
         parameters = common.parameters
         samples = common.samples
@@ -255,7 +258,7 @@ workflow minimap_pipeline {
                 ref2taxid,
                 taxonomy,
                 taxonomic_rank,
-                keep_bam
+                common_minimap2_opts
         )
         // add unclassified to meta to use it to filter samples with all unclassified in igv
         samples_classification = mm2.bam.map { meta, bam, bai, stats, unmapped->
