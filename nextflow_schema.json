@@ -83,7 +83,11 @@
             "title": "Real Time Analysis Options",
             "type": "object",
             "description": "Options relating to the default real-time Kraken2 workflow.",
-            "default": "",
+            "overrides": {
+                "epi2mecloud": {
+                    "hidden": true
+                }
+            },
             "properties": {
                 "real_time": {
                     "type": "boolean",
