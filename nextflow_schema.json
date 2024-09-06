@@ -201,7 +201,12 @@
                     "format": "path",
                     "title": "Kraken2 database",
                     "description": "Not required but can be used to specifically override Kraken2 database [.tar.gz or Directory].",
-                    "help_text": "By default uses database chosen in database_set parameter."
+                    "help_text": "By default uses database chosen in database_set parameter.",
+                    "overrides": {
+                        "epi2mecloud": {
+                            "hidden": true
+                        }
+                    }
                 },
                 "taxonomy": {
                     "type": "string",
@@ -223,11 +228,6 @@
                     "title": "File linking reference IDs to specific taxids",
                     "description": "Not required but can be used to specify a  ref2taxid mapping. Format is .tsv (refname  taxid), no header row.",
                     "help_text": "By default uses ref2taxid for option chosen in database_set parameter."
-                },
-                "database_sets": {
-                    "type": "object",
-                    "hidden": true,
-                    "description": "A map containing the available sources and their default resource paths."
                 },
                 "taxonomic_rank": {
                     "type": "string",
