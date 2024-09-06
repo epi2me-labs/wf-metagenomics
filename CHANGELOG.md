@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `keep_bam` is now only required to output BAM files.
 - `include_kraken2_assignments` has been replaced by `include_read_assignments`.
+- Update databases:
+    - Kraken2 indexes to the ones released 2024-06-05
+    - Taxonomy database to the one released 2024-09-01
 ### Removed
 - `split-prefix` parameter, as the workflow automatically enables this option for large reference genomes
 
