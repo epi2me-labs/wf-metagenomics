@@ -16,6 +16,7 @@ process minimap {
     label "wfmetagenomics"
     tag "${meta.alias}"
     cpus params.threads
+    publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.minimap2.assignments.tsv", enabled: params.include_read_assignments
     // due to the wf fail at the samtools step
     memory {
         // depends on the database and the size of samples to be processed
@@ -60,7 +61,16 @@ process minimap {
     | samtools view -h -F 2304 - \
     | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
     | samtools sort -@ ${task.cpus - 1} --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
-
+    # add taxonomy to the tables if required by the user,
+    # as this file would contain 1 entry per read
+    if ${params.include_read_assignments} ;
+    then
+        taxonkit reformat \
+            --taxid-field 3 \
+            --data-dir "${taxonomy}" \
+            --format "{k}|{p}|{c}|{o}|{f}|{g}|{s}" \
+            --fill-miss-rank "${sample_id}.minimap2.assignments.tsv" > "${sample_id}_lineages.minimap2.assignments.tsv"
+    fi
     # run bamstats
     mkdir "${meta.alias}.bamstats_results"
     bamstats "${meta.alias}.reference.bam" -s $meta.alias -u \

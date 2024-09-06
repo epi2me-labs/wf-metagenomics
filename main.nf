@@ -37,7 +37,10 @@ workflow {
 
     // Check source param is valid
     sources = params.database_sets
-    
+    if (params.containsKey('include_kraken2_assignments')){
+        throw new Exception("`include_kraken2_assignments` is now deprecated in favour of `include_read_assignments`.")
+    }
+
     // Stop the pipeline in case not valid parameters combinations
     if (params.classifier == 'minimap2' && params.database) {
         throw new Exception("To use minimap2 with your custom database, you need to use `--reference` (instead of `--database`) and `--ref2taxid`.")

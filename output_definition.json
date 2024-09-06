@@ -1,7 +1,7 @@
 {
     "files": {
       "workflow-report": {
-        "filepath": "./wf-metagenomics-report.html",
+        "filepath": "wf-metagenomics-report.html",
         "title": "workflow report",
         "description": "Report for all samples.",
         "mime-type": "text/html",
@@ -9,7 +9,7 @@
         "type": "aggregated"
       },
       "abundance-table-rank": {
-        "filepath": "./abundance_table_{{ taxonomic_rank }}.tsv",
+        "filepath": "abundance_table_{{ taxonomic_rank }}.tsv",
         "title": "Abundance table with counts per taxa",
         "description": "Per-taxa counts TSV, including all samples.",
         "mime-type": "text/tab-separated-values",
@@ -17,7 +17,7 @@
         "type": "aggregated"
       },
       "bracken-report": {
-        "filepath": "./bracken/{{ alias }}.kraken2_bracken.report",
+        "filepath": "bracken/{{ alias }}.kraken2_bracken.report",
         "title": "Bracken report file",
         "description": "TSV file with the abundance of each taxa. More info about [bracken report](https://github.com/jenniferlu717/Bracken#output-kraken-style-bracken-report).",
         "mime-type": "text/tab-separated-values",
@@ -25,7 +25,7 @@
         "type": "per-sample"
       },
       "kraken-report": {
-        "filepath": "./kraken2/{{ alias }}.kraken2.report.txt",
+        "filepath": "kraken2/{{ alias }}.kraken2.report.txt",
         "title": "Kraken2 taxonomic assignment per read (Kraken2 pipeline)",
         "description": "Lineage-aggregated counts. More info about [kraken2 report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#sample-report-output-format).",
         "mime-type": "text/txt",
@@ -33,7 +33,7 @@
         "type": "per-sample"
       },
       "kraken-assignments": {
-        "filepath": "./kraken2/{{ alias }}.kraken2.assignments.tsv",
+        "filepath": "kraken2/{{ alias }}.kraken2.assignments.tsv",
         "title": "Kraken2 taxonomic asignment per read (Kraken2 pipeline)",
         "description": "TSV file with the taxonomic assignment per read. More info about [kraken2 assignments report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format).",
         "mime-type": "text/tab-separated-values",
@@ -41,7 +41,7 @@
         "type": "per-sample"
       },
       "host-bam": {
-        "filepath": "./host_bam/{{ alias }}.bam",
+        "filepath": "host_bam/{{ alias }}.bam",
         "title": "Host BAM file",
         "description": "BAM file generated from mapping filtered input reads to the host reference.",
         "mime-type": "application/gzip",
@@ -49,7 +49,7 @@
         "type": "per-sample"
       },
       "host-bai": {
-        "filepath": "./host_bam/{{ alias }}.bai",
+        "filepath": "host_bam/{{ alias }}.bai",
         "title": "BAM index file of host reads",
         "description": "BAM index file generated from mapping filtered input reads to the host reference.",
         "mime-type": "application/octet-stream",
@@ -57,7 +57,7 @@
         "type": "per-sample"
       },
       "minimap2-bam": {
-        "filepath": "./bams/{{ alias }}.reference.bam",
+        "filepath": "bams/{{ alias }}.reference.bam",
         "title": "BAM file (minimap2)",
         "description": "BAM file generated from mapping filtered input reads to the reference.",
         "mime-type": "application/gzip",
@@ -65,7 +65,7 @@
         "type": "per-sample"
       },
       "minimap2-index": {
-        "filepath": "./bams/{{ alias }}.reference.bam.bai",
+        "filepath": "bams/{{ alias }}.reference.bam.bai",
         "title": "BAM index file (minimap2)",
         "description": "Index file generated from mapping filtered input reads to the reference.",
         "mime-type": "application/octet-stream",
@@ -73,7 +73,7 @@
         "type": "per-sample"
       },
       "minimap2-flagstats": {
-        "filepath": "./bams/{{ alias }}.bamstats_results/bamstats.flagstat.tsv",
+        "filepath": "bams/{{ alias }}.bamstats_results/bamstats.flagstat.tsv",
         "title": "BAM flagstat (minimap2)",
         "description": "Mapping results per reference",
         "mime-type": "text/tab-separated-values",
@@ -81,7 +81,7 @@
         "type": "per-sample"
       },
       "minimap2-bamreadstats": {
-        "filepath": "./bams/{{ alias }}.bamstats_results/bamstats.readstats.tsv.gz",
+        "filepath": "bams/{{ alias }}.bamstats_results/bamstats.readstats.tsv.gz",
         "title": "Minimap2 alignment statistics (minimap2)",
         "description": "Per read stats after aligning",
         "mime-type": "application/gzip",
@@ -89,7 +89,7 @@
         "type": "per-sample"
       },
       "amr-report": {
-        "filepath": "./amr/{{ alias }}.json",
+        "filepath": "amr/{{ alias }}.json",
         "title": "JSON file with identified AMR genes (amr)",
         "description": "JSON file with abricate results. More info about [abricate output](https://github.com/tseemann/abricate#output).",
         "mime-type": "text/json",
@@ -97,7 +97,7 @@
         "type": "per-sample"
       },
       "reduced-reference": {
-        "filepath": "./igv_reference/reduced_reference.fasta.gz",
+        "filepath": "igv_reference/reduced_reference.fasta.gz",
         "title": "Reduced reference FASTA file",
         "description": "Reference FASTA file containing only those sequences that have reads mapped against them.",
         "mime-type": "application/gzip",
@@ -105,7 +105,7 @@
         "type": "aggregated"
       },
       "reduced-reference-index": {
-        "filepath": "./igv_reference/reduced_reference.fasta.gz.fai",
+        "filepath": "igv_reference/reduced_reference.fasta.gz.fai",
         "title": "Index of the reduced reference FASTA file",
         "description": "Index of the reference FASTA file containing only those sequences that have reads mapped against them.",
         "mime-type": "text/tab-separated-values",
@@ -113,7 +113,7 @@
         "type": "aggregated"
       },
       "reduced-reference-gzi-index": {
-        "filepath": "./igv_reference/reduced_reference.fasta.gz.gzi",
+        "filepath": "igv_reference/reduced_reference.fasta.gz.gzi",
         "title": "GZI index of the reduced reference FASTA file",
         "description": "Index of the reference FASTA file containing only those sequences that have reads mapped against them.",
         "mime-type": "application/octet-stream",
@@ -121,12 +121,20 @@
         "type": "aggregated"
       },
       "igv-config": {
-        "filepath": "./igv.json",
+        "filepath": "igv.json",
         "title": "JSON configuration file for IGV browser",
         "description": "JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference.",
         "mime-type": "text/json",
         "optional": true,
         "type": "aggregated"
+      },
+      "read-assignments": {
+        "filepath": "reads_assignments/{{ alias }}.{{kraken2|minimap2}}.assignments.tsv",
+        "title": "Taxonomic assignment per read.",
+        "description": "TSV file with the taxonomic assignment per read.",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "per-sample"
       }
     }
   }

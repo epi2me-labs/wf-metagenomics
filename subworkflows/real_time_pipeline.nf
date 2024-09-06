@@ -549,14 +549,14 @@ workflow real_time_pipeline {
         )
         | map { [it, null] }
 
-        if (params.include_kraken2_assignments) {
+        if (params.include_read_assignments) {
             kraken2_assignments = concatAssignments(
                 kraken2_client.out.map{ 
                     id, report, json, assignments -> tuple(id, assignments) 
                 }.groupTuple(), taxonomy)
             ch_to_publish = ch_to_publish | mix (
             kraken2_assignments.kraken2_reads_assignments | map {
-                 id, kraken_reads_classification -> [kraken_reads_classification, "kraken_reads_assignments"]},
+                 id, kraken_reads_classification -> [kraken_reads_classification, "reads_assignments"]},
             )
         }
 

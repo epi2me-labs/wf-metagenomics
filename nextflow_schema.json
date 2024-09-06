@@ -266,13 +266,6 @@
                     "description": "Avoids loading database into RAM",
                     "help_text": "Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database."
                 },
-                "include_kraken2_assignments": {
-                    "type": "boolean",
-                    "default": false,
-                    "title": "Include Kraken2 reads assignments",
-                    "description": "A per sample TSV file that indicates how each input sequence was classified as well as the taxon that has been assigned to each read. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely.",
-                    "help": "It also includes the taxon that each k-mer mapped back to, if the k-mer was able to be classified."
-                },
                 "kraken2_confidence": {
                     "type": "number",
                     "default": 0.0,
@@ -418,6 +411,12 @@
                     "default": false,
                     "title": "IGV",
                     "description": "Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well."
+                },
+                "include_read_assignments": {
+                    "type": "boolean",
+                    "default": false,
+                    "title": "Include Kraken2/Minimap2 taxonomy per read.",
+                    "description": "A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely."
                 }
             }
         },
