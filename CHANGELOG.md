@@ -10,8 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switch to markdown links in the outputs table in the README.
 ### Added
 - `igv` option to enable IGV in the EPI2ME Desktop Application.
+- `include_read_assignments` option to output a file with the taxonomy of each read.
 ### Changed
 - `keep_bam` is now only required to output BAM files.
+- `include_kraken2_assignments` has been replaced by `include_read_assignments`.
 ### Removed
 - `split-prefix` parameter, as the workflow automatically enables this option for large reference genomes
 

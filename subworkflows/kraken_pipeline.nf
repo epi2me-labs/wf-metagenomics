@@ -15,7 +15,7 @@ OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 process run_kraken2 {
     label 'wfmetagenomics'
     tag "${meta.alias}"
-    publishDir "${params.out_dir}/kraken2", mode: 'copy', pattern: "*kraken2*"
+    publishDir "${params.out_dir}/kraken2", mode: 'copy', pattern: "*kraken2.report.txt*"
     cpus params.threads
     // Set the memory required to the size of the database + 4GB overhead.
     memory {
@@ -106,20 +106,24 @@ process output_kraken2_read_assignments {
     tag "${meta.alias}"
     cpus 2
     memory "4GB"
+    publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.kraken2.assignments.tsv"
     input:
         tuple val(meta), path("${meta.alias}.kraken2.assignments.tsv")
         path taxonomy
     output:
         tuple(
             val(meta),
-            path("*_lineages.kraken2.assignments.tsv"), 
-            emit: kraken2_reads_assignments
+            path("*_lineages.kraken2.assignments.tsv")
             )
     script:
         def sample_id = "${meta.alias}"
     """
     # Run taxonkit to give users a more informative table
-    taxonkit reformat  -I 3  --data-dir "${taxonomy}" -f "{k}|{p}|{c}|{o}|{f}|{g}|{s}" -F "${sample_id}.kraken2.assignments.tsv" > "${sample_id}_lineages.kraken2.assignments.tsv"
+    taxonkit reformat \
+        --taxid-field 3 \
+        --data-dir "${taxonomy}" \
+        --format "{k}|{p}|{c}|{o}|{f}|{g}|{s}" \
+        --fill-miss-rank "${sample_id}.kraken2.assignments.tsv" > "${sample_id}_lineages.kraken2.assignments.tsv"
     """
 
 }
@@ -243,15 +247,11 @@ workflow kraken_pipeline {
         | map { [it, null] }
 
         // output kraken read assignments + taxonomy info
-        if (params.include_kraken2_assignments) {
+        if (params.include_read_assignments) {
             kraken2_assignments = output_kraken2_read_assignments(
                 kraken2_reports.map{ 
                     id, report, assignments -> tuple(id, assignments) 
                 }.groupTuple(), taxonomy)
-            ch_to_publish = ch_to_publish | mix (
-            kraken2_assignments.kraken2_reads_assignments | map {
-                 id, kraken_reads_classification -> [kraken_reads_classification, "kraken_reads_assignments"]},
-            )
         }
 
          ch_to_publish | output_results

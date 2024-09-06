@@ -49,7 +49,6 @@
 |--------------------------|------|-------------|------|---------|
 | bracken_length | integer | Set the length value Bracken will use | Should be set to the length used to generate the kmer distribution file supplied in the Kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 1000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300 |  |
 | kraken2_memory_mapping | boolean | Avoids loading database into RAM | Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database. | False |
-| include_kraken2_assignments | boolean | A per sample TSV file that indicates how each input sequence was classified as well as the taxon that has been assigned to each read. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
 | kraken2_confidence | number | Kraken2 Confidence score threshold. Default: 0.0. Valid interval: 0-1 | Apply a threshold to determine if a sequence is classified or unclassified. See the [kraken2 manual section on confidence scoring](https://github.com/DerrickWood/kraken2/wiki/Manual#confidence-scoring) for further details about how it works. | 0.0 |
 
 
@@ -89,6 +88,7 @@
 |--------------------------|------|-------------|------|---------|
 | out_dir | string | Directory for output of all user-facing files. |  | output |
 | igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. |  | False |
+| include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
 
 
 ### Advanced Options

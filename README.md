@@ -188,7 +188,6 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 |--------------------------|------|-------------|------|---------|
 | bracken_length | integer | Set the length value Bracken will use | Should be set to the length used to generate the kmer distribution file supplied in the Kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 1000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300 |  |
 | kraken2_memory_mapping | boolean | Avoids loading database into RAM | Kraken 2 will by default load the database into process-local RAM; this flag will avoid doing so. It may be useful if the available RAM memory is lower than the size of the chosen database. | False |
-| include_kraken2_assignments | boolean | A per sample TSV file that indicates how each input sequence was classified as well as the taxon that has been assigned to each read. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
 | kraken2_confidence | number | Kraken2 Confidence score threshold. Default: 0.0. Valid interval: 0-1 | Apply a threshold to determine if a sequence is classified or unclassified. See the [kraken2 manual section on confidence scoring](https://github.com/DerrickWood/kraken2/wiki/Manual#confidence-scoring) for further details about how it works. | 0.0 |
 
 
@@ -228,6 +227,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 |--------------------------|------|-------------|------|---------|
 | out_dir | string | Directory for output of all user-facing files. |  | output |
 | igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. |  | False |
+| include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
 
 
 ### Advanced Options
@@ -250,22 +250,23 @@ Output files may be aggregated including information for all samples or provided
 
 | Title | File path | Description | Per sample or aggregated |
 |-------|-----------|-------------|--------------------------|
-| workflow report | ./wf-metagenomics-report.html | Report for all samples. | aggregated |
-| Abundance table with counts per taxa | ./abundance_table_{{ taxonomic_rank }}.tsv | Per-taxa counts TSV, including all samples. | aggregated |
-| Bracken report file | ./bracken/{{ alias }}.kraken2_bracken.report | TSV file with the abundance of each taxa. More info about [bracken report](https://github.com/jenniferlu717/Bracken#output-kraken-style-bracken-report). | per-sample |
-| Kraken2 taxonomic assignment per read (Kraken2 pipeline) | ./kraken2/{{ alias }}.kraken2.report.txt | Lineage-aggregated counts. More info about [kraken2 report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#sample-report-output-format). | per-sample |
-| Kraken2 taxonomic asignment per read (Kraken2 pipeline) | ./kraken2/{{ alias }}.kraken2.assignments.tsv | TSV file with the taxonomic assignment per read. More info about [kraken2 assignments report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format). | per-sample |
-| Host BAM file | ./host_bam/{{ alias }}.bam | BAM file generated from mapping filtered input reads to the host reference. | per-sample |
-| BAM index file of host reads | ./host_bam/{{ alias }}.bai | BAM index file generated from mapping filtered input reads to the host reference. | per-sample |
-| BAM file (minimap2) | ./bams/{{ alias }}.reference.bam | BAM file generated from mapping filtered input reads to the reference. | per-sample |
-| BAM index file (minimap2) | ./bams/{{ alias }}.reference.bam.bai | Index file generated from mapping filtered input reads to the reference. | per-sample |
-| BAM flagstat (minimap2) | ./bams/{{ alias }}.bamstats_results/bamstats.flagstat.tsv | Mapping results per reference | per-sample |
-| Minimap2 alignment statistics (minimap2) | ./bams/{{ alias }}.bamstats_results/bamstats.readstats.tsv.gz | Per read stats after aligning | per-sample |
-| JSON file with identified AMR genes (amr) | ./amr/{{ alias }}.json | JSON file with abricate results. More info about [abricate output](https://github.com/tseemann/abricate#output). | per-sample |
-| Reduced reference FASTA file | ./igv_reference/reduced_reference.fasta.gz | Reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
-| Index of the reduced reference FASTA file | ./igv_reference/reduced_reference.fasta.gz.fai | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
-| GZI index of the reduced reference FASTA file | ./igv_reference/reduced_reference.fasta.gz.gzi | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
-| JSON configuration file for IGV browser | ./igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
+| workflow report | wf-metagenomics-report.html | Report for all samples. | aggregated |
+| Abundance table with counts per taxa | abundance_table_{{ taxonomic_rank }}.tsv | Per-taxa counts TSV, including all samples. | aggregated |
+| Bracken report file | bracken/{{ alias }}.kraken2_bracken.report | TSV file with the abundance of each taxa. More info about [bracken report](https://github.com/jenniferlu717/Bracken#output-kraken-style-bracken-report). | per-sample |
+| Kraken2 taxonomic assignment per read (Kraken2 pipeline) | kraken2/{{ alias }}.kraken2.report.txt | Lineage-aggregated counts. More info about [kraken2 report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#sample-report-output-format). | per-sample |
+| Kraken2 taxonomic asignment per read (Kraken2 pipeline) | kraken2/{{ alias }}.kraken2.assignments.tsv | TSV file with the taxonomic assignment per read. More info about [kraken2 assignments report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format). | per-sample |
+| Host BAM file | host_bam/{{ alias }}.bam | BAM file generated from mapping filtered input reads to the host reference. | per-sample |
+| BAM index file of host reads | host_bam/{{ alias }}.bai | BAM index file generated from mapping filtered input reads to the host reference. | per-sample |
+| BAM file (minimap2) | bams/{{ alias }}.reference.bam | BAM file generated from mapping filtered input reads to the reference. | per-sample |
+| BAM index file (minimap2) | bams/{{ alias }}.reference.bam.bai | Index file generated from mapping filtered input reads to the reference. | per-sample |
+| BAM flagstat (minimap2) | bams/{{ alias }}.bamstats_results/bamstats.flagstat.tsv | Mapping results per reference | per-sample |
+| Minimap2 alignment statistics (minimap2) | bams/{{ alias }}.bamstats_results/bamstats.readstats.tsv.gz | Per read stats after aligning | per-sample |
+| JSON file with identified AMR genes (amr) | amr/{{ alias }}.json | JSON file with abricate results. More info about [abricate output](https://github.com/tseemann/abricate#output). | per-sample |
+| Reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz | Reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
+| Index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.fai | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
+| GZI index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.gzi | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
+| JSON configuration file for IGV browser | igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
+| Taxonomic assignment per read. | reads_assignments/{{ alias }}.{{kraken2|minimap2}}.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
 
 
 
@@ -343,7 +344,7 @@ nextflow run epi2me-labs/wf-metagenomics --fastq path/to/fastq/ --database_set P
 
 The main output of the wf-metagenomics pipeline is the `wf-metagenomics-report.html` which can be found in the output directory. It contains a summary of read statistics, the taxonomic composition of the sample and some diversity metrics. The results shown in the report can also be customised with several options. For example, you can use `abundance_threshold` to remove all taxa less prevalent than the threshold from the abundance table. When setting this parameter to a natural number, taxa with fewer absolute counts are removed. You can also pass a decimal between 0.0-1.0 to drop taxa of lower relative abundance. Furthermore, `n_taxa_barplot` controls the number of taxa displayed in the bar plot and groups the rest under the category ‘Other’.
 
-The workflow output also contains Kraken and bracken reports for each sample. Additionally, the ‘species-abundance.tsv’ is a table with the counts of the different taxa per sample. You can use the flag `include_kraken2_assignments` to include a per sample TSV file that indicates how each input sequence was classified as well as the taxon that has been assigned to each read. This TSV file will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. This option is available in the Kraken2 pipeline.
+The workflow output also contains Kraken and bracken reports for each sample. Additionally, the ‘species-abundance.tsv’ is a table with the counts of the different taxa per sample.
 
 
 #### 5.1 Diversity indices

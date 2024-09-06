@@ -69,7 +69,7 @@ nextflow run epi2me-labs/wf-metagenomics --fastq path/to/fastq/ --database_set P
 
 The main output of the wf-metagenomics pipeline is the `wf-metagenomics-report.html` which can be found in the output directory. It contains a summary of read statistics, the taxonomic composition of the sample and some diversity metrics. The results shown in the report can also be customised with several options. For example, you can use `abundance_threshold` to remove all taxa less prevalent than the threshold from the abundance table. When setting this parameter to a natural number, taxa with fewer absolute counts are removed. You can also pass a decimal between 0.0-1.0 to drop taxa of lower relative abundance. Furthermore, `n_taxa_barplot` controls the number of taxa displayed in the bar plot and groups the rest under the category ‘Other’.
 
-The workflow output also contains Kraken and bracken reports for each sample. Additionally, the ‘species-abundance.tsv’ is a table with the counts of the different taxa per sample. You can use the flag `include_kraken2_assignments` to include a per sample TSV file that indicates how each input sequence was classified as well as the taxon that has been assigned to each read. This TSV file will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. This option is available in the Kraken2 pipeline.
+The workflow output also contains Kraken and bracken reports for each sample. Additionally, the ‘species-abundance.tsv’ is a table with the counts of the different taxa per sample.
 
 
 #### 5.1 Diversity indices

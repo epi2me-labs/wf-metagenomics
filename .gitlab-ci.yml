@@ -73,7 +73,7 @@ docker-run:
        variables:
           NF_PROCESS_FILES: >
             subworkflows/kraken_pipeline.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_kraken2_assignments --abundance_threshold 1 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_read_assignments --abundance_threshold 1 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: ""
           AFTER_NEXTFLOW_CMD: >
             grep "Found empty file for sample 'barcode05'" .nextflow.log
@@ -86,7 +86,7 @@ docker-run:
           NF_BEFORE_SCRIPT: "REAL_TIME_PORT=$$(shuf -i 8100-8900 -n 1)"
           NF_PROCESS_FILES: >
             subworkflows/real_time_pipeline.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --read_limit 3000 --include_kraken2_assignments --batch_size 1000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT}"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --read_limit 3000 --include_read_assignments --batch_size 1000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT}"
           NF_IGNORE_PROCESSES: ""
      ## Regular test minimap2 - mapping stats
      - if: $MATRIX_NAME == "minimap2"
@@ -95,7 +95,7 @@ docker-run:
             subworkflows/minimap_pipeline.nf
             lib/common.nf
             modules/local/igv_related.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s --keep_bam"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s --keep_bam --include_read_assignments"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"
      # Minimap2 - sample sheet - taxonomic_rank - taxa barplot - abundance_threshold
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
@@ -108,12 +108,12 @@ docker-run:
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats,configure_igv,filter_references"
      # BACTERIA-ARCHAEA-EUKARYA
      ## Bacteria, Archaea, Fungi (BAF) with are supposed to be included in the default database: ncbi_16s_18s.
-     ## It also works as a test for single file - kraken_confidence - include_kraken2_assignments
+     ## It also works as a test for single file - kraken_confidence - include_read_assignments
      - if: $MATRIX_NAME == "kraken2-baf"
        variables:
           NF_PROCESS_FILES: >
             subworkflows/kraken_pipeline.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10 --include_kraken2_assignments --sample bacteria_archaea_fungi --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --abundance_threshold 10 --include_read_assignments --sample bacteria_archaea_fungi --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: "concatAssignments"
      - if: $MATRIX_NAME == "minimap2-baf"
        variables:
@@ -186,7 +186,7 @@ docker-run:
        variables:
           NF_PROCESS_FILES: >
             subworkflows/kraken_pipeline.nf
-          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --include_kraken2_assignments --abundance_threshold 1 --database_set ncbi_16s_18s"
+          NF_WORKFLOW_OPTS: "--bam test_data/case05_bam --include_read_assignments --abundance_threshold 1 --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: ""
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
