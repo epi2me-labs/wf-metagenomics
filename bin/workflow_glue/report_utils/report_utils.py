@@ -434,3 +434,30 @@ def load_alignment_data(align_stats, sample, rank='species'):
     plt_heatmap.xAxis.axisLabel = dict(rotate=90)
     # return table, scatter, heatmap
     return [align_df, plt_scatter, plt_heatmap]
+
+
+def n_reads_pass(metadata):
+    """Table with number of reads discarded per sample."""
+    n_reads = {}
+    with open(metadata) as meta:
+        meta_list = json.load(meta)
+        for sample_meta in meta_list:
+            n_reads[sample_meta["alias"]] = {
+                "Reads": int(sample_meta.get("n_seqs")),
+                "Reads after host depletion": sample_meta.get(
+                    "n_seqs_passed_host_depletion"),
+                "Unclassified": sample_meta.get("n_unclassified")
+            }
+    df = pd.DataFrame.from_dict(n_reads).T.sort_index()
+    # NaNs are expected in the case of skipping steps
+    # e.g. when the exclude_host is not used
+    # remove those columns in the report
+    df = df.dropna(axis=1, how='all')
+    df.rename_axis('Sample alias')
+    # Calculate percentages based on the initial number of reads (after fastcat)
+    reference_column = 'Reads'
+    cols_to_make_pc = df.columns.difference([reference_column])
+    # Add pc suffix
+    df[cols_to_make_pc + ' (%)'] = df[cols_to_make_pc].apply(
+        lambda x: round(x / df[reference_column] * 100, 2))
+    return df

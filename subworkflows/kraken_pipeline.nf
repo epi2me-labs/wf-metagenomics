@@ -61,7 +61,7 @@ process run_bracken {
         val(taxonomic_rank)
     output:
         tuple val(meta), path("${meta.alias}.kraken2_bracken.report"), emit: bracken_reports
-        tuple val(meta), path("${meta.alias}.json"), emit: bracken_json
+        tuple val(meta), path("${meta.alias}.json"), env(n_unclassified), emit: bracken_json
     script:
         def sample_id = "${meta.alias}"
         def awktab="awk -F '\t' -v OFS='\t'"
@@ -92,7 +92,7 @@ process run_bracken {
         -u kraken2.report \
         -p "${sample_id}.kraken2" \
         -r "${taxonomic_rank}"
-    
+    n_unclassified=\$(cut -f1 kraken2.assignments.tsv | grep -c '^U' -)
     # add sample to the json file    
     file1=\$(find -name '*.json' -exec cat {} +)
     echo "{"'"$sample_id"'": \$file1}" >> "bracken.json"
@@ -186,15 +186,6 @@ workflow kraken_pipeline {
         software_versions = common.software_versions
         parameters = common.parameters
         samples = common.samples
-        // Initial reads QC
-        // get metadata and stats files, keeping them ordered (could do with transpose I suppose)
-        samples.multiMap{ meta, path, stats ->
-            meta: meta
-            stats: stats
-        }.set { for_report }
-        metadata = for_report.meta.collect()
-        // create a file list of the stats, and signal if its empty or not
-        stats = for_report.stats.collect()
 
         // Run Kraken2
         // Find out size of the db. Cannot be done within the process
@@ -204,10 +195,33 @@ workflow kraken_pipeline {
         // Run bracken
         bracken_reports = run_bracken(kraken2_reports, database, taxonomy, bracken_length, taxonomic_rank)
         lineages = bracken_reports.bracken_json
+        // Update meta with unclassified
+        samples_classification = lineages.map { meta, lineages_json, n_unclassified->
+            [meta + [n_unclassified: n_unclassified as Integer], lineages_json]
+        }
 
-        // Abundance tabeles
+        // // Use initial reads stats (after fastcat) QC, but update meta
+        for_report = samples
+        | map{
+            meta, path, stats -> [meta.alias, stats]
+        }
+        | combine (
+            samples_classification
+            | map {
+                    meta, lineages_json -> [meta.alias, meta]
+                },
+            by: 0
+        ) | multiMap{ alias, stats, meta ->
+            meta: meta
+            stats: stats
+        }
+        metadata = for_report.meta.collect()
+        // create a file list of the stats, and signal if its empty or not
+        stats = for_report.stats.collect()
+
+        // Abundance table
         abundance_tables = createAbundanceTables(
-            lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
+            lineages.flatMap { meta, lineages_json, n_unclassified -> lineages_json }.collect(),
             taxonomic_rank, 'kraken2')
 
 
@@ -230,7 +244,7 @@ workflow kraken_pipeline {
             metadata,
             stats,
             abundance_tables.abundance_tsv,
-            lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
+            lineages.flatMap { meta, lineages_json, n_unclassified -> lineages_json }.collect(),
             software_versions,
             parameters,
             taxonomic_rank,
@@ -253,7 +267,6 @@ workflow kraken_pipeline {
                     id, report, assignments -> tuple(id, assignments) 
                 }.groupTuple(), taxonomy)
         }
-
          ch_to_publish | output_results
 
     emit:

@@ -157,6 +157,14 @@ def main(args):
                         hover = plt._fig.select(dict(type=HoverTool))
                         hover.tooltips = [("Number of reads", "@top")]
                         EZChart(plt, THEME)
+    if args.pipeline != 'real_time':
+        with report.add_section("Number of reads", "Reads"):
+            p("""
+                Number of reads after read length and quality filtering,
+                host depletion and unclassified.
+                Percentages are calculated from reads after the filtering.
+            """)
+            DataTable.from_pandas(report_utils.n_reads_pass(args.metadata))
 
     #
     # 2. TAXONOMY RESULTS
