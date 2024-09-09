@@ -249,17 +249,6 @@ workflow minimap_pipeline {
         parameters = common.parameters
         samples = common.samples
 
-        
-        // Initial reads QC
-        // get metadata and stats files, keeping them ordered (could do with transpose I suppose)
-        samples.multiMap{ meta, path, stats ->
-            meta: meta
-            stats: stats
-        }.set { for_report }
-        metadata = for_report.meta.collect()
-        // create a file list of the stats, and signal if its empty or not
-        stats = for_report.stats.collect()
-
         // Run Minimap2
         mm2 = minimap(
                 samples
@@ -275,6 +264,24 @@ workflow minimap_pipeline {
             [meta + [n_unclassified: unmapped as Integer], bam, bai, stats]
         }
 
+        // Use initial reads stats (after fastcat) QC, but update meta
+        for_report = samples
+        | map{
+            meta, path, stats -> [meta.alias, stats]
+        }
+        | combine (
+            samples_classification
+            | map {
+                    meta, bam, bai, stats -> [meta.alias, meta]
+                },
+            by: 0
+        ) | multiMap{ alias, stats, meta ->
+            meta: meta
+            stats: stats
+        }
+        metadata = for_report.meta.collect()
+        // create a file list of the stats, and signal if its empty or not
+        stats = for_report.stats.collect()
         // take samples with classified sequences
         bam_classified = samples_classification.filter { meta, bam, bai, stats ->
             // a sample is unclassified if all reads are unclassified

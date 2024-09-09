@@ -67,6 +67,7 @@ process exclude_host_reads {
             val(meta),
             path("*.unmapped.fastq.gz"),
             path("stats_unmapped"),
+            env(n_seqs_passed_host_depletion),
             emit: fastq)
         tuple(
             val(meta),
@@ -99,6 +100,9 @@ process exclude_host_reads {
         -f $fastcat_stats_outdir/per-file-stats.tsv \
         --histograms histograms \
         "${sample_id}.unmapped.fastq.gz" > /dev/null
+    # get number of reads after host removal
+    n_seqs_passed_host_depletion=\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' \
+        $fastcat_stats_outdir/per-file-stats.tsv)
     mv histograms/* $fastcat_stats_outdir
     """
 }
@@ -162,15 +166,36 @@ workflow run_common {
         }
         parameters = getParams()
         if (params.exclude_host){
-            if (params.bam) {
-                log.info("Reads mapped against the host reference will be removed from the analysis.")
-            }
             host_reference = file(params.exclude_host, checkIfExists: true)
             reads = exclude_host_reads(samples,
                 host_reference,
                 common_minimap2_opts
             )
-            samples = reads.fastq
+            samples_passed = reads.fastq.map { 
+                meta, fastq, stats, n_seqs_passed_host_depletion->
+                [meta + [n_seqs_passed_host_depletion: n_seqs_passed_host_depletion as Integer], fastq, stats]
+            }
+            // Discard empty samples after host depletion
+            branched = samples_passed
+            | branch { meta, seqs, stats ->
+                pass: meta.n_seqs_passed_host_depletion > 0
+                fail: true
+            }
+            // log info about the failing samples
+            branched.fail
+                | subscribe {
+                    meta, seqs, stats ->
+                    def valid = meta['n_seqs_passed_host_depletion'] > 0
+                    if (!valid) {
+                        log.warn "Found empty file after host depletion for sample: '${meta["alias"]}'."
+                    }
+                onComplete: { 
+                     log.warn "Empty files or those files whose reads have been discarded after host depletion " +
+                     "will not appear in the report and will be excluded from subsequent analysis."
+                 }
+                }
+            // Save the passing samples
+            samples = branched.pass
             ch_to_publish = Channel.empty()
             ch_to_publish = ch_to_publish | mix (
             reads.host_bam | map { meta, bam, bai -> [bam, "host_bam"]},
