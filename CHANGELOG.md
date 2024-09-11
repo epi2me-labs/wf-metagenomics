@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Taxonomy database to the one released 2024-09-01
 ### Removed
 - `split-prefix` parameter, as the workflow automatically enables this option for large reference genomes.
+- Plot showing number of reads per sample has been replaced for a new table in `Reads` section.
 
 ## [v2.10.1]
 ### Fixed

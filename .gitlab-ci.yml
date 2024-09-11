@@ -16,6 +16,8 @@ variables:
     NF_IGNORE_PROCESSES: "rebatchFastq, output_kraken2_read_assignments"
     CI_FLAVOUR: "new"
     CWG_AWS_ENV_NAME: "stack"
+    PYTEST_CONTAINER_NAME: "wf-common"
+    PYTEST_CONTAINER_CONFIG_KEY: "common_sha"
 
 ## This test works with Standard-8 GB using a stored copy of Standard-8GB in S3.
 aws-run:

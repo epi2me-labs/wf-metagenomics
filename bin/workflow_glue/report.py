@@ -126,11 +126,7 @@ def main(args):
                     stats = stats[0]
                     names = names[0]
                 SeqSummary(stats, sample_names=names)
-            with report.add_section("Samples summary", "Samples summary"):
-                tabs = Tabs()
-                with tabs.add_tab('Reads'):
-                    with Grid(columns=1):
-                        EZChart(report_utils.per_sample_reads(args.metadata), THEME)
+
     # kraken stats for the real time are not in tsv,
     # they came from json files with binned counts
     # to be plotted directly as an histogram
@@ -367,6 +363,10 @@ def main(args):
                 plot = ezc.lineplot(
                     data=df_richness_melt_sort,
                     x='Sample size', y='Richness', hue='Sample')
+                hover = plot._fig.select(dict(type=HoverTool))
+                hover.tooltips = [
+                    ("Richness", "$y"),
+                    ]
                 EZChart(plot, 'epi2melabs')
             em("Note that Unknown taxon is considered as a unique taxon.")
 
@@ -401,7 +401,10 @@ def main(args):
                         )
                         plt._fig.title.text = barcode
                         plt._fig.title.align = "center"
-                        plt._fig.xaxis.visible = False
+                        # show top of the bar value
+                        hover = plt._fig.select(dict(type=HoverTool))
+                        plt._fig.xaxis.axis_label = "Rank"
+                        hover.tooltips = [("freq", "@top")]
                         EZChart(plt, 'epi2melabs')
                         em("""This plot includes all the counts (except Unknown),
                         previous to apply any filter threshold based on abundances.
@@ -439,26 +442,26 @@ def main(args):
         samples_references = {}
         for s in samples:
             samples_references[s] = report_utils.load_alignment_data(
-                args.align_stats, s)
+                args.align_stats, s, args.taxonomic_rank)
         # make sure that the samples really have data.
         dataset_results = {k: v for k, v in samples_references.items() if v is not None}
         if len(dataset_results) >= 1:
             with report.add_section("Alignment Statistics", "References"):
                 tabs = Tabs()
                 # Show table with the detailed output.
-                with tabs.add_dropdown_menu("Dataset", change_header=True):
+                with tabs.add_dropdown_menu("Dataset"):
                     # It will apply on the last analyzed rank.
                     taxa = [  # split the taxonomy string to the last value
                         i.split(';')[-1] for i in counts_per_taxa_df_filtered['tax']]
                     for barcode, metrics in dataset_results.items():
-                        # Choose those species that have passed the abundance threshold.
+                        # Choose those species above the abundance threshold.
                         align_stats = metrics[0]
                         align_stats_filtered = align_stats[align_stats[rank].isin(taxa)]
                         with tabs.add_dropdown_tab(barcode):
                             p(
                                 "Only taxa present in the abundance table above the ",
                                 html_tags.code("abundance_threshold"),
-                                " parameter will appear in the table."
+                                " parameter appear in the table."
                             )
                             DataTable.from_pandas(
                                     align_stats_filtered,
@@ -466,12 +469,12 @@ def main(args):
                                     file_name='wf-metagenomics-alignment'
                             )
                 # Show reference scatterplot of number of reads by coverage.
-                with tabs.add_dropdown_menu("Scatter", change_header=True):
+                with tabs.add_dropdown_menu("Scatter", change_header=False):
                     for barcode, metrics in dataset_results.items():
                         with tabs.add_dropdown_tab(barcode):
                             EZChart(metrics[1], 'epi2melabs')
                 # Show heatmap of relative positional coverage.
-                with tabs.add_dropdown_menu("Heatmap", change_header=True):
+                with tabs.add_dropdown_menu("Heatmap", change_header=False):
                     for barcode, metrics in dataset_results.items():
                         with tabs.add_dropdown_tab(barcode):
                             EZChart(metrics[2], 'epi2melabs')
