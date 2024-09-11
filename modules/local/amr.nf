@@ -112,8 +112,11 @@ workflow run_amr {
             sample_id: meta.alias
             report: amr
         } . set {amr_scan}
-        progressive_amr.scan(amr_scan.report, amr_scan.sample_id)
-        // amr_all = combine_jsons(amr_json.collect())
+        if (params.real_time) {
+            progressive_amr.scan(amr_scan.report, amr_scan.sample_id)
+        } else {
+            amr_all = amr_json.flatMap { meta, amr_json -> amr_json }.collect()
+        }
     emit:
-        reports = progressive_amr.out.reports
+        reports = (params.real_time) ? progressive_amr.out.reports : amr_all
 }
