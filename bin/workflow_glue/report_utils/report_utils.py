@@ -7,7 +7,6 @@ from pathlib import Path
 from bokeh.models import HoverTool
 import ezcharts as ezc
 from ezcharts.plots.distribution import histplot
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import workflow_glue.diversity as diversity
@@ -122,31 +121,6 @@ def most_abundant_table(counts_per_taxa_df, n=10, percent=False):
     return d2plot
 
 
-def per_sample_reads(metadata):
-    """Plot total reads per sample from metadata.
-
-    :param metadata (path).
-    :return (plot): Barplot with reads per sample.
-    """
-    n_reads = {}
-    with open(metadata) as meta:
-        meta_list = json.load(meta)
-        for sample_meta in meta_list:
-            n_reads[sample_meta["alias"]] = sample_meta["n_seqs"]
-    df = pd.DataFrame.from_dict(
-        n_reads, orient='index', columns=['Number of reads']
-        ).reset_index().sort_values(by=['index']).rename(
-        columns={'index': 'sample'})
-    # Add barplot with reads per sample
-    plt = ezc.barplot(data=df, x='sample', y='Number of reads')
-    plt._fig.xaxis.major_label_orientation = 45
-    plt.title = {"text": "Number of reads per sample."}
-    hover = plt._fig.select(dict(type=HoverTool))
-    # show top of the bar value
-    hover.tooltips = [("Number of reads", "@top")]
-    return plt
-
-
 def calculate_diversity_metrics(counts_per_taxa_df):
     """Generate diversity indexes from abundance table.
 
@@ -216,9 +190,9 @@ def read_quality_plot(seq_summary, min_qual=4, max_qual=30, title='Read quality'
         weights=list(df['counts'])
         )
     plt.title = dict(text=title)
-    plt.xAxis.name = 'Quality score'
-    plt.xAxis.min, plt.xAxis.max = min_qual, max_qual
-    plt.yAxis.name = 'Number of reads'
+    plt._fig.xaxis.axis_label = 'Quality score'
+    plt._fig.x_range.start, plt._fig.x_range.end = min_qual, max_qual
+    plt._fig.yaxis.axis_label = 'Number of reads'
     return plt
 
 
@@ -233,8 +207,8 @@ def read_length_plot(seq_summary, title='Read length'):
         bins=len(df),
         weights=list(df['counts']))
     plt.title = dict(text=title)
-    plt.xAxis.name = 'Read length / kb'
-    plt.yAxis.name = 'Number of reads'
+    plt._fig.xaxis.axis_label = 'Read length / kb'
+    plt._fig.yaxis.axis_label = 'Number of reads'
     return plt
 
 
@@ -284,10 +258,10 @@ def coverage_dispersion(depth_ref, ref_len):
     # Get sequencing depth at each positions
     all_depth_pos = nreads_all_positions(depth_ref, ref_len)
     # Calculate the mean of the reads distribution
-    m_depth = all_depth_pos.depth.mean()
+    m_depth = all_depth_pos.depth.mean().round(2)
     # Calculate the deviation from this mean
-    s_depth = all_depth_pos.depth.std()
-    return m_depth, s_depth, s_depth/m_depth
+    s_depth = all_depth_pos.depth.std().round(2)
+    return m_depth, s_depth, (s_depth/m_depth).round(2)
 
 
 def alignment_metrics(depth, stats):
@@ -371,6 +345,7 @@ def load_alignment_data(align_stats, sample, rank='species'):
 
     :return [table, scatter, heatmap]
     """
+    rank = RANKS_ABB[rank]
     cov_tsv = Path(f"{align_stats}/{sample}.reference.tsv.gz")
     depth_tsv = Path(f"{align_stats}/{sample}.depth.tsv.gz")
     # the depth file is empty if there aren't classfied reads, e.g. barcode03
@@ -392,36 +367,45 @@ def load_alignment_data(align_stats, sample, rank='species'):
         align_df['numreads']
         / align_df['numreads'].sum()
         * 100).round(2)
-    align_df.rename(columns={'numreads': 'number of reads'}, inplace=True)
+    align_df.rename(
+        columns={
+            'numreads': 'number of reads',
+            'coverage': 'pc coverage',
+            'ref': 'reference',
+            'endpos': 'ref length',
+            }, inplace=True)
+
     # create the scatter plot.
     # x-axis is the number of reads, y-axis is the coverage.
     # Depth: number of reads that map in X position
     # Coverage: number of bases in the references that are covered by the reads.
-    # Color: by default the species of each reference to help to identify different
-    # references of the same species. If 'species doesn't exist (e.g. silva db),
+    # Color: the rank (eg. species) of each reference to identify different
+    # references of the same species. If species doesn't exist (e.g. silva db)
     # use the previous rank.
-    if 'species' not in align_df.columns:
+    if (rank == 'species') and (rank not in align_df.columns):
         rank = 'genus'
     plt_scatter = ezc.scatterplot(
-        data=align_df.reset_index(),
-        x='number of reads', y='coverage', hue=rank)
-    # move to ezcharts package!!!!
-    # Add custom label tooltips: nreads, cov, species name, reference (ref)
-    plt_scatter.dataset[0].source = np.hstack((
-        plt_scatter.dataset[0].source,
-        align_df['ref'].values[:, None]))
-    plt_scatter.dataset[0].dimensions = list(
-        plt_scatter.dataset[0].dimensions) + ['ref']
-    # Add them and custom format-color by species
-    for series in plt_scatter.series:
-        series.encode = dict(
-            x="number of reads",
-            y="coverage",
-            seriesName=None,
-            itemName="ref",
-            tooltip=['x', 'y'],
-        )
-        plt_scatter.tooltip = {"trigger": "item"}
+        data=align_df,
+        x='number of reads', y='pc coverage', hue=rank)
+    plt_scatter._fig.title.text = sample
+    # Add ref to the plot to be able to access later in hover
+    # There is two glyd per species (rank), which is the hue
+    # eg. 10 different families -> 20 glyd
+    # Replace with the corresponding info based on the index value
+    for gly in plt_scatter._fig.renderers:
+        # add more properties for hover later
+        gly.data_source.data['reference'] = align_df.loc[
+            list(gly.data_source.to_df().index)]['reference']
+        gly.data_source.data['rank'] = align_df.loc[
+            list(gly.data_source.to_df().index)][rank]
+
+    hover = plt_scatter._fig.select(dict(type=HoverTool))
+    hover.tooltips = [
+        ("number of reads", "$x"),
+        ("coverage (%)", "$y"),
+        ("reference", "@reference"),
+        ("taxa", "@rank")
+    ]
     # Add heatmap in blues to visualize the coverage of the reference and
     # the sequencing depth by quartiles (depth2heatmap).
     cmap = sns.color_palette(
@@ -432,6 +416,7 @@ def load_alignment_data(align_stats, sample, rank='species'):
     plt_heatmap.tooltip = dict(position='top', trigger='item')
     plt_heatmap.yAxis.name = "Relative position"
     plt_heatmap.xAxis.axisLabel = dict(rotate=90)
+    plt_heatmap.title = dict(text=sample)
     # return table, scatter, heatmap
     return [align_df, plt_scatter, plt_heatmap]
 
