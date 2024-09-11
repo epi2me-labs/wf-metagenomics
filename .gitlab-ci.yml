@@ -168,7 +168,7 @@ docker-run:
             subworkflows/minimap_pipeline.nf
             lib/common.nf
             modules/local/igv_related.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/case04-2/ --exclude_host ${CI_PROJECT_NAME}/data/reference_host/cw_4388_human_vero.fna --classifier minimap2 --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/case04-2/ --exclude_host ${CI_PROJECT_NAME}/data/reference_host/cw_4388_human_vero.fna --classifier minimap2 --database_set ncbi_16s_18s -executor.\\$$local.memory 24GB"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats,configure_igv,filter_references"
      - if: $MATRIX_NAME == "minimap2-exclude-host-bam"
        variables:

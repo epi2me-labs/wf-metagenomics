@@ -198,15 +198,15 @@ process makeReport {
         path "versions/*"
         path "params.json"
         val taxonomic_rank
-        path amr
+        path "amr/*"
     output:
         path "*.html", emit: report_html
     script:
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
         String metadata = new JsonBuilder(metadata).toPrettyString()
         String report_name = "${workflow_name}-report.html"
-        def align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
-        def amr = params.amr as Boolean ? "--amr ${amr}" : ""
+        String align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
+        String amr = params.amr as Boolean ? "--amr amr" : ""
     """
     echo '${metadata}' > metadata.json
     workflow-glue report \
