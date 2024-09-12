@@ -54,10 +54,9 @@ process exclude_host_reads {
     cpus params.threads
     // cannot use maxRetries based on exitcodes 137 
     // due to the wf fail at the samtools step
-    memory {
-        // Memory usage is dependent on the database and the size of samples to be processed
-        "15GB"
-    }
+    memory {12.GB * task.attempt}
+    maxRetries 1
+    errorStrategy = 'retry'
     input:
         tuple val(meta), path(concat_seqs), path(fastcat_stats)
         path host_reference

@@ -18,10 +18,9 @@ process minimap {
     cpus params.threads
     publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.minimap2.assignments.tsv", enabled: params.include_read_assignments
     // due to the wf fail at the samtools step
-    memory {
-        // depends on the database and the size of samples to be processed
-        "12GB"
-    }
+    memory {12.GB * task.attempt}
+    maxRetries 1
+    errorStrategy = 'retry'
     input:
         tuple val(meta), path(concat_seqs), path(stats)
         path reference
@@ -187,7 +186,9 @@ process getAlignmentStats {
 process makeReport {
     label "wf_common"
     cpus 1
-    memory 4.GB
+    memory {4.GB * task.attempt}
+    maxRetries 3
+    errorStrategy = 'retry'
     input:
         val wf_version
         val metadata
@@ -362,15 +363,14 @@ workflow minimap_pipeline {
             // create IGV config file: use absolute paths in the igv.JSON
             // write files in file-names.txt
 
-            current_dir = "${file('.').toUriString()}"
             igv_files = filtered_refs
-                | map { list -> list.collect { "$current_dir/$params.out_dir/$publish_ref/${it.Name}" }}
+                | map { list -> list.collect { "$publish_ref/${it.Name}" }}
                 | concat (
                     bam_classified
                     | flatMap {
                          meta, bam, bai, stats -> [
-                            "$current_dir/$params.out_dir/$publish_bam/${meta.alias}.reference.bam",
-                            "$current_dir/$params.out_dir/$publish_bam/${meta.alias}.reference.bam.bai",
+                            "$publish_bam/${meta.alias}.reference.bam",
+                            "$publish_bam/${meta.alias}.reference.bam.bai",
                         ]
                     }
                     | collect

@@ -40,7 +40,7 @@
 | taxonomy | string | Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory]. | By default NCBI taxonomy file will be downloaded and used. |  |
 | reference | string | Override the FASTA reference file selected by the database_set parameter. It can be a FASTA format reference sequence collection or a minimap2 MMI format index. | This option should be used in conjunction with the database parameter to specify a custom database. |  |
 | ref2taxid | string | Not required but can be used to specify a  ref2taxid mapping. Format is .tsv (refname  taxid), no header row. | By default uses ref2taxid for option chosen in database_set parameter. |  |
-| taxonomic_rank | string | Returns results at the taxonomic rank chosen. In the Kraken2 pipeline: set the level that Bracken will estimate abundance at. Default: S (species). Other possible options are K (kingdom level), P (phylum), C (class), O (order), F (family), and G (genus). |  | S |
+| taxonomic_rank | string | Returns results at the taxonomic rank chosen. In the Kraken2 pipeline: set the level that Bracken will estimate abundance at. Default: S (species). Other possible options are P (phylum), C (class), O (order), F (family), and G (genus). |  | S |
 
 
 ### Kraken2 Options
@@ -58,7 +58,7 @@
 |--------------------------|------|-------------|------|---------|
 | minimap2filter | string | Filter output of minimap2 by taxids inc. child nodes, E.g. "9606,1404" | Provide a list of taxids if you are only interested in certain ones in your minimap2 analysis outputs. |  |
 | minimap2exclude | boolean | Invert minimap2filter and exclude the given taxids instead | Exclude a list of taxids from analysis outputs. | False |
-| keep_bam | boolean | Copy bam files into the output directory. It also creates the configuration and reduced reference files needed to load the alignments in IGV. |  | False |
+| keep_bam | boolean | Copy bam files into the output directory. |  | False |
 | minimap2_by_reference | boolean | Add a table with the mean sequencing depth per reference, standard deviation and coefficient of variation. It adds a scatterplot of the sequencing depth vs. the coverage and a heatmap showing the depth per percentile to the report |  | False |
 | min_percent_identity | number | Minimum percentage of identity with the matched reference to define a sequence as classified; sequences with a value lower than this are defined as unclassified. |  | 90 |
 | min_ref_coverage | number | Minimum coverage value to define a sequence as classified; sequences with a coverage value lower than this are defined as unclassified. Use this option if you expect reads whose lengths are similar to the references' lengths. |  | 0 |
