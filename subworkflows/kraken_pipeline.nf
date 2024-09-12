@@ -52,7 +52,9 @@ process run_bracken {
     tag "${meta.alias}"
     publishDir "${params.out_dir}/bracken", mode: 'copy', pattern: "*bracken*"
     cpus Math.max(params.threads - 2, 2)
-    memory "7GB"
+    memory {8.GB * task.attempt - 1.GB}
+    maxRetries 1
+    errorStrategy = 'retry'
     input:
         tuple val(meta), path("kraken2.report"), path("kraken2.assignments.tsv")
         path(database)
@@ -92,7 +94,7 @@ process run_bracken {
         -u kraken2.report \
         -p "${sample_id}.kraken2" \
         -r "${taxonomic_rank}"
-    n_unclassified=\$(cut -f1 kraken2.assignments.tsv | grep -c '^U' -)
+    n_unclassified=\$(cut -f1 kraken2.assignments.tsv | { grep -c '^U' - || test \$? = 1;} )
     # add sample to the json file    
     file1=\$(find -name '*.json' -exec cat {} +)
     echo "{"'"$sample_id"'": \$file1}" >> "bracken.json"
@@ -132,7 +134,9 @@ process makeReport {
     label "wf_common"
     cpus 1
     // Report generation will generally use less memory than 4GB, but higher complexity data will use more.
-    memory "4GB" 
+    memory {4.GB * task.attempt}
+    maxRetries 3
+    errorStrategy = 'retry'
     input:
         val wf_version
         val metadata
