@@ -156,10 +156,17 @@ def main(args):
     if args.pipeline != 'real_time':
         with report.add_section("Number of reads", "Reads"):
             p("""
-                Number of reads after read length and quality filtering,
-                host depletion and unclassified.
+                Number of reads after applying read length and quality filters.
+                Read counts will also reflect host depletion and unclassified
+                reads (kraken2 approach) and unmapped reads (minimap2 approach).
                 Percentages are calculated from reads after the filtering.
             """)
+            p("""
+                Note that in the minimap2 approach, there are two filters
+                based on the mapping identity and coverage that can increase
+                the number of unclassified sequences. This table shows the
+                unmapped reads before both filters are applied.
+              """)
             DataTable.from_pandas(report_utils.n_reads_pass(args.metadata))
 
     #
@@ -180,7 +187,7 @@ def main(args):
     with report.add_section('Sunburst', 'Sunburst'):
         tabs = Tabs()
         with tabs.add_dropdown_menu('Sample', change_header=True):
-            for barcode in all_json.keys():
+            for barcode in sorted(all_json.keys()):
                 logger.info(f"Sample {barcode}.")
                 with tabs.add_dropdown_tab(barcode):
                     p("""
@@ -363,10 +370,6 @@ def main(args):
                 plot = ezc.lineplot(
                     data=df_richness_melt_sort,
                     x='Sample size', y='Richness', hue='Sample')
-                hover = plot._fig.select(dict(type=HoverTool))
-                hover.tooltips = [
-                    ("Richness", "$y"),
-                    ]
                 EZChart(plot, 'epi2melabs')
             em("Note that Unknown taxon is considered as a unique taxon.")
 
@@ -401,13 +404,12 @@ def main(args):
                         )
                         plt._fig.title.text = barcode
                         plt._fig.title.align = "center"
-                        # show top of the bar value
-                        hover = plt._fig.select(dict(type=HoverTool))
                         plt._fig.xaxis.axis_label = "Rank"
-                        hover.tooltips = [("freq", "@top")]
+                        plt._fig.xaxis.major_label_text_color = None
+                        plt._fig.xaxis.major_tick_line_color = None
                         EZChart(plt, 'epi2melabs')
                         em("""This plot includes all the counts (except Unknown),
-                        previous to apply any filter threshold based on abundances.
+                        before applying any filter threshold based on abundances.
                         """)
                     # case of barcode03 with all unclassified.
                     else:

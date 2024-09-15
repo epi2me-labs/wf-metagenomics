@@ -190,8 +190,8 @@ def read_quality_plot(seq_summary, min_qual=4, max_qual=30, title='Read quality'
         weights=list(df['counts'])
         )
     plt.title = dict(text=title)
-    plt._fig.xaxis.axis_label = 'Quality score'
     plt._fig.x_range.start, plt._fig.x_range.end = min_qual, max_qual
+    plt._fig.xaxis.axis_label = 'Quality score'
     plt._fig.yaxis.axis_label = 'Number of reads'
     return plt
 
@@ -388,6 +388,7 @@ def load_alignment_data(align_stats, sample, rank='species'):
         data=align_df,
         x='number of reads', y='pc coverage', hue=rank)
     plt_scatter._fig.title.text = sample
+    plt_scatter._fig.legend.visible = False
     # Add ref to the plot to be able to access later in hover
     # There is two glyd per species (rank), which is the hue
     # eg. 10 different families -> 20 glyd
@@ -431,7 +432,7 @@ def n_reads_pass(metadata):
                 "Reads": int(sample_meta.get("n_seqs")),
                 "Reads after host depletion": sample_meta.get(
                     "n_seqs_passed_host_depletion"),
-                "Unclassified": sample_meta.get("n_unclassified")
+                "Unclassified|Unmapped": sample_meta.get("n_unclassified")
             }
     df = pd.DataFrame.from_dict(n_reads).T.sort_index()
     # NaNs are expected in the case of skipping steps
