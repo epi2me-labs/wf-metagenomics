@@ -51,6 +51,9 @@ workflow {
     if (params.classifier != 'kraken2' && params.real_time) {
         throw new Exception("Real time subworkflow must use kraken2 classifier.")
     }
+    if (params.real_time) {
+        log.info("WARNING: The real-time processing functionality of this workflow is experimental and may not be suitable for all use cases.")
+    }
 
     // If user provides each database, set to 'custom' the params.database_set
     if (params.reference || params.database) {
