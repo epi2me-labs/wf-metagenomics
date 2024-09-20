@@ -84,6 +84,7 @@ process exclude_host_reads {
         def common_minimap2_opts = (host_reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
         common_minimap2_opts = common_minimap2_opts.join(" ")
         String fastcat_stats_outdir = "stats_unmapped"
+        def per_read_stats = params.real_time ? "-r >(bgzip -c > $fastcat_stats_outdir/per-read-stats.tsv.gz)" : ""
     // Map reads against the host reference and take the unmapped reads for further analysis
     """
     minimap2 -t $task.cpus ${common_minimap2_opts} -m 50 --secondary=no "${host_reference}" $concat_seqs \
@@ -98,6 +99,7 @@ process exclude_host_reads {
         -s "${sample_id}" \
         -f $fastcat_stats_outdir/per-file-stats.tsv \
         --histograms histograms \
+        ${per_read_stats} \
         "${sample_id}.unmapped.fastq.gz" > /dev/null
     # get number of reads after host removal
     n_seqs_passed_host_depletion=\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' \
