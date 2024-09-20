@@ -16,7 +16,6 @@ This workflow can be used for the following:
 
 Additional features:
 + Two different approaches are available: `kraken2` (k-mer based) or `minimap2` (using alignment).
-+ Option to run it in [real time](#311-running-wf-metagenomics-in-real-time): `real_time`.
 + Results include:
     - An abundance table with counts per taxa in all the samples.
     - Interactive sankey and sunburst plots to explore the different identified lineages.
@@ -295,28 +294,6 @@ There are two different approaches to taxonomic classification:
 
 [Kraken2](https://github.com/DerrickWood/kraken2) provides the fastest method for the taxonomic classification of the reads. Then, [Bracken](https://github.com/jenniferlu717/Bracken) is used to provide an estimate of the species (or the selected taxonomic rank) abundance in the sample.
 
-##### 3.1.1 Running wf-metagenomics in real time
-
-The Kraken2 mode can be used in real-time, allowing the workflow to run parallel with an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies sequencing instrument. In this case, [Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) and the user can visualise the classification of reads and species abundances in a real-time updating report.    
-In real-time mode, the workflow processes new input files as they become available in batches of the specified size. Thus, this option cannot be used with a single fastq as input.    
->Note: When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with `ctrl+c` when on the command line). The workflow can be configured to complete automatically after a set number of reads have been analysed using the `read_limit` variable. Once this threshold has been reached, the program will emit a `STOP.fastq.gz` file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq.gz" file is then deleted.
-
-```
-nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --real_time --batch_size 1000 --read_limit 4000
-```
-
-If running the Kraken2 pipeline **real_time** in a cluster, there are two options to enable the workflow to be able to communicate with the Kraken-server: 
-
-1. Run a Kraken-server separately outside of the workflow.
-2. Submit the workflow job to run on a single node (i.e. running as if on a single local machine).
-
->Notes on CPU resource of Kraken-server and client in the real time workflow
-The real-time subworkflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
-+ port: The option specifies the local network port on which the server and clients will communicate.
-+ host: Network hostname (or IP address) for communication between Kraken2 server and clients. (See also external_kraken2 parameter).
-+ external_kraken2: Whether a pre-existing Kraken2 server should be used, rather than creating one as part of the workflow. By default the workflow assumes that it is running on a single host computer, and further that it should start its own Kraken2 server. It may be desirable to start a Kraken2 server outside of the workflow (for example to host a large database), in which case this option should be enabled. This option may be used in conjuction with the host option to specify that the Kraken2 server is running on a remote computer.
-+ server_threads: Number of CPU threads used by the Kraken2 server for classifying reads.
-+ kraken_clients: Number of clients that can connect at once to the Kraken-server for classifying reads. It should not be set to more than 4 fewer than the executor CPU limit.
 
 #### 3.2 Using Minimap2
 
@@ -400,6 +377,33 @@ These indices are calculated by default using the original abundance table (see 
 The report also includes the rarefaction curve per sample which displays the mean of species richness for a subsample of reads (sample size). Generally, this curve initially grows rapidly, as most abundant species are sequenced and they add new taxa in the community, then slightly flattens due to the fact that 'rare' species are more difficult of being sampled, and because of that is more difficult to report an increase in the number of observed species.
 
 > Note: Within each rank, each named taxon is a unique unit. The counts are the number of reads assigned to that taxon. All `Unknown` sequences are considered as a unique taxon
+
+
+### 6. Running wf-metagenomics in real time
+
+> This feature is only available when using Kraken2 as the classifier. It is somewhat experimental and may not work as expected in all environments.
+
+The Kraken2 mode of the workflow can be used in real-time, allowing the workflow to run parallel with an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies sequencing instrument. In this case, [Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) and the user can visualise the classification of reads and species abundances in a real-time updating report.
+In real-time mode, the workflow processes new input files as they become available in batches of the specified size. Thus, this option cannot be used with a single fastq as input.
+
+When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with `ctrl+c` when on the command line). The workflow can be configured to complete automatically after a set number of reads have been analysed using the `read_limit` variable. Once this threshold has been reached, the program will emit a `STOP.fastq.gz` file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq.gz" file is then deleted.
+
+```
+nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --real_time --batch_size 1000 --read_limit 4000
+```
+
+If running the Kraken2 pipeline **real_time** in a cluster, there are two options to enable the workflow to be able to communicate with the Kraken-server: 
+
+1. Run a Kraken-server separately outside of the workflow.
+2. Submit the workflow job to run on a single node (i.e. running as if on a single local machine).
+
+The real-time subworkflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
++ port: The option specifies the local network port on which the server and clients will communicate.
++ host: Network hostname (or IP address) for communication between Kraken2 server and clients. (See also external_kraken2 parameter).
++ external_kraken2: Whether a pre-existing Kraken2 server should be used, rather than creating one as part of the workflow. By default the workflow assumes that it is running on a single host computer, and further that it should start its own Kraken2 server. It may be desirable to start a Kraken2 server outside of the workflow (for example to host a large database), in which case this option should be enabled. This option may be used in conjuction with the host option to specify that the Kraken2 server is running on a remote computer.
++ server_threads: Number of CPU threads used by the Kraken2 server for classifying reads.
++ kraken_clients: Number of clients that can connect at once to the Kraken-server for classifying reads. It should not be set to more than 4 fewer than the executor CPU limit.
+
 
 
 
