@@ -231,7 +231,7 @@ docker-run:
             --reference "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/genomes.fna.gz"
             --ref2taxid "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/ref2taxid.tsv"
             --igv
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads,download_reference_ref2taxid,prepareSILVA,unpack_download_kraken2_database,determine_bracken_length"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,download_reference_ref2taxid,prepareSILVA,unpack_download_kraken2_database,determine_bracken_length,download_unpack_taxonomy"
      ## Test real time simulating new fq files on the fly
      - if: $MATRIX_NAME == "amr-real-time"
        variables:
@@ -249,5 +249,5 @@ docker-run:
             --real_time true
             --database_set "ncbi_16s_18s"
             --read_limit 10000
-          NF_IGNORE_PROCESSES: "concatAssignments,rebatchFastq,download_reference_ref2taxid,prepareSILVA,check_reference_ref2taxid,configure_igv"
-      
+          NF_IGNORE_PROCESSES: "concatAssignments,rebatchFastq,download_reference_ref2taxid,prepareSILVA,check_reference_ref2taxid,configure_igv,determine_bracken_length,download_unpack_taxonomy,unpack_download_kraken2_database"
+
