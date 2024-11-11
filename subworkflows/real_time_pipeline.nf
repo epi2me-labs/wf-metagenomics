@@ -5,7 +5,7 @@ include { run_amr } from '../modules/local/amr'
 include {
     run_common;
     createAbundanceTables;
-    output as output_results;
+    publish;
 } from '../modules/local/common'
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
@@ -560,7 +560,7 @@ workflow real_time_pipeline {
             )
         }
 
-        ch_to_publish | output_results
+        ch_to_publish | publish
 
 
         // Stop server when all are processed

@@ -6,7 +6,7 @@ include { filter_references } from '../modules/local/igv_related'
 include {
     run_common;
     createAbundanceTables;
-    output as output_results;
+    publish;
 } from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
@@ -17,6 +17,9 @@ process minimap {
     tag "${meta.alias}"
     cpus params.threads
     publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.minimap2.assignments.tsv", enabled: params.include_read_assignments
+    publishDir "${params.out_dir}/bams", mode: 'copy', pattern: "*reference.bam*", enabled: (params.keep_bam || params.igv)
+    publishDir "${params.out_dir}/bams", mode: 'copy', pattern: "*.bamstats_results", enabled: (params.keep_bam || params.igv)
+
     // due to the wf fail at the samtools step
     memory {12.GB * task.attempt}
     maxRetries 1
@@ -114,6 +117,7 @@ process minimap {
 
 process extractMinimap2Reads {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}/extracted", mode: 'copy', pattern: "*.minimap2.extracted.fastq"
     tag "${meta.alias}"
     cpus 1
     memory "7GB" //depends on the size of the BAM file.
@@ -185,6 +189,7 @@ process getAlignmentStats {
 
 process makeReport {
     label "wf_common"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "${report_name}"
     cpus 1
     memory {4.GB * task.attempt}
     maxRetries 3
@@ -201,11 +206,11 @@ process makeReport {
         val taxonomic_rank
         path "amr/*"
     output:
-        path "*.html", emit: report_html
+        path "${report_name}", emit: report_html
     script:
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
         String metadata = new JsonBuilder(metadata).toPrettyString()
-        String report_name = "${workflow_name}-report.html"
+        report_name = "${workflow_name}-report.html"
         String align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
         String amr = params.amr as Boolean ? "--amr amr" : ""
     """
@@ -229,7 +234,7 @@ process makeReport {
     """
 }
 
- 
+
 // workflow module
 workflow minimap_pipeline {
     take:
@@ -298,7 +303,7 @@ workflow minimap_pipeline {
         }
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
-            taxonomic_rank, params.classifier)      
+            taxonomic_rank, params.classifier)
 
         // Process AMR
         if (params.amr) {
@@ -326,29 +331,8 @@ workflow minimap_pipeline {
             taxonomic_rank,
             amr_reports.ifEmpty(OPTIONAL_FILE)
         )
-        
-        // Define output folder structure
-        String publish_bam = "bams"
-        String publish_ref = "igv_reference"
-
-        // Prepare IGV when the user wants the BAM files output.
-        ch_to_publish = Channel.empty()
-        | mix(
-            software_versions,
-            parameters,
-            report.report_html,
-            abundance_tables.abundance_tsv,
-        )
-        | map { [it, null] }
 
 
-        if (keep_bam) {
-            ch_to_publish = ch_to_publish
-            | concat(samples_classification.flatMap { meta, bam, bai, stats -> 
-                    [bam, bai, stats].collect{ [it, publish_bam] }
-                }
-            )
-        }
 
         if (params.igv) {
             // filter references
@@ -364,13 +348,13 @@ workflow minimap_pipeline {
             // write files in file-names.txt
 
             igv_files = filtered_refs
-                | map { list -> list.collect { "$publish_ref/${it.Name}" }}
+                | map { list -> list.collect { "igv_reference/${it.Name}" }}
                 | concat (
                     bam_classified
                     | flatMap {
-                         meta, bam, bai, stats -> [
-                            "$publish_bam/${meta.alias}.reference.bam",
-                            "$publish_bam/${meta.alias}.reference.bam.bai",
+                        meta, bam, bai, stats -> [
+                            "bams/${meta.alias}.reference.bam",
+                            "bams/${meta.alias}.reference.bam.bai",
                         ]
                     }
                     | collect
@@ -384,14 +368,6 @@ workflow minimap_pipeline {
                 [displayMode: "SQUISHED", colorBy: "strand"], // bam extra opts
                 Channel.of(null), // vcf extra opts
                 )
-
-            ch_to_publish = igv_conf
-            | map { [it, null] }
-            | concat (
-                filtered_refs.flatMap { ref, fai, gzi ->
-                    [ref, fai, gzi].collect { [it, publish_ref] }},
-                ch_to_publish,
-            )
         }
 
 
@@ -402,12 +378,8 @@ workflow minimap_pipeline {
                 ref2taxid,
                 taxonomy
             )
-            ch_to_publish = ch_to_publish | mix (
-                mm2_filt.extracted | map { meta, fastq -> [fastq, "reference"]},
-            )
         }
 
-        ch_to_publish | output_results
     emit:
         report.report_html  // just emit something
 }

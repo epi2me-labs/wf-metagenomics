@@ -266,6 +266,7 @@ Output files may be aggregated including information for all samples or provided
 | GZI index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.gzi | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
 | JSON configuration file for IGV browser | igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
 | Taxonomic assignment per read. | reads_assignments/{{ alias }}.{{kraken2|minimap2}}.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
+| FASTQ of the selected taxids. | extracted/{{ alias }}.minimap2.extracted.fastq | FASTQ containing/excluding the reads of the selected taxids. | per-sample |
 
 
 

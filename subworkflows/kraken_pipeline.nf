@@ -5,7 +5,7 @@ include { run_amr } from '../modules/local/amr'
 include {
     run_common;
     createAbundanceTables;
-    output as output_results;
+    publish;
 } from "../modules/local/common"
 
 
@@ -105,10 +105,10 @@ process run_bracken {
 // Concatenate kraken reports per read
 process output_kraken2_read_assignments {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.kraken2.assignments.tsv"
     tag "${meta.alias}"
     cpus 2
     memory "4GB"
-    publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.kraken2.assignments.tsv"
     input:
         tuple val(meta), path("${meta.alias}.kraken2.assignments.tsv")
         path taxonomy
@@ -132,6 +132,7 @@ process output_kraken2_read_assignments {
 
 process makeReport {
     label "wf_common"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "${report_name}"
     cpus 1
     // Report generation will generally use less memory than 4GB, but higher complexity data will use more.
     memory {4.GB * task.attempt}
@@ -148,11 +149,11 @@ process makeReport {
         val taxonomic_rank
         path "amr/*"
     output:
-        path "*.html", emit: report_html
+        path "${report_name}", emit: report_html
     script:
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
         String metadata = new JsonBuilder(metadata).toPrettyString()
-        String report_name = "${workflow_name}-report.html"
+        report_name = "${workflow_name}-report.html"
         String amr = params.amr as Boolean ? "--amr amr" : ""
     """
     echo '${metadata}' > metadata.json
@@ -195,7 +196,7 @@ workflow kraken_pipeline {
         // Find out size of the db. Cannot be done within the process
         database_main_file_size = database.resolve('hash.k2d').size()
         kraken2_reports = run_kraken2(samples, database, database_main_file_size)
-        
+
         // Run bracken
         bracken_reports = run_bracken(kraken2_reports, database, taxonomy, bracken_length, taxonomic_rank)
         lineages = bracken_reports.bracken_json
@@ -255,23 +256,15 @@ workflow kraken_pipeline {
             amr_reports.ifEmpty(OPTIONAL_FILE)
         )
 
-        ch_to_publish = Channel.empty()
-        | mix(
-            software_versions,
-            parameters,
-            report.report_html,
-            abundance_tables.abundance_tsv,
-        )
-        | map { [it, null] }
 
         // output kraken read assignments + taxonomy info
         if (params.include_read_assignments) {
             kraken2_assignments = output_kraken2_read_assignments(
-                kraken2_reports.map{ 
-                    id, report, assignments -> tuple(id, assignments) 
+                kraken2_reports.map{
+                    id, report, assignments -> tuple(id, assignments)
                 }.groupTuple(), taxonomy)
         }
-         ch_to_publish | output_results
+
 
     emit:
         report.report_html  // just emit something
