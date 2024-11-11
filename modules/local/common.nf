@@ -3,6 +3,7 @@ import groovy.json.JsonBuilder
 
 process abricateVersion {
     label "amr"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt", overwrite: true
     cpus 1
     memory "2GB"
     input:
@@ -18,6 +19,7 @@ process abricateVersion {
 
 process getVersions {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt"
     cpus 1
     memory "2GB"
     output:
@@ -36,6 +38,7 @@ process getVersions {
 
 process getParams {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "params.json"
     cpus 1
     memory "2GB"
     output:
@@ -50,6 +53,8 @@ process getParams {
 
 process exclude_host_reads {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}/host_bam", mode: 'copy', pattern: "*.host.bam*"
+    publishDir "${params.out_dir}/no_host_bam", mode: 'copy', pattern: "*.unmapped.bam*"
     tag "${meta.alias}"
     cpus params.threads
     // cannot use maxRetries based on exitcodes 137 
@@ -112,6 +117,7 @@ process exclude_host_reads {
 // Process to collapse lineages info into abundance dataframes.
 process createAbundanceTables {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "abundance_table_*.tsv"
     cpus 1
     memory "2GB"
     input:
@@ -134,7 +140,7 @@ process createAbundanceTables {
 // See https://github.com/nextflow-io/nextflow/issues/1636
 // This is the only way to publish files from a workflow whilst
 // decoupling the publish from the process steps.
-process output {
+process publish {
     // publish inputs to output directory
     label "wfmetagenomics"
     cpus 1
@@ -197,14 +203,6 @@ workflow run_common {
                 }
             // Save the passing samples
             samples = branched.pass
-            ch_to_publish = Channel.empty()
-            ch_to_publish = ch_to_publish | mix (
-            reads.host_bam | map { meta, bam, bai -> [bam, "host_bam"]},
-            reads.host_bam | map { meta, bam, bai -> [bai, "host_bam"]},
-            reads.no_host_bam | map { meta, bam, bai -> [bam, "no_host_bam"]},
-            reads.no_host_bam | map { meta, bam, bai -> [bai, "no_host_bam"]},
-            )
-            ch_to_publish | output
         } else{
             samples
         }

@@ -135,6 +135,14 @@
         "mime-type": "text/tab-separated-values",
         "optional": true,
         "type": "per-sample"
+      },
+      "extracted-fastq": {
+        "filepath": "extracted/{{ alias }}.minimap2.extracted.fastq",
+        "title": "FASTQ of the selected taxids.",
+        "description": "FASTQ containing/excluding the reads of the selected taxids.",
+        "mime-type": "text",
+        "optional": true,
+        "type": "per-sample"
       }
     }
   }

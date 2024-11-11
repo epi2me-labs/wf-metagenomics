@@ -5,6 +5,7 @@ import groovy.json.JsonBuilder
 // We need the union because there is a common reference
 process filter_references {
     label "wfmetagenomics"
+    publishDir "${params.out_dir}/igv_reference", mode: 'copy', pattern: "reduced_reference.*"
     cpus params.threads
     memory "7 GB"
     input:
@@ -25,5 +26,5 @@ process filter_references {
     | seqkit grep -i -f - "${reference}" \
     | bgzip -@ $task.cpus > reduced_reference.fasta.gz
     samtools faidx reduced_reference.fasta.gz
-    """ 
+    """
 }
