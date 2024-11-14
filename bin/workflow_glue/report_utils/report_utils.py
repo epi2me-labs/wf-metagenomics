@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 """Create tables for the report."""
 import json
+from math import floor
 import os
 from pathlib import Path
 
 from bokeh.models import HoverTool
 import ezcharts as ezc
 from ezcharts.plots.distribution import histplot
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import workflow_glue.diversity as diversity
+
 
 RANK_ORDER = {
     'superkingdom': 1, 'kingdom': 2, 'phylum': 3, 'class': 4, 'order': 5, 'family': 6,
@@ -23,8 +26,6 @@ RANKS_ABB = {
     "D": "superkingdom", "K": "kingdom", "P": "phylum", "C": "class",
     "O": "order", "F": "family", "G": "genus", "S": "species"
 }
-
-# READ INPUT DATA
 
 
 def parse_lineages(lineages):
@@ -226,44 +227,6 @@ def parse_amr(amr_dir):
     return all_output
 
 
-def nreads_all_positions(depth_ref, ref_len):
-    """For each reference, provide mean and standard deviation of the sequencing depth.
-
-    :param depth (Pandas DataFrame): Sequencing depth per position per reference.
-    :param ref_len (int): length in bp of the reference.
-    :return all_depth_pos, DataFrame: contains the depth of each position for reference.
-    """
-    # Initiate an empty dataframe with all the positions of the reference.
-    # Samtools depth returns just positions that at least had 1 read mapped,
-    # exclude those positions whose depth is 0 to avoid huge files.
-    # To make percentiles, we need to count these empty positions,
-    # but better do it now by each reference than having a file with all pos for all the
-    # references.
-    all_depth_pos = pd.DataFrame(0, index=range(1, ref_len + 1), columns=["depth"])
-    all_depth_pos.index.name = "pos"
-    # Fill the df with the sequencing depth of each position.
-    all_depth_pos.loc[depth_ref["pos"], 'depth'] = list(depth_ref["depth"])
-    # total_pos contains now the depth of each position, even those whose depth=0
-    return all_depth_pos
-
-
-def coverage_dispersion(depth_ref, ref_len):
-    """For each reference, provide mean and standard deviation of the sequencing depth.
-
-    :param depth (Pandas DataFrame): Sequencing depth per position per reference.
-    :param ref_len (int): length in bp of the reference.
-    :return average_depth, st. deviation, deviation/ref_len (tuple): Average of the
-        sequencing depth, deviation from this average, coefficient of variation.
-    """
-    # Get sequencing depth at each positions
-    all_depth_pos = nreads_all_positions(depth_ref, ref_len)
-    # Calculate the mean of the reads distribution
-    m_depth = all_depth_pos.depth.mean().round(2)
-    # Calculate the deviation from this mean
-    s_depth = all_depth_pos.depth.std().round(2)
-    return m_depth, s_depth, (s_depth/m_depth).round(2)
-
-
 def alignment_metrics(depth, stats):
     """Provide some alignment metrics for each reference.
 
@@ -272,72 +235,124 @@ def alignment_metrics(depth, stats):
     :return reference_stats (DataFrame): a df with all the stats and the mean +
         st. deviation in coverage for each reference.
     """
-    # For each row/reference, get the sequence length and positional depth.
-    # Then, calculate the depth and coverage dispersion.
-    # Each row is a reference, as in the samtools coverage output ->
-    # apply 1 or ‘columns’: apply function to each row.
-    metrics = stats.apply(lambda row: coverage_dispersion(
-        depth.query("ref == @row.name"), stats.loc[
-            row.name, 'endpos']), axis=1)
-    metrics = pd.DataFrame(metrics.tolist(), index=metrics.index)
-    metrics.columns = ['mean', 'sd', 'Coefficient of Variance']
+    # Input depth data may not cover all positions with zero coverage,
+    # but we're interested in generating statistics that relate to the
+    # entire reference. This code previously allocated memory to cover
+    # all possible positions and then filled in the positions from the
+    # loaded depth data. This not only double stored the input data, but
+    # needlessly kept gigabytes of sparse depth in memory for the purpose
+    # of calculating summary metrics.
+    # Let's avoid all that. We can trivially calculate the mean as we
+    # know the denominator. We can calculate the stddev with a pass over
+    # the known data and adjust for the difference in mean after.
+    ref_lens = dict(zip(stats.index, stats["endpos"]))
 
-    # Add this df to reference_tsv
-    reference_stats = pd.concat([stats, metrics], axis=1)
+    grouped_stats = depth.groupby('ref')['depth'].agg(["count", "sum"])
+    grouped_stats["ref_len"] = grouped_stats.index.map(ref_lens)
+    grouped_stats["mean"] = grouped_stats["sum"] / grouped_stats["ref_len"]
+    ref_means = dict(zip(grouped_stats.index, grouped_stats["mean"]))
+    ref_sum_of_sqdifferences = {ref: 0 for ref in stats.index}
+
+    # calculate the sample variance using the "direct" method
+    # this is more robust than sum of squares, if we wanted to be fancy
+    # we might write this again to just do a one-pass with Welford
+    # but that'll need some rejigging in the caller scope.
+    #
+    # i'd written this to use kahan summation which was a bit more
+    # involved but ultimately unnecessary - np.allclose was happy
+    # and this method should suffice for the use case
+    #   see https://www.johndcook.com/blog/2008/09/26/comparing-three-methods-of-computing-standard-deviation/  # noqa:E501
+    for row in depth.itertuples():
+        ref_sum_of_sqdifferences[row.ref] += (row.depth - ref_means[row.ref]) ** 2
+
+    # account for missing zero depth positions
+    # "count" is the number of positions observed, anything else is zero
+    ref_skipped = dict(
+        zip(grouped_stats.index, grouped_stats["ref_len"] - grouped_stats["count"])
+    )
+    for row in grouped_stats.itertuples():
+        n_missing_zero = ref_skipped[row.Index]
+        ref_sum_of_sqdifferences[row.Index] += (row.mean ** 2) * n_missing_zero
+
+    grouped_stats["sd"] = \
+        np.sqrt(
+            grouped_stats.index.map(ref_sum_of_sqdifferences) /
+            grouped_stats["ref_len"]  # over N for pop sd
+        )
+    grouped_stats["Coefficient of Variance"] = \
+        grouped_stats["sd"] / grouped_stats["mean"]
+    grouped_stats.drop(["count", "sum", "ref_len"], axis=1, inplace=True)
+
+    # Add this df to reference_tsv as before
+    reference_stats = pd.concat([stats, grouped_stats], axis=1)
     return reference_stats.reset_index()
 
 
-def depth_windows(depth_ref, ref_len, nwindows=100):
-    """For each reference, return mean depth by windows.
-
-    :param depth (Pandas DataFrame): Sequencing depth per position for each reference.
-    :param ref_len (int): length in bp of the reference.
-    :param nwindows (int): Number of windows to make intervals in the length of the
-        reference.
-    """
-    # Get sequencing depth of all the positions
-    all_depth_pos = nreads_all_positions(depth_ref, ref_len)
-    # There is likely a very large variability in reference lengths: virus + Eukaryota
-    # Calculate sequencing depth for each n quantile (nwindows) -> break in intervals
-    all_depth_pos['windows'] = pd.qcut(all_depth_pos.index, nwindows)
-    # Sequencing depth in each window
-    windows = all_depth_pos.groupby(['windows']).mean()
-    # nwindows is the same for all the references regardless each length.
-    # use these nwindows as the axis to plot.
-    windows.index = list(range(len(windows)))
-    # return the series (it will be added to a df in the depth2heatmap function to make
-    # the df to be plotted).
-    return pd.Series(windows['depth'])
-
-
-def depth2heatmap(depth, reference, min_nreads=0.01):
+def depth2heatmap(depth, reference, min_cov=1):
     """
     Calculate depth by windows for those references with a sequencing depth.
 
     :param depth (Pandas DataFrame): Sequencing depth per position for each reference.
     :param reference (Pandas DataFrame): Output from samtools coverage with the taxonomy
         assigned to each reference.
-    :param min_nreads (float, optional): Minimum percentage of depth required to plot
-        the reference in the heatmap. Defaults to 0.01.
+    :param min_cov (float, optional): Minimum average depth required to plot
+        the reference in the heatmap. Defaults to 1x.
 
-    :return plot.
+    :return (DataFrame): heatmap data structure.
     """
-    # For each row/reference, get the sequence length and positional depth.
-    # Then, calculate the depth  in sliding windows (percentiles).
-    # Each row is a reference, as in the samtools coverage output ->
-    # apply 1 or ‘columns’: apply function to each row.
-    metrics = reference.apply(lambda row: depth_windows(
-        depth.query("ref == @row.name"), reference.loc[
-            row.name, 'endpos']), axis=1)
-    # Apply an abundance cutoff for the heatmap.
-    # Get references with depth greater than cutoff.
-    cutoff = min_nreads*(metrics.mean(axis=1).max())
-    mask = metrics.mean(axis=1) > cutoff
-    metrics = metrics[mask.values]
-    return metrics
+    if min_cov < 0:
+        raise ValueError("min_cov must be non-negative.")
+
+    n_seqs = len(reference.index)
+    # keep a map of reference names to position in our heatmap matrix
+    ref_ids = {}
+    # keep explicit array of ref_lens to avoid any assumptions on order
+    # use an np array to support broadcasting division later
+    ref_lens = np.zeros(n_seqs, dtype=np.uint64)
+    # heatmap matrix - declared as float type to support div later
+    ref_heatmap = np.zeros((n_seqs, 100), dtype=np.float64)
+    for i, ref in enumerate(reference.itertuples()):
+        ref_ids[ref.Index] = i
+        ref_lens[i] = ref.endpos  # ref_lens are 1 based endpos
+
+    # This previously used pd.qcut to discretise values, which unnecessarily
+    # allocated a Series to assign each depth position a corresponding
+    # window, and consumed the resulting dataframe to calculate some metrics
+    # for each of the window groups. This used a lot of memory.
+    # Let's avoid all that noise and simply iterate the positions; summing
+    # the depth and later dividing by possible observations (to account for
+    # missing zeros) to get the heatmap.
+    for row in depth.itertuples():
+        this_ref_id = ref_ids[row.ref]
+        this_ref_len = ref_lens[this_ref_id]
+        # convert row.pos to 0 based to ensure no window can be 100
+        this_window = floor((row.pos - 1) / this_ref_len * 100)
+        ref_heatmap[this_ref_id, this_window] += row.depth
+
+    # calculate the average over all windows for the ref
+    # to determine the reference mask
+    ref_mean_cov = ref_heatmap.sum(axis=1) / ref_lens
+    ref_mask = ref_mean_cov >= min_cov
+
+    # now convert window count cells to averages for plotting
+    ref_heatmap /= (ref_lens // 100)[:, None]
+
+    # apply the mask to remove refs that do not meet the threshold
+    ref_heatmap = ref_heatmap[ref_mask]
+
+    # convert to a dataframe with some nice labels to match the old api
+    return pd.DataFrame(
+        ref_heatmap,
+        index=reference.index[ref_mask]
+    )
 
 
-def load_alignment_data(align_stats, sample, rank='species'):
+def load_alignment_data(
+    align_stats,
+    sample,
+    rank='species',
+    heatmap_min_cov=1
+):
     """Load alignment data and return components for the report.
 
     :param align_stats (string): Path to the files
@@ -407,18 +422,23 @@ def load_alignment_data(align_stats, sample, rank='species'):
         ("reference", "@reference"),
         ("taxa", "@rank")
     ]
+
     # Add heatmap in blues to visualize the coverage of the reference and
     # the sequencing depth by quartiles (depth2heatmap).
-    cmap = sns.color_palette(
-        "Blues",  n_colors=1000, as_cmap=False).as_hex()
-    plt_heatmap = ezc.heatmap(
-        depth2heatmap(depth, stats),
-        annot=False, cmap=cmap)
-    plt_heatmap.tooltip = dict(position='top', trigger='item')
-    plt_heatmap.yAxis.name = "Relative position"
-    plt_heatmap.xAxis.axisLabel = dict(rotate=90)
-    plt_heatmap.title = dict(text=sample)
-    # return table, scatter, heatmap
+    heatmap_matrix = depth2heatmap(depth, stats, min_cov=heatmap_min_cov)
+    if not heatmap_matrix.empty:
+        cmap = sns.color_palette(
+            "Blues",  n_colors=1000, as_cmap=False).as_hex()
+        plt_heatmap = ezc.heatmap(
+            heatmap_matrix,
+            annot=False, cmap=cmap)
+        plt_heatmap.tooltip = dict(position='top', trigger='item')
+        plt_heatmap.yAxis.name = "Relative position"
+        plt_heatmap.xAxis.axisLabel = dict(rotate=90)
+        plt_heatmap.title = dict(text=sample)
+        # return table, scatter, heatmap
+    else:
+        plt_heatmap = None
     return [align_df, plt_scatter, plt_heatmap]
 
 
