@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - kraken2_client exits with `fastcat_histogram` usage error when using real time pipeline with `exclude_host` option.
 ### Changed
 - Reconcile template with v5.3.0 and v5.3.1
+- Significantly improved the performance of report generation when summarising alignment data.
 
 
 ## [v2.11.0]

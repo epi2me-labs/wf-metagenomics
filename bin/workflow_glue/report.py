@@ -441,10 +441,15 @@ def main(args):
     # 5. ALIGNMENT STATS
     #
     if args.align_stats:
+        heatmap_min_cov = 1
         samples_references = {}
         for s in samples:
             samples_references[s] = report_utils.load_alignment_data(
-                args.align_stats, s, args.taxonomic_rank)
+                args.align_stats,
+                s,
+                args.taxonomic_rank,
+                heatmap_min_cov=heatmap_min_cov,
+            )
         # make sure that the samples really have data.
         dataset_results = {k: v for k, v in samples_references.items() if v is not None}
         if len(dataset_results) >= 1:
@@ -479,7 +484,22 @@ def main(args):
                 with tabs.add_dropdown_menu("Heatmap", change_header=False):
                     for barcode, metrics in dataset_results.items():
                         with tabs.add_dropdown_tab(barcode):
-                            EZChart(metrics[2], 'epi2melabs')
+                            if metrics[2]:
+                                p(
+                                    "To illustrate consistency of coverage between ",
+                                    "the reference sequences, each reference is ",
+                                    "divided into 100 evenly sized windows, and the ",
+                                    "average depth across all positions in the window ",
+                                    "is plotted in a cell in the heatmap. Only ",
+                                    f"references with {heatmap_min_cov}% average ",
+                                    "coverage across the entire sequence are included ",
+                                    "in the heatmap."
+                                )
+                                EZChart(metrics[2], 'epi2melabs')
+                            else:
+                                p(
+                                    "No taxa present with sufficient coverage for heatmap."  # noqa:E501
+                                )
     report.write(args.report)
     logger.info(f"Report written to {args.report}.")
 
