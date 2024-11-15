@@ -13,7 +13,7 @@ variables:
     NF_WORKFLOW_OPTS: "--fastq ${CI_PROJECT_NAME}/data/wf-metagenomics-demo/test_data/ -executor.\\$$local.memory 16GB --database_set Standard-8"
     NF_PROCESS_FILES: >
       subworkflows/kraken_pipeline.nf
-    NF_IGNORE_PROCESSES: "rebatchFastq, output_kraken2_read_assignments"
+    NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
     CI_FLAVOUR: "new"
     CWG_AWS_ENV_NAME: "stack"
     PYTEST_CONTAINER_NAME: "wf-common"
@@ -23,7 +23,6 @@ variables:
 aws-run:
     variables:
         NF_WORKFLOW_OPTS: "--fastq test_data/case01 --store_dir s3://$${XAWS_BUCKET}/${CI_PROJECT_NAME}/store --database_set Standard-8"
-        NF_IGNORE_PROCESSES: "rebatchFastq"
     artifacts:
         when: always
         paths:
@@ -36,13 +35,11 @@ aws-run:
 singularity-run:
     variables:
         NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set ncbi_16s_18s"
-        NF_IGNORE_PROCESSES: "rebatchFastq"
 
 ## This test avoids using the Standard-8GB. The use of this database is tested in aws-run
 macos-run:
     variables:
         NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set ncbi_16s_18s"
-        NF_IGNORE_PROCESSES: "rebatchFastq"
 
 docker-run:
 
@@ -64,7 +61,11 @@ docker-run:
                 "minimap2-exclude-host", "kraken2-exclude-host", "minimap2-exclude-host-bam", "minimap2-exclude-host-empty-barcode",
                 "kraken2-bam", "minimap2-bam", "minimap2-igv",
                 "kraken2-real-time", "kraken2-real-time-bam", "amr-real-time",
-                "minimap2-split-prefix"
+                "minimap2-split-prefix",
+                "report-many-samples",
+                # test combinations of databases
+                "exception-kraken2-reference", "exception-minimap2-database",
+                "exception-minimap2-real-time", "exception-minimap2-igv-mmi-reference"
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -250,4 +251,50 @@ docker-run:
             --database_set "ncbi_16s_18s"
             --read_limit 10000
           NF_IGNORE_PROCESSES: "concatAssignments,rebatchFastq,download_reference_ref2taxid,prepareSILVA,check_reference_ref2taxid,configure_igv,determine_bracken_length,download_unpack_taxonomy,unpack_download_kraken2_database"
+          ## Test real time simulating new fq files on the fly
+     - if: $MATRIX_NAME == "report-many-samples"
+       variables:
+          # simulate_samples.sh create the samples on the fly
+          NF_BEFORE_SCRIPT: "mkdir -p ${CI_PROJECT_NAME}/data/ && bash util/simulate_many_samples.sh ${CI_PROJECT_NAME}/data/ test_data/case06_amr/reads.fq &> ${CI_PROJECT_NAME}/data/simulate_many_samples.log &"
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+          NF_WORKFLOW_OPTS: >
+            --fastq="$CI_PROJECT_NAME/data/test_data/"
+            -executor.\$$local.memory 16GB
+            --database_set "ncbi_16s_18s"
+            --classifier minimap2
+            --minimap2_by_reference
+          NF_IGNORE_PROCESSES: "configure_igv,extractMinimap2Reads"
+      ## Test invalid combinations
+     - if: $MATRIX_NAME == "exception-kraken2-reference"
+       variables:
+          NF_BEFORE_SCRIPT: mkdir -p ${CI_PROJECT_NAME}/data/ && wget -q -O ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz https://ont-exd-int-s3-euwst1-epi2me-labs.s3.amazonaws.com/wf-metagenomics/wf-metagenomics-demo.tar.gz && tar -xzvf ${CI_PROJECT_NAME}/data/wf-metagenomics-demo.tar.gz -C ${CI_PROJECT_NAME}/data/
+          NF_WORKFLOW_OPTS: >
+            --fastq test_data/case01
+            --reference "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/genomes.fna.gz"
+            --ref2taxid "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/ref2taxid.tsv"
+          ASSERT_NEXTFLOW_FAILURE: "yes"
+          ASSERT_NEXTFLOW_FAILURE_REXP : "To use kraken2 with your custom database, you need to use `--database` (instead of `--reference`) and include the `bracken_dist` within it."
+     - if: $MATRIX_NAME == "exception-minimap2-database"
+       variables:
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database data/ --classifier minimap2"
+          ASSERT_NEXTFLOW_FAILURE: "yes"
+          ASSERT_NEXTFLOW_FAILURE_REXP : "To use minimap2 with your custom database, you need to use `--reference` (instead of `--database`) and `--ref2taxid`."
+     - if: $MATRIX_NAME == "exception-minimap2-real-time"
+       variables:
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --classifier minimap2"
+          ASSERT_NEXTFLOW_FAILURE: "yes"
+          ASSERT_NEXTFLOW_FAILURE_REXP : "Real time subworkflow must use kraken2 classifier."
+     - if: $MATRIX_NAME == "exception-minimap2-igv-mmi-reference"
+      ## Pass OPTIONAL_FILE as the goal is make the test fail
+       variables:
+          NF_WORKFLOW_OPTS: >
+            --fastq test_data/case01
+            --classifier minimap2
+            --reference "data/OPTIONAL_FILE"
+            --ref2taxid "${CI_PROJECT_NAME}/data/wf-metagenomics-demo/reference/ref2taxid.tsv"
+            --igv
+          ASSERT_NEXTFLOW_FAILURE: "yes"
+          ASSERT_NEXTFLOW_FAILURE_REXP : "The custom database reference must be a FASTA format file in order to view within IGV."
 

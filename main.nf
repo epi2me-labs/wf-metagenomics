@@ -45,6 +45,18 @@ workflow {
     if (params.classifier == 'minimap2' && params.database) {
         throw new Exception("To use minimap2 with your custom database, you need to use `--reference` (instead of `--database`) and `--ref2taxid`.")
     }
+
+    boolean output_igv = params.igv
+    if (params.classifier == 'minimap2' && params.reference && params.igv) {
+        ArrayList ref_exts = [".fa", ".fa.gz", ".fasta", ".fasta.gz", ".fna", ".fna.gz"]
+        if (! ref_exts.any { ext -> file(params.reference).name.endsWith(ext) }) {
+            output_igv = false
+            log.info("The custom database reference must be a FASTA format file in order to view within IGV.")
+        } else {
+            output_igv=true
+        }
+    }
+
     if ((params.classifier == 'kraken2' || params.real_time ) && params.reference) {
         throw new Exception("To use kraken2 with your custom database, you need to use `--database` (instead of `--reference`) and include the `bracken_dist` within it.")
     }
@@ -69,7 +81,7 @@ workflow {
             log.info("Note: Or consider to use the --kraken2_memory_mapping.")
         }
 
-    } 
+    }
     if(params.taxonomy){
         // this can be useful if the user wants to use a new taxonomy database (maybe updated) but the default reference.
         source_name = params.database_set
@@ -167,7 +179,8 @@ workflow {
             databases_minimap2.taxonomy,
             databases_minimap2.taxonomic_rank,
             common_minimap2_opts,
-            keep_bam
+            keep_bam,
+            output_igv
             )
     }
 
