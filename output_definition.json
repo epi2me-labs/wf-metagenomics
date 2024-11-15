@@ -129,7 +129,7 @@
         "type": "aggregated"
       },
       "read-assignments": {
-        "filepath": "reads_assignments/{{ alias }}.{{kraken2|minimap2}}.assignments.tsv",
+        "filepath": "reads_assignments/{{ alias }}.*.assignments.tsv",
         "title": "Taxonomic assignment per read.",
         "description": "TSV file with the taxonomic assignment per read.",
         "mime-type": "text/tab-separated-values",

@@ -6,7 +6,7 @@ If your question is not answered here, please report any issues or suggestions o
     * 16S, 18S, ITS
         * ncbi_16s_18s and ncbi_16s_18s_28s_ITS:  Archaeal, bacterial and fungal 16S/18S and ITS data. There are two databases available using the data from [NCBI]https://www.ncbi.nlm.nih.gov/refseq/targetedloci/)
         * SILVA_138_1: The [SILVA](https://www.arb-silva.de/) database (version 138) is also available. Note that SILVA uses its own set of taxids, which do not match the NCBI taxids. We provide the respective taxdump files, but if you prefer using the NCBI ones, you can create them from the SILVA files ([NCBI](https://www.arb-silva.de/no_cache/download/archive/current/Exports/taxonomy/ncbi/)). As the SILVA database uses genus level, the last taxonomic rank at which the analysis is carried out is genus (`taxonomic_rank G`).
-    * General databases
+    * General databases (available only in kraken2 approaches)
         * Standard-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
         * PlusPF-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa and fungi. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
         * PlusPFP-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa, fungi and plant. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).

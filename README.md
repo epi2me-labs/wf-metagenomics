@@ -173,7 +173,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
-| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | Standard-8 |
+| database_set | string | Sets the reference, databases and taxonomy datasets that will be used for classifying reads. Choices: ['ncbi_16s_18s','ncbi_16s_18s_28s_ITS', 'SILVA_138_1', 'Standard-8', 'PlusPF-8', 'PlusPFP-8']. Memory requirement will be slightly higher than the size of the database. Standard-8, PlusPF-8 and PlusPFP-8 databases require more than 8GB and are only available in the kraken2 approach. | This setting is overridable by providing an explicit taxonomy, database or reference path in the other reference options. | Standard-8 |
 | database | string | Not required but can be used to specifically override Kraken2 database [.tar.gz or Directory]. | By default uses database chosen in database_set parameter. |  |
 | taxonomy | string | Not required but can be used to specifically override taxonomy database. Change the default to use a different taxonomy file  [.tar.gz or directory]. | By default NCBI taxonomy file will be downloaded and used. |  |
 | reference | string | Override the FASTA reference file selected by the database_set parameter. It can be a FASTA format reference sequence collection or a minimap2 MMI format index. | This option should be used in conjunction with the database parameter to specify a custom database. |  |
@@ -225,7 +225,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
 | out_dir | string | Directory for output of all user-facing files. |  | output |
-| igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. |  | False |
+| igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. If using a custom reference, this must be a FASTA file and not a minimap2 MMI format index. |  | False |
 | include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
 
 
@@ -265,7 +265,7 @@ Output files may be aggregated including information for all samples or provided
 | Index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.fai | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
 | GZI index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.gzi | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
 | JSON configuration file for IGV browser | igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
-| Taxonomic assignment per read. | reads_assignments/{{ alias }}.{{kraken2|minimap2}}.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
+| Taxonomic assignment per read. | reads_assignments/{{ alias }}.*.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
 | FASTQ of the selected taxids. | extracted/{{ alias }}.minimap2.extracted.fastq | FASTQ containing/excluding the reads of the selected taxids. | per-sample |
 
 
@@ -414,6 +414,7 @@ The real-time subworkflow uses a server process to handle Kraken2 classification
 + See how to interpret some common nextflow exit codes [here](https://labs.epi2me.io/trouble-shooting/).
 + When using the Minimap2 pipeline with a custom database, you must make sure that the `ref2taxid` and reference files are coherent, as well as the taxonomy database.
 + If your device doesn't have the resources to use large Kraken2 databases (e.g. Standard-8, PlusPF-8 and PlusPFP-8), you can enable `kraken2_memory_mapping` to reduce the amount of memory required.
++ To enable IGV viewer with a custom reference, this must be a FASTA file and not a minimap2 MMI format index.
 
 
 
@@ -428,7 +429,7 @@ If your question is not answered here, please report any issues or suggestions o
     * 16S, 18S, ITS
         * ncbi_16s_18s and ncbi_16s_18s_28s_ITS:  Archaeal, bacterial and fungal 16S/18S and ITS data. There are two databases available using the data from [NCBI]https://www.ncbi.nlm.nih.gov/refseq/targetedloci/)
         * SILVA_138_1: The [SILVA](https://www.arb-silva.de/) database (version 138) is also available. Note that SILVA uses its own set of taxids, which do not match the NCBI taxids. We provide the respective taxdump files, but if you prefer using the NCBI ones, you can create them from the SILVA files ([NCBI](https://www.arb-silva.de/no_cache/download/archive/current/Exports/taxonomy/ncbi/)). As the SILVA database uses genus level, the last taxonomic rank at which the analysis is carried out is genus (`taxonomic_rank G`).
-    * General databases
+    * General databases (available only in kraken2 approaches)
         * Standard-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
         * PlusPF-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa and fungi. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).
         * PlusPFP-8: It contains references for Archaea, Bacteria, viral, plasmid, human, UniVec_Core, protozoa, fungi and plant. To use this database the memory available to the workflow must be slightly higher than size of the database index (8GB).

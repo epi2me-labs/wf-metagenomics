@@ -245,6 +245,7 @@ workflow minimap_pipeline {
         taxonomic_rank
         common_minimap2_opts
         keep_bam
+        output_igv
     main:
         lineages = Channel.empty()
         // Run common
@@ -334,7 +335,7 @@ workflow minimap_pipeline {
 
 
 
-        if (params.igv) {
+        if (output_igv) {
             // filter references
             bamstats_flagstat = bam_classified
             | map { meta, bam, bai, stats -> file(stats.resolve("*.bamstats.flagstat.tsv")) }
