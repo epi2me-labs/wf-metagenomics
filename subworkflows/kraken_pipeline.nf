@@ -78,6 +78,7 @@ process run_bracken {
         kraken2.report \
         \$BRACKEN_LENGTH \
         "${taxonomic_rank}" \
+        "${params.bracken_threshold}" \
         "${sample_id}.kraken2_bracken.report"
 
     # do some stuff...
