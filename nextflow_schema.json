@@ -266,6 +266,14 @@
                     "minimum": 1,
                     "help_text": "Should be set to the length used to generate the kmer distribution file supplied in the Kraken database input directory. For the default datasets these will be set automatically. ncbi_16s_18s = 1000 , ncbi_16s_18s_28s_ITS = 1000 , PlusPF-8 = 300"
                 },
+                "bracken_threshold": {
+                    "type": "integer",
+                    "title": "Bracken minimum read threshold",
+                    "description": "Set the minimum read threshold Bracken will use to consider a taxon",
+                    "default": 10,
+                    "minimum": 0,
+                    "help_text": "Bracken will only consider taxa with a read count greater than or equal to this value."
+                },
                 "kraken2_memory_mapping": {
                     "type": "boolean",
                     "default": false,

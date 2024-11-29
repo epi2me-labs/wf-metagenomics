@@ -343,6 +343,7 @@ process progressive_bracken {
         "${kreports}/${sample_id}.kreport.txt" \
         \$BRACKEN_LENGTH \
         "${taxonomic_rank}" \
+        "${params.bracken_threshold}" \
         "${sample_id}.bracken_report.txt"
 
     # do some stuff...
