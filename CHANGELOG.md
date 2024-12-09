@@ -6,8 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Fixed
+- Publish AMR results to the output directory when real time is disabled.
 ### Changed
 - Reconcile wf with template v5.3.3
+
 
 ## [v2.11.1]
 ### Fixed
