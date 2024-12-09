@@ -1,6 +1,8 @@
 import groovy.json.JsonBuilder
 
 
+include { getParams } from '../../lib/common'
+
 process abricateVersion {
     label "amr"
     publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt", overwrite: true
@@ -36,20 +38,6 @@ process getVersions {
     """
 }
 
-process getParams {
-    label "wfmetagenomics"
-    publishDir "${params.out_dir}", mode: 'copy', pattern: "params.json"
-    cpus 1
-    memory "2GB"
-    output:
-        path "params.json"
-    script:
-        def paramsJSON = new JsonBuilder(params).toPrettyString()
-    """
-    # Output nextflow params object to JSON
-    echo '$paramsJSON' > params.json
-    """
-}
 
 process exclude_host_reads {
     label "wfmetagenomics"
