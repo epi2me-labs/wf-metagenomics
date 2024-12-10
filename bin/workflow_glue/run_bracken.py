@@ -29,6 +29,7 @@ def main(args):
         f'-d {args.database} '
         f'-i {args.kraken2_report} '
         f'-r {args.bracken_length} '
+        f'-l {args.bracken_level} '
         f'-t {args.bracken_threshold} '
         f'-o {args.output}',
         capture_output=True,
