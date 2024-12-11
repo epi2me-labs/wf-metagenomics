@@ -1,10 +1,12 @@
 process abricate{
     label "amr"
     tag "${meta.alias}"
-    cpus 1
-    memory "7GB"
+    cpus { params.real_time ? 1 : 2 }
+    memory {7.GB * task.attempt}
+    maxRetries 3
+    errorStrategy = 'retry'
     input:
-        tuple val(meta), path(concat_seqs), path("stats/")
+        tuple val(meta), path("input_reads.fastq.gz"), path("stats/")
         val amr_db
         val amr_minid
         val amr_mincov
@@ -13,9 +15,10 @@ process abricate{
     script:
         String fastq_name = "${meta.alias}.fastq"
     """
+    # abricate runs with gzip files, but not bgzip
+    gunzip -c input_reads.fastq.gz > input_reads.fq
     # run abricate
-    gunzip -c ${concat_seqs}  > input_reads.fastq
-    abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fastq > ${meta.alias}_amr_results.tsv
+    abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fq --threads $task.cpus > "${meta.alias}_amr_results.tsv"
     """
 }
 
