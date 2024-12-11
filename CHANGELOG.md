@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bracken_threshold` parameter to adjust bracken minimum read threshold, default 10.
 ### Fixed
 - Publish AMR results to the output directory when real time is disabled.
+- Abricate process failure is now correctly caught by the workflow.
 ### Changed
 - Reconcile wf with template v5.3.3
 

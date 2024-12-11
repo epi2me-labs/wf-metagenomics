@@ -65,7 +65,7 @@ docker-run:
                 "report-many-samples",
                 # test combinations of databases
                 "exception-kraken2-reference", "exception-minimap2-database",
-                "exception-minimap2-real-time", "exception-minimap2-igv-mmi-reference"
+                "exception-minimap2-real-time", "exception-minimap2-igv-mmi-reference",
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
