@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Publish AMR results to the output directory when real time is disabled.
 - Abricate process failure is now correctly caught by the workflow.
 ### Changed
-- Reconcile wf with template v5.3.3
+- Reconcile workflow with wf-template v5.3.3
+- Update wf-metagenomics image for improved fastcat/bamstats.
 
 
 ## [v2.11.1]
