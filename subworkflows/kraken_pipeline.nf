@@ -142,7 +142,7 @@ process makeReport {
     input:
         val wf_version
         val metadata
-        path(stats, stageAs: "stats_*")
+        path(stats, stageAs:"stats/stats_*")
         path abundance_table
         path "lineages/*"
         path "versions/*"

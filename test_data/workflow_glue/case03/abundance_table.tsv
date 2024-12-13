@@ -1,0 +1,12 @@
+tax	test_sample	total
+Bacteria;Bacteria_none;Proteobacteria;Alphaproteobacteria;Rickettsiales;Rickettsiaceae;Rickettsia;Rickettsia rhipicephali	200	200
+Archaea;Archaea_none;Crenarchaeota;Thermoprotei;Sulfolobales;Sulfolobaceae;Sulfuracidifex;Sulfuracidifex metallicus	100	100
+Archaea;Archaea_none;Euryarchaeota;Methanobacteria;Methanobacteriales;Methanobacteriaceae;Methanobrevibacter;Methanobrevibacter ruminantium	100	100
+Bacteria;Bacteria_none;Cyanobacteria;Cyanobacteria_Incertae_sedis;Synechococcales;Prochlorococcaceae;Prochlorococcus;Prochlorococcus marinus	100	100
+Eukaryota;Fungi;Ascomycota;Saccharomycetes;Saccharomycetales;Debaryomycetaceae;Candida;Candida albicans	100	100
+Eukaryota;Fungi;Basidiomycota;Malasseziomycetes;Malasseziales;Malasseziaceae;Malassezia;Malassezia restricta	100	100
+Bacteria;Bacteria_none;Proteobacteria;Gammaproteobacteria;Vibrionales;Vibrionaceae;Vibrio;Vibrio harveyi	88	88
+Bacteria;Bacteria_none;Cyanobacteria;Cyanobacteria_Incertae_sedis;Chroococcales;Chroococcaceae;Cryptococcum;Cryptococcum komarkovae	86	86
+Bacteria;Bacteria_none;Proteobacteria;Gammaproteobacteria;Vibrionales;Vibrionaceae;Vibrio;Vibrio neptunius	74	74
+Bacteria;Bacteria_none;Proteobacteria;Gammaproteobacteria;Vibrionales;Vibrionaceae;Vibrio;Vibrio sinaloensis	37	37
+Bacteria;Bacteria_none;Cyanobacteria;Cyanobacteria_Incertae_sedis;Chroococcales;Chroococcaceae;Limnococcus;Limnococcus fonticola	13	13
