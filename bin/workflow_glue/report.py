@@ -17,6 +17,7 @@ import pandas as pd
 import workflow_glue.diversity as diversity
 import workflow_glue.report_utils.report_utils as report_utils
 
+
 from .util import get_named_logger, wf_parser  # noqa: ABS101
 
 # Setup simple globals
@@ -34,8 +35,8 @@ def amr_section(amr_data, html_id):
     for i, (gene, data) in enumerate(amr_data.items()):
         _head = html_tags.h2(id=str(i), style="border: 1px solid rgba(0,0,0,.125);\
                             border-collapse: collapse;\
-                             padding:0;\
-                             margin-bottom:0")
+                            padding:0;\
+                            margin-bottom:0")
         _button = html_tags.button(
             html_tags.span(html_tags.b(gene)),
             html_tags.span(
@@ -424,7 +425,7 @@ def main(args):
                 params = json.load(f)
             amr_db = params["amr_db"].capitalize()
             p(f"""Detection of acquired AMR genes within sample using Abricate
-               with the {amr_db} database.
+                with the {amr_db} database.
             Please note that SNP-mediated AMR cannot be detected.
             """)
             amr_data = report_utils.parse_amr(args.amr)
@@ -516,38 +517,38 @@ def argparser():
         help="sample metadata")
     parser.add_argument(
         "--read_stats",  nargs='+', required=False,
-        help="Fastcat per-read stats, ordered as per entries in --metadata "
-    )
+        help="Fastcat per-read stats, ordered as per entries in --metadata",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--lineages", nargs='+', required=True,
-        help="Read lineage file.")
+        help="Read lineage file.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--align_stats", required=False,
-        help="Folder containing the mapping and depth statistics in TSV format.")
+        help="Folder containing the mapping and depth statistics in TSV format.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--abundance_table", required=True,
-        help="Read abundance tsv file.")
+        help="Read abundance tsv file.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         '--taxonomic_rank', required=True, choices=["S", "G", "k", "F", "O", "C", "P"],
         help="Taxonomic rank.")
     parser.add_argument(
         "--versions", required=True,
-        help="directory containing CSVs containing name,version.")
+        help="directory containing CSVs containing name,version.",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--params", default=None, required=True,
-        help="A JSON file containing the workflow parameter key/values")
-    parser.add_argument(
-        "--revision", default='unknown',
-        help="git branch/tag of the executed workflow")
-    parser.add_argument(
-        "--commit", default='unknown',
-        help="git commit of the executed workflow")
+        help="A JSON file containing the workflow parameter key/values",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--pipeline", default='kraken2', choices=["kraken2", "minimap2", "real_time"],
         help="kraken2, minimap2 or real_time")
     parser.add_argument(
         "--amr", default=None,
-        help="Path to combined AMR results")
+        help="Path to combined AMR results",
+        type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
         "--abundance_threshold", default=1, type=float,
         help="Remove those taxa whose abundance is below this cut-off.")

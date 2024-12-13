@@ -138,7 +138,7 @@ def calculate_diversity_metrics(counts_per_taxa_df):
 
 
 def filter_by_abundance(
-        df, column_to_filter, abundance_threshold=0, column_to_group=None):
+        df, column_to_filter, abundance_threshold=0, columns_to_group=None):
     """Given a df, return a filtered dataframe after applying a threshold of abundances.
 
     :param df (DataFrame): Dataframe with counts.
@@ -154,18 +154,18 @@ def filter_by_abundance(
         abundance_threshold = round(
             abundance_threshold * df[column_to_filter].sum())
     # Group & filter them
-    if column_to_group:
+    if columns_to_group:
         # Subset just columns that are going to be used
         # E.g. not use lineages columns
         # In case the df contains character/factor columns
         interesting_cols = [
             colname for colname in [
-                column_to_filter, column_to_group
+                column_to_filter, columns_to_group
                 ] if colname in df.columns]
         mini_df = df[interesting_cols]
-        mini_df = mini_df.groupby(column_to_group).sum()
+        mini_df = mini_df.groupby(columns_to_group).sum()
         df_filtered = df[
-            df[column_to_group].isin(  # list of species that satisfy the threshold
+            df[columns_to_group].isin(  # list of species that satisfy the threshold
                 mini_df.loc[mini_df[column_to_filter] > abundance_threshold].index
             )]
     else:
@@ -288,7 +288,7 @@ def alignment_metrics(depth, stats):
     return reference_stats.reset_index()
 
 
-def depth2heatmap(depth, reference, min_cov=1):
+def depth2heatmap(depth, reference, min_cov=1, windows=100):
     """
     Calculate depth by windows for those references with a sequencing depth.
 
@@ -309,8 +309,9 @@ def depth2heatmap(depth, reference, min_cov=1):
     # keep explicit array of ref_lens to avoid any assumptions on order
     # use an np array to support broadcasting division later
     ref_lens = np.zeros(n_seqs, dtype=np.uint64)
+
     # heatmap matrix - declared as float type to support div later
-    ref_heatmap = np.zeros((n_seqs, 100), dtype=np.float64)
+    ref_heatmap = np.zeros((n_seqs, windows), dtype=np.float64)
     for i, ref in enumerate(reference.itertuples()):
         ref_ids[ref.Index] = i
         ref_lens[i] = ref.endpos  # ref_lens are 1 based endpos
@@ -325,8 +326,8 @@ def depth2heatmap(depth, reference, min_cov=1):
     for row in depth.itertuples():
         this_ref_id = ref_ids[row.ref]
         this_ref_len = ref_lens[this_ref_id]
-        # convert row.pos to 0 based to ensure no window can be 100
-        this_window = floor((row.pos - 1) / this_ref_len * 100)
+        # convert row.pos to 0 based to ensure no window can be (window)
+        this_window = floor((row.pos - 1) / this_ref_len * windows)
         ref_heatmap[this_ref_id, this_window] += row.depth
 
     # calculate the average over all windows for the ref
@@ -335,7 +336,7 @@ def depth2heatmap(depth, reference, min_cov=1):
     ref_mask = ref_mean_cov >= min_cov
 
     # now convert window count cells to averages for plotting
-    ref_heatmap /= (ref_lens // 100)[:, None]
+    ref_heatmap /= (ref_lens // windows)[:, None]
 
     # apply the mask to remove refs that do not meet the threshold
     ref_heatmap = ref_heatmap[ref_mask]
@@ -467,3 +468,26 @@ def n_reads_pass(metadata):
     df[cols_to_make_pc + ' (%)'] = df[cols_to_make_pc].apply(
         lambda x: round(x / df[reference_column] * 100, 2))
     return df
+
+
+def is_not_empty_or_exit(input_file_or_dir):
+    """Make sure the files/directories indeed contain something."""
+    input_path = Path(input_file_or_dir)
+    if input_path.exists():
+        if input_path.is_file():
+            if input_path.stat().st_size > 0:
+                # all good (unless file is compressed in which case the size will always
+                # be non-zero)
+                return input_file_or_dir
+            else:
+                raise SystemExit(f"Empty input file: {input_file_or_dir}")
+        elif input_path.is_dir():
+            if not any(Path(input_path).iterdir()):
+                raise SystemExit(f"Empty directory: {input_file_or_dir}")
+            else:
+                return input_file_or_dir
+        else:
+            raise SystemExit(
+                f"{input_file_or_dir} appears to be neither a file nor a directory")
+    else:
+        raise FileNotFoundError(f"File/Dir not found: {input_file_or_dir}")
