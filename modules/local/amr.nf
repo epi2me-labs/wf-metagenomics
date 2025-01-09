@@ -15,10 +15,8 @@ process abricate{
     script:
         String fastq_name = "${meta.alias}.fastq"
     """
-    # abricate runs with gzip files, but not bgzip
-    gunzip -c input_reads.fastq.gz > input_reads.fq
-    # run abricate
-    abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fq --threads $task.cpus > "${meta.alias}_amr_results.tsv"
+    # run a patched (this is done in the container) version of abricate, which uses `seqkit fq2fa` in place of `any2fasta`
+    abricate --db $amr_db --minid $amr_minid --mincov $amr_mincov input_reads.fastq.gz --threads $task.cpus > "${meta.alias}_amr_results.tsv"
     """
 }
 
