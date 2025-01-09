@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Changed
+- Update Seqkit version(>2.6.0) so Abricate can handle bgzip files without decompressing.
+
 ## [v2.12.1]
 ### Changed
 - Reconcile workflow with wf-template v5.3.4
