@@ -7,7 +7,7 @@ process abricateVersion {
     label "amr"
     publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt", overwrite: true
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     input:
         path "input_versions.txt"
     output:
@@ -23,7 +23,7 @@ process getVersions {
     label "wfmetagenomics"
     publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt"
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     output:
         path "versions.txt"
     script:
@@ -107,7 +107,7 @@ process createAbundanceTables {
     label "wfmetagenomics"
     publishDir "${params.out_dir}", mode: 'copy', pattern: "abundance_table_*.tsv"
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     input:
         // lineages is a folder in the kraken2, but is a list of files in the minimap2 approach
         path "lineages/*"
@@ -132,7 +132,7 @@ process publish {
     // publish inputs to output directory
     label "wfmetagenomics"
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     publishDir (
         params.out_dir,
         mode: "copy",

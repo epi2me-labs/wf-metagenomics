@@ -109,7 +109,7 @@ process output_kraken2_read_assignments {
     publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.kraken2.assignments.tsv"
     tag "${meta.alias}"
     cpus 2
-    memory "4GB"
+    memory "4 GB"
     input:
         tuple val(meta), path("${meta.alias}.kraken2.assignments.tsv")
         path taxonomy

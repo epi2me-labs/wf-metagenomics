@@ -16,7 +16,7 @@ process rebatchFastq {
     tag "${meta.alias}"
     maxForks params.threads  // no point having more inputs than processing threads
     cpus 2
-    memory "2GB"
+    memory "2 GB"
     input:
         tuple val(meta), path(concat_seqs), path(stats)
     output:
@@ -55,7 +55,7 @@ process rebatchFastq {
 process stopCondition { 
     label "wfmetagenomics"
     cpus 1 
-    memory "2GB"
+    memory "2 GB"
     publishDir = [
         path: { params.fastq ? params.fastq: params.bam },
         mode: 'copy', pattern: "*"
@@ -191,7 +191,7 @@ process kraken2_client {
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
     maxForks kraken_compute
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     input:
         tuple val(meta), path(concat_seqs), path(stats)
     output:
@@ -222,7 +222,7 @@ process kraken2_client {
 process stop_kraken_server {
     label "wfmetagenomics"
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     containerOptions {workflow.profile != "singularity" ? "--network host" : ""}
     // this shouldn't happen, but we'll keep retrying
     errorStrategy = { task.exitStatus in [8] ? 'retry' : 'finish' }
@@ -242,7 +242,7 @@ process progressive_stats {
     label "wfmetagenomics"
     maxForks 1
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     input: 
         path stats
     output:
@@ -275,7 +275,7 @@ process progressive_kraken_reports {
     tag "${sample_id}"
     maxForks 1 
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "kraken"}, overwrite: true
     input:
         path kreport
@@ -316,7 +316,7 @@ process progressive_bracken {
     label "wfmetagenomics"
     tag "${sample_id}"
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     maxForks 1
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "bracken"}, overwrite: true
     input:
@@ -384,7 +384,7 @@ process concatAssignments {
     tag "${sample_id}"
     maxForks 1
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     input:
         tuple (
             val(sample_id),
@@ -411,7 +411,7 @@ process makeReport {
     label "wf_common"
     maxForks 1
     cpus 1
-    memory "2GB" //depends on the number of different species identified that tables may be bigger.
+    memory "2 GB" //depends on the number of different species identified that tables may be bigger.
     input:
         path lineages
         path abundance_table
