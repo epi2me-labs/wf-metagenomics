@@ -268,6 +268,7 @@ Output files may be aggregated including information for all samples or provided
 | JSON configuration file for IGV browser | igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
 | Taxonomic assignment per read. | reads_assignments/{{ alias }}.*.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
 | FASTQ of the selected taxids. | extracted/{{ alias }}.minimap2.extracted.fastq | FASTQ containing/excluding the reads of the selected taxids. | per-sample |
+| TSV with some alignment statistics | alignment_tables/{{ alias }}.alignment-stats.tsv | Coverage and taxonomy of each reference. | aggregated |
 
 
 

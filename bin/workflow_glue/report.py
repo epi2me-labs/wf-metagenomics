@@ -442,14 +442,12 @@ def main(args):
     # 5. ALIGNMENT STATS
     #
     if args.align_stats:
-        heatmap_min_cov = 1
         samples_references = {}
         for s in samples:
             samples_references[s] = report_utils.load_alignment_data(
                 args.align_stats,
                 s,
                 args.taxonomic_rank,
-                heatmap_min_cov=heatmap_min_cov,
             )
         # make sure that the samples really have data.
         dataset_results = {k: v for k, v in samples_references.items() if v is not None}
@@ -472,14 +470,25 @@ def main(args):
                                 " parameter appear in the table."
                             )
                             DataTable.from_pandas(
-                                    align_stats_filtered,
-                                    export=True,
-                                    file_name='wf-metagenomics-alignment'
+                                align_stats_filtered.set_index(
+                                    report_utils.RANKS_ABB[args.taxonomic_rank]
+                                ).round(2),
+                                export=True,
+                                file_name="wf-metagenomics-alignment",
                             )
                 # Show reference scatterplot of number of reads by coverage.
                 with tabs.add_dropdown_menu("Scatter", change_header=False):
                     for barcode, metrics in dataset_results.items():
                         with tabs.add_dropdown_tab(barcode):
+                            p(
+                                "Scatter plot showing, for each reference, ",
+                                "the coverage (y-axis) and the number of mapped reads ",
+                                "(x-axis).\n",
+                                "Hover the cursor over the points to show ",
+                                "the reference name and species. ",
+                                "Zoom into a specific region to distinguish ",
+                                "between closest points."
+                            )
                             EZChart(metrics[1], 'epi2melabs')
                 # Show heatmap of relative positional coverage.
                 with tabs.add_dropdown_menu("Heatmap", change_header=False):
@@ -491,12 +500,12 @@ def main(args):
                                     "the reference sequences, each reference is ",
                                     "divided into 100 evenly sized windows, and the ",
                                     "average depth across all positions in the window ",
-                                    "is plotted in a cell in the heatmap. Only ",
-                                    f"references with {heatmap_min_cov}% average ",
-                                    "coverage across the entire sequence are included ",
-                                    "in the heatmap."
+                                    "is plotted in a cell in the heatmap. ",
+                                    "Only references with at least an average",
+                                    "sequencing depth > 1 across the entire ",
+                                    "reference sequence are included in the heatmap."
                                 )
-                                EZChart(metrics[2], 'epi2melabs')
+                                EZChart(metrics[2], "epi2melabs")
                             else:
                                 p(
                                     "No taxa present with sufficient coverage for heatmap."  # noqa:E501

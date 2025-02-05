@@ -1,13 +1,13 @@
 """Test the table generation code.
 
-Test the alignment statistic helper functions in bin/workflow_glue/report_utils.py.
+Test the alignment statistic helper functions
 """
 
 from pathlib import Path
 
 import pandas as pd
 import pytest
-from workflow_glue.report_utils.report_utils import (
+from workflow_glue.alignment_stats import (
     alignment_metrics,
     depth2heatmap,
 )

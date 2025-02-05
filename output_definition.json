@@ -143,6 +143,14 @@
         "mime-type": "text",
         "optional": true,
         "type": "per-sample"
+      },
+      "alignment-table": {
+        "filepath": "alignment_tables/{{ alias }}.alignment-stats.tsv",
+        "title": "TSV with some alignment statistics",
+        "description": "Coverage and taxonomy of each reference.",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "aggregated"
       }
     }
   }
