@@ -149,24 +149,27 @@ process extractMinimap2Reads {
 }
 
 
-// Process to compute the sequencing depth of each reference and their coverages.
+/* Process to compute the sequencing depth of each reference and their coverages.
+Run python script to parse the data and output the alignment table
+*/
 process getAlignmentStats {
     label "wfmetagenomics"
     tag "${meta.alias}"
+    publishDir "${params.out_dir}/alignment_tables", mode: 'copy', pattern: "*-alignment-stats.tsv"
     cpus Math.max(params.threads, 2)
     //depends on number of references and their lengths. There are also custom databases of varying sizes.
-    memory "7GB"
+    memory "7 GB"
     input:
         tuple val(meta), path("input.bam"), path("input.bam.bai"), path("bamstats")
         path ref2taxid
         path taxonomy
     output:
-        path "*.tsv.gz", emit: align_stats
+        path "${meta.alias}-alignment-stats*", emit: align_stats
     script:
         def sample_name = meta["alias"]
     // TODO: remove samtools coverage and use bamstats results
     """
-    samtools depth input.bam | bgzip -c > "${sample_name}.depth.tsv.gz" 
+    samtools depth input.bam | bgzip -c > "${sample_name}.depth.tsv.gz"
     # Reference stats
     samtools coverage input.bam \
     | awk 'BEGIN { OFS="\t" } { if((\$4 != 0) && (\$6 != 0)) {print } }' \
@@ -182,6 +185,13 @@ process getAlignmentStats {
         | bgzip -c > "${sample_name}.reference.tsv.gz"
         # compress tsv
         bgzip "${sample_name}.reference_coverage.tsv"
+
+        # Run python script to process a useful table
+        workflow-glue alignment_stats \
+        --output "${meta.alias}-alignment-stats.tsv" \
+        --output_heatmap "${meta.alias}-alignment-stats-heatmap.tsv" \
+        --coverage "${sample_name}.reference.tsv.gz" \
+        --depth "${sample_name}.depth.tsv.gz"
     fi
     """
 }
@@ -191,15 +201,13 @@ process makeReport {
     label "wf_common"
     publishDir "${params.out_dir}", mode: 'copy', pattern: "${report_name}"
     cpus 1
-    memory {4.GB * task.attempt}
-    maxRetries 3
-    errorStrategy = 'retry'
+    memory "4 GB"
     input:
         val wf_version
         val metadata
         path(stats, stageAs:"stats/stats_*")
         path abundance_table
-        path "alignment_stats/*"
+        path "alignment_tables/*"
         path "lineages/*"
         path "versions/*"
         path "params.json"
@@ -211,7 +219,7 @@ process makeReport {
         String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
         String metadata = new JsonBuilder(metadata).toPrettyString()
         report_name = "${workflow_name}-report.html"
-        String align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
+        String align_stats = params.minimap2_by_reference ? "--align_stats alignment_tables" : ""
         String amr = params.amr as Boolean ? "--amr amr" : ""
     """
     echo '${metadata}' > metadata.json
