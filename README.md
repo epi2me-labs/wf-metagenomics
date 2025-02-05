@@ -1,6 +1,6 @@
 # Metagenomics workflow
 
-Taxonomic classification from shotgun metagenomics sequencing.
+Taxonomic classification of metagenomic sequencing data.
 
 
 

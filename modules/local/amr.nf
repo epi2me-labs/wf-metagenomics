@@ -25,7 +25,7 @@ process abricate_json{
     label "wfmetagenomics"
     publishDir path: "${params.out_dir}/amr", mode: 'copy', pattern: "*.json", saveAs: { filename -> "${meta.alias}.amr.json" }, enabled: !params.real_time
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     input:
         tuple val(meta), path("${meta.alias}_amr_results.tsv")
     output:
@@ -47,7 +47,7 @@ process progressive_amr{
     tag "${current_sample_id}"
     maxForks 1
     cpus 1
-    memory "2GB"
+    memory "2 GB"
     publishDir path: "${params.out_dir}", mode: 'copy', pattern: "${new_state}", saveAs: {name -> "amr"}, overwrite: true
     input:
         path report_and_prev_states

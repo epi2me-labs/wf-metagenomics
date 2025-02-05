@@ -120,7 +120,7 @@ process extractMinimap2Reads {
     publishDir "${params.out_dir}/extracted", mode: 'copy', pattern: "*.minimap2.extracted.fastq"
     tag "${meta.alias}"
     cpus 1
-    memory "7GB" //depends on the size of the BAM file.
+    memory "7 GB" //depends on the size of the BAM file.
     input:
         tuple val(meta), path("alignment.bam"), path("alignment.bai"), path("bamstats"), val(n_unmapped)
         path ref2taxid
