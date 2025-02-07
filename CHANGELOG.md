@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - Update Seqkit version(>2.6.0) so Abricate can handle bgzip files without decompressing.
+- Split taxonomy classification from minimap2 alignment process to make it more modular.
+
 ### Added
 - Table with alignment stats is now an output: `alignment_tables/{{ alias }}.alignment-stats.tsv`
 

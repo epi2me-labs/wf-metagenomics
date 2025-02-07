@@ -16,7 +16,6 @@ process minimap {
     label "wfmetagenomics"
     tag "${meta.alias}"
     cpus params.threads
-    publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.minimap2.assignments.tsv", enabled: params.include_read_assignments
     publishDir "${params.out_dir}/bams", mode: 'copy', pattern: "*reference.bam*", enabled: (params.keep_bam || params.igv)
     publishDir "${params.out_dir}/bams", mode: 'copy', pattern: "*.bamstats_results", enabled: (params.keep_bam || params.igv)
 
@@ -28,8 +27,6 @@ process minimap {
         tuple val(meta), path(concat_seqs), path(stats)
         path reference
         path ref2taxid
-        path taxonomy
-        val taxonomic_rank
         val common_minimap2_opts
     output:
         tuple(
@@ -41,38 +38,20 @@ process minimap {
             emit: bam)
         tuple(
             val(meta),
-            path("*assignments.tsv"),
+            path("*.modified.minimap2.assignments.tsv"),
             emit: assignments)
-        tuple(
-            val(meta),
-            path("*lineages.txt"),
-            emit: lineage_txt)
-        tuple(
-            val(meta),
-            path("${meta.alias}.json"),
-            emit: lineage_json)
     script:
-        def sample_id = "${meta.alias}"
         def common_minimap2_opts = (reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
         common_minimap2_opts = common_minimap2_opts.join(" ")
         def bamstats_threads = Math.max(1, task.cpus - 1)
     // min_percent_identity and min_ref_coverage can be used within format_minimap2 or after the BAM is generated to not modify the raw BAM from the alignment.
-    // Filter from ${sample_id}.minimap2.assignments.tsv
+    // Filter from ${meta.alias}.minimap2.assignments.tsv
     """
     minimap2 -t $task.cpus ${common_minimap2_opts} $reference $concat_seqs \
     | samtools view -h -F 2304 - \
-    | workflow-glue format_minimap2 - -o "${sample_id}.minimap2.assignments.tsv" -r "$ref2taxid" \
-    | samtools sort -@ ${task.cpus - 1} --write-index -o "${sample_id}.reference.bam##idx##${sample_id}.reference.bam.bai" -
-    # add taxonomy to the tables if required by the user,
-    # as this file would contain 1 entry per read
-    if ${params.include_read_assignments} ;
-    then
-        taxonkit reformat \
-            --taxid-field 3 \
-            --data-dir "${taxonomy}" \
-            --format "{k}|{p}|{c}|{o}|{f}|{g}|{s}" \
-            --fill-miss-rank "${sample_id}.minimap2.assignments.tsv" > "${sample_id}_lineages.minimap2.assignments.tsv"
-    fi
+    | workflow-glue format_minimap2 - -o "${meta.alias}.minimap2.assignments.tsv" -r "$ref2taxid" \
+    | samtools sort -@ ${task.cpus - 1} --write-index -o "${meta.alias}.reference.bam##idx##${meta.alias}.reference.bam.bai" -
+
     # run bamstats
     mkdir "${meta.alias}.bamstats_results"
     bamstats "${meta.alias}.reference.bam" -s $meta.alias -u \
@@ -88,29 +67,75 @@ process minimap {
     # if there are reads to be reclassified
     if [ -s extra_unclassified_readsIDS.txt ]; then
         # Reclassified minimap2.assignments.tsv and move to unclassified those reads which haven't passed the filter
-        grep -w -f extra_unclassified_readsIDS.txt -F "${sample_id}.minimap2.assignments.tsv" \
+        grep -w -f extra_unclassified_readsIDS.txt -F "${meta.alias}.minimap2.assignments.tsv" \
             | csvtk replace -t -H -f 3 -p '(.+)' -r 0 - > modified.minimap2.assignments.txt
         # Avoid grep error when there are no hits and fails with set -eo pipefail
-        { grep -w -v -f extra_unclassified_readsIDS.txt -F "${sample_id}.minimap2.assignments.tsv" || true; }  \
-            | cat - modified.minimap2.assignments.txt > "${sample_id}.modified.minimap2.assignments.tsv"
+        { grep -w -v -f extra_unclassified_readsIDS.txt -F "${meta.alias}.minimap2.assignments.tsv" || true; }  \
+            | cat - modified.minimap2.assignments.txt > "${meta.alias}.modified.minimap2.assignments.tsv"
     else
-        mv "${sample_id}.minimap2.assignments.tsv" "${sample_id}.modified.minimap2.assignments.tsv"
+        mv "${meta.alias}.minimap2.assignments.tsv" "${meta.alias}.modified.minimap2.assignments.tsv"
     fi
 
-    awk '{print \$3}' "${sample_id}.modified.minimap2.assignments.tsv" > taxids.tmp
-    # Add taxonomy
-    taxonkit \
-        --data-dir "${taxonomy}" \
-        lineage -R taxids.tmp \
-        | workflow-glue aggregate_lineages -p "${sample_id}.minimap2" -r "${taxonomic_rank}"
-    file1=\$(find -name '*.json' -exec cat {} +)
-    echo "{"'"$sample_id"'": \$file1}" >> temp
-    cp "temp" "${sample_id}.json"
     # get unmapped reads to add it to meta (unmapped == unclassified)
     n_unmapped=\$(csvtk grep -t -f ref -p '*' "${meta.alias}.bamstats_results/${meta.alias}.bamstats.flagstat.tsv" \
         | csvtk cut -t -f total - \
         | sed "1d" -
     )
+    """
+}
+
+
+process minimapTaxonomy {
+    label "wfmetagenomics"
+    tag "${meta.alias}"
+    cpus 1
+    publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.minimap2.assignments.tsv", enabled: params.include_read_assignments
+    memory 4.GB
+    input:
+        tuple(
+            val(meta),
+            path(assignments)
+        )
+        path taxonomy
+        val taxonomic_rank
+    output:
+        tuple(
+            val(meta),
+            path("${meta.alias}.json"),
+            emit: lineage_json)
+        tuple(
+            val(meta),
+            path("${meta.alias}.unclassified.txt"),
+            emit: unclassified_ids
+        )
+    script:
+    String taxid_col = 3
+    """
+    # add taxonomy to the tables if required by the user,
+    # as this file would contain 1 entry per read
+    # Output assignments after filters
+    if ${params.include_read_assignments} ;
+    then
+        taxonkit reformat \
+            --taxid-field $taxid_col \
+            --data-dir "${taxonomy}" \
+            --format "{k}|{p}|{c}|{o}|{f}|{g}|{s}" \
+            --fill-miss-rank "${assignments}" > "${meta.alias}_lineages.minimap2.assignments.tsv"
+    fi
+
+    awk '{print \$3}' "${assignments}" > taxids.tmp
+    # Add taxonomy
+    taxonkit \
+        --data-dir "${taxonomy}" \
+        lineage --show-lineage-ranks taxids.tmp \
+        | workflow-glue aggregate_lineages -p "${meta.alias}.minimap2" -r "${taxonomic_rank}"
+    file1=\$(find -name '*.json' -exec cat {} +)
+    echo "{"'"${meta.alias}"'": \$file1}" >> temp
+    cp "temp" "${meta.alias}.json"
+
+    # Recover unclassified IDs
+    csvtk filter2 --no-header-row --tabs -f '\$1=="U"' "${assignments}" \
+        | cut -f2 > "${meta.alias}.unclassified.txt"
     """
 }
 
@@ -266,14 +291,14 @@ workflow minimap_pipeline {
 
         // Run Minimap2
         mm2 = minimap(
-                samples
-                | map { [it[0], it[1], it[2] ] },
+                samples,
                 reference,
                 ref2taxid,
-                taxonomy,
-                taxonomic_rank,
                 common_minimap2_opts
         )
+        // Add taxonomy
+        mm2_taxonomy = minimapTaxonomy(mm2.assignments, taxonomy, taxonomic_rank)
+
         // add unclassified to meta to use it to filter samples with all unclassified in igv
         samples_classification = mm2.bam.map { meta, bam, bai, stats, unmapped->
             [meta + [n_unclassified: unmapped as Integer], bam, bai, stats]
@@ -303,7 +328,7 @@ workflow minimap_pipeline {
             meta.n_seqs > meta.n_unclassified
         }
 
-        lineages = lineages.mix(mm2.lineage_json)
+        lineages = lineages.mix(mm2_taxonomy.lineage_json)
         // Add some statistics related to the mapping
         if (params.minimap2_by_reference) {
             alignment_reports = getAlignmentStats(bam_classified, ref2taxid, taxonomy) | collect
