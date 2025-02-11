@@ -7,6 +7,7 @@ include {
     run_common;
     createAbundanceTables;
     publish;
+    extractReads;
 } from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
@@ -298,12 +299,21 @@ workflow minimap_pipeline {
         )
         // Add taxonomy
         mm2_taxonomy = minimapTaxonomy(mm2.assignments, taxonomy, taxonomic_rank)
-
         // add unclassified to meta to use it to filter samples with all unclassified in igv
         samples_classification = mm2.bam.map { meta, bam, bai, stats, unmapped->
             [meta + [n_unclassified: unmapped as Integer], bam, bai, stats]
         }
 
+
+        // Output unclassified
+        if (params.output_unclassified) {
+            unclassified_to_extract = samples.join(
+                    mm2_taxonomy.unclassified_ids
+                ).map { meta, seqs, stats, unclassified_ids ->
+                        [meta, seqs, unclassified_ids]
+                }
+            extractReads(unclassified_to_extract, "unclassified")
+        }
         // Use initial reads stats (after fastcat) QC, but update meta
         for_report = samples
         | map{
@@ -365,8 +375,6 @@ workflow minimap_pipeline {
             taxonomic_rank,
             amr_reports.ifEmpty(OPTIONAL_FILE)
         )
-
-
 
         if (output_igv) {
             // filter references

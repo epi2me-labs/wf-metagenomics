@@ -90,6 +90,7 @@
 | out_dir | string | Directory for output of all user-facing files. |  | output |
 | igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. If using a custom reference, this must be a FASTA file and not a minimap2 MMI format index. |  | False |
 | include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
+| output_unclassified | boolean | Output a FASTQ of the unclassified reads. |  | False |
 
 
 ### Advanced Options

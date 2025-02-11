@@ -144,13 +144,21 @@
         "optional": true,
         "type": "per-sample"
       },
+      "unclassified-fastq": {
+        "filepath": "unclassified/{{ alias }}.unclassified.fq.gz",
+        "title": "FASTQ of the unclassified reads.",
+        "description": "FASTQ containing the reads that have not been classified against the database.",
+        "mime-type": "application/gzip",
+        "optional": true,
+        "type": "per-sample"
+      },
       "alignment-table": {
         "filepath": "alignment_tables/{{ alias }}.alignment-stats.tsv",
         "title": "TSV with some alignment statistics",
         "description": "Coverage and taxonomy of each reference.",
         "mime-type": "text/tab-separated-values",
         "optional": true,
-        "type": "aggregated"
+        "type": "per-sample"
       }
     }
   }

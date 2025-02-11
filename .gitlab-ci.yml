@@ -57,6 +57,7 @@ docker-run:
             - MATRIX_NAME: [
                 "kraken2", "minimap2", "minimap2-sample-sheet",
                 "kraken2-baf", "minimap2-baf", "minimap2-filter",
+                "unclassified-minimap2", "unclassified-kraken2",
                 "kraken2-amr", "minimap2-amr",
                 "minimap2-exclude-host", "kraken2-exclude-host", "minimap2-exclude-host-bam", "minimap2-exclude-host-empty-barcode",
                 "kraken2-bam", "minimap2-bam", "minimap2-igv",
@@ -80,6 +81,14 @@ docker-run:
           NF_IGNORE_PROCESSES: ""
           AFTER_NEXTFLOW_CMD: >
             grep "Found empty file for sample 'barcode05'" .nextflow.log
+     - if: $MATRIX_NAME == "unclassified-kraken2"
+       variables:
+          NF_PROCESS_FILES: >
+            subworkflows/kraken_pipeline.nf
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --output_unclassified"
+          NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
+          AFTER_NEXTFLOW_CMD: >
+            if [ ! -d $$PWD/$$CI_PROJECT_NAME/unclassified ]; then (echo -e "Unclassified not found" && exit 1); fi
      # In wf-metagenomics, the wf runs indefinitely if there is no condition to stop it.
      # With the read limit we can stop the wf if the limit is reached.
      # It creates a STOP.fastq.gz that will be a new input in the wf and make it stop.
@@ -135,6 +144,17 @@ docker-run:
             modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case03_baf/reads_baf.fastq.gz --classifier minimap2 --minimap2filter '2157,2759' --minimap2exclude --database_set ncbi_16s_18s --min_percent_identity 97 --min_ref_coverage 95"
           NF_IGNORE_PROCESSES: "getAlignmentStats,configure_igv,filter_references"
+      ## Unclassified
+     - if: $MATRIX_NAME == "unclassified-minimap2"
+       variables:
+          NF_PROCESS_FILES: >
+            subworkflows/minimap_pipeline.nf
+            lib/common.nf
+            modules/local/igv_related.nf
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --database_set ncbi_16s_18s --output_unclassified"
+          NF_IGNORE_PROCESSES: "getAlignmentStats,configure_igv,filter_references,extractMinimap2Reads"
+          AFTER_NEXTFLOW_CMD: >
+            if [ ! -d $$PWD/$$CI_PROJECT_NAME/unclassified ]; then (echo -e "Unclassified not found" && exit 1); fi
       # AMR TESTS
       ## AMR tests using isolate test data (need to find better tests)
      - if: $MATRIX_NAME == "kraken2-amr"

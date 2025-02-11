@@ -228,6 +228,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | out_dir | string | Directory for output of all user-facing files. |  | output |
 | igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. If using a custom reference, this must be a FASTA file and not a minimap2 MMI format index. |  | False |
 | include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
+| output_unclassified | boolean | Output a FASTQ of the unclassified reads. |  | False |
 
 
 ### Advanced Options
@@ -268,7 +269,8 @@ Output files may be aggregated including information for all samples or provided
 | JSON configuration file for IGV browser | igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
 | Taxonomic assignment per read. | reads_assignments/{{ alias }}.*.assignments.tsv | TSV file with the taxonomic assignment per read. | per-sample |
 | FASTQ of the selected taxids. | extracted/{{ alias }}.minimap2.extracted.fastq | FASTQ containing/excluding the reads of the selected taxids. | per-sample |
-| TSV with some alignment statistics | alignment_tables/{{ alias }}.alignment-stats.tsv | Coverage and taxonomy of each reference. | aggregated |
+| FASTQ of the unclassified reads. | unclassified/{{ alias }}.unclassified.fq.gz | FASTQ containing the reads that have not been classified against the database. | per-sample |
+| TSV with some alignment statistics | alignment_tables/{{ alias }}.alignment-stats.tsv | Coverage and taxonomy of each reference. | per-sample |
 
 
 
