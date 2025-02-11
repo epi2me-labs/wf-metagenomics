@@ -1,11 +1,11 @@
 import groovy.json.JsonBuilder
 import nextflow.util.BlankSeparatedList
-
 include { run_amr } from '../modules/local/amr'
 include {
     run_common;
     createAbundanceTables;
     publish;
+    extractReads;
 } from "../modules/local/common"
 
 
@@ -30,11 +30,25 @@ process run_kraken2 {
         log.error("Consider to use --kraken2_memory_mapping to reduce the use of RAM memory.")
     }
     input:
-        tuple val(meta), path(concat_seqs), path(fastq_stats)
+        tuple(
+            val(meta),
+            path(concat_seqs),
+            path(fastq_stats)
+        )
         path kraken_db
         val hash_size
     output:
-        tuple val(meta), path("${meta.alias}.kraken2.report.txt"), path("${meta.alias}.kraken2.assignments.tsv"), emit: kraken2_reports
+        tuple(
+            val(meta),
+            path("${meta.alias}.kraken2.report.txt"),
+            path("${meta.alias}.kraken2.assignments.tsv"),
+            emit: kraken2_reports
+        )
+        tuple (
+            val(meta),
+            path("${meta.alias}.unclassified.txt"),
+            emit: unclassified_ids
+        )
     script:
         def sample_id = "${meta.alias}"
         def memory_mapping = params.kraken2_memory_mapping ? '--memory-mapping' : ''
@@ -43,6 +57,9 @@ process run_kraken2 {
         --threads $task.cpus \
         --report "${sample_id}.kraken2.report.txt" \
         --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
+    # Recover unclassified IDs
+    csvtk filter2 --no-header-row --tabs -f '\$1=="U"' "${sample_id}.kraken2.assignments.tsv" \
+        | cut -f2 > "${meta.alias}.unclassified.txt"
     """
 }
 
@@ -96,7 +113,7 @@ process run_bracken {
         -p "${sample_id}.kraken2" \
         -r "${taxonomic_rank}"
     n_unclassified=\$(cut -f1 kraken2.assignments.tsv | { grep -c '^U' - || test \$? = 1;} )
-    # add sample to the json file    
+    # add sample to the json file
     file1=\$(find -name '*.json' -exec cat {} +)
     echo "{"'"$sample_id"'": \$file1}" >> "bracken.json"
     mv "bracken.json" "${sample_id}.json"
@@ -197,9 +214,18 @@ workflow kraken_pipeline {
         // Find out size of the db. Cannot be done within the process
         database_main_file_size = database.resolve('hash.k2d').size()
         kraken2_reports = run_kraken2(samples, database, database_main_file_size)
+        // Output unclassified
+        if (params.output_unclassified) {
+            unclassified_to_extract = samples.join(kraken2_reports.unclassified_ids
+                )
+                | map { meta, seqs, stats, unclassified_ids ->
+                    [meta, seqs, unclassified_ids]
+                }
+            extractReads(unclassified_to_extract, "unclassified")
+        }
 
         // Run bracken
-        bracken_reports = run_bracken(kraken2_reports, database, taxonomy, bracken_length, taxonomic_rank)
+        bracken_reports = run_bracken(kraken2_reports.kraken2_reports, database, taxonomy, bracken_length, taxonomic_rank)
         lineages = bracken_reports.bracken_json
         // Update meta with unclassified
         samples_classification = lineages.map { meta, lineages_json, n_unclassified->
@@ -261,7 +287,7 @@ workflow kraken_pipeline {
         // output kraken read assignments + taxonomy info
         if (params.include_read_assignments) {
             kraken2_assignments = output_kraken2_read_assignments(
-                kraken2_reports.map{
+                kraken2_reports.kraken2_reports.map{
                     id, report, assignments -> tuple(id, assignments)
                 }.groupTuple(), taxonomy)
         }
