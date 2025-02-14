@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Table with alignment stats is now an output: `alignment_tables/{{ alias }}.alignment-stats.tsv`
 - `output_unclassified` parameter to output FASTQ with unclassified sequences for both minimap2 and kraken2 modes (default: False).
+### Fixed
+- Fix error: `bracken-build: line 231: syntax error: unexpected end of file` when using SILVA database.
 
 ## [v2.12.1]
 ### Changed

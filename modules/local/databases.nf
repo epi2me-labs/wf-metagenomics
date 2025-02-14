@@ -181,13 +181,11 @@ process prepareSILVA {
         path "taxonomy", emit: taxonomy
         path "database", emit: database
         path "seqid2taxid.map", emit: ref2taxid
-        path "database*mers.kmer_distrib", emit: bracken_dist
+        path "database/database*mers.kmer_distrib", emit: bracken_dist
     script:
     """
     kraken2-build --db ${params.database_set} --special silva
     bracken-build -d ${params.database_set} -t "${task.cpus}" -l ${bracken_length}
-    BRACKEN_PATH=\$(dirname \$(which bracken))
-    python \$BRACKEN_PATH/src/generate_kmer_distribution.py -i ${params.database_set}/database${bracken_length}mers.kraken -o database${bracken_length}mers.kmer_distrib
     # Move all the files following other default databases:
     mkdir database
     mv ${params.database_set}/*.k2d database/
