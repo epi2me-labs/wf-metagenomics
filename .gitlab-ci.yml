@@ -22,7 +22,7 @@ variables:
 ## This test works with Standard-8 GB using a stored copy of Standard-8GB in S3.
 aws-run:
     variables:
-        NF_WORKFLOW_OPTS: "--fastq test_data/case01 --store_dir s3://$${XAWS_BUCKET}/${CI_PROJECT_NAME}/store --database_set Standard-8"
+        NF_WORKFLOW_OPTS: "--fastq test_data/case01 --database_set Standard-8"
     artifacts:
         when: always
         paths:

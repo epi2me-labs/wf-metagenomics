@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Update Seqkit version(>2.6.0) so Abricate can handle bgzip files without decompressing.
 - Split taxonomy classification from minimap2 alignment process to make it more modular.
+- Reconciled workflow with wf-template v5.5.0.
 ### Added
 - Table with alignment stats is now an output: `alignment_tables/{{ alias }}.alignment-stats.tsv`
 - `output_unclassified` parameter to output FASTQ with unclassified sequences for both minimap2 and kraken2 modes (default: False).
