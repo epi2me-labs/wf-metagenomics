@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [v2.13.0]
 ### Changed
 - Update Seqkit version(>2.6.0) so Abricate can handle bgzip files without decompressing.
 - Split taxonomy classification from minimap2 alignment process to make it more modular.

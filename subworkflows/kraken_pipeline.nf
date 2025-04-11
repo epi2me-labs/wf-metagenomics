@@ -5,7 +5,6 @@ include {
     run_common;
     createAbundanceTables;
     publish;
-    extractReads;
 } from "../modules/local/common"
 
 
@@ -16,6 +15,10 @@ process run_kraken2 {
     label 'wfmetagenomics'
     tag "${meta.alias}"
     publishDir "${params.out_dir}/kraken2", mode: 'copy', pattern: "*kraken2.report.txt*"
+    publishDir (
+        "${params.out_dir}/unclassified", mode: 'copy',
+        pattern: "${meta.alias}.unclassified.fq.gz", enabled: params.output_unclassified
+    )
     cpus params.threads
     // Set the memory required to the size of the database + 4GB overhead.
     memory {
@@ -26,13 +29,18 @@ process run_kraken2 {
         }
     }
     errorStrategy {
-        task.exitStatus == 137 ? log.error("Error 137 may indicate the process ran out of memory.\nIf you are using Docker you should check the amount of RAM allocated to your Docker server.") : ''
+        task.exitStatus == 137 ? log.error(
+            '''
+            Error 137 may indicate the process ran out of memory.
+            If you are using Docker you should check the amount of 
+            RAM allocated to your Docker server.
+            '''.stripIndent()) : ''
         log.error("Consider to use --kraken2_memory_mapping to reduce the use of RAM memory.")
     }
     input:
         tuple(
             val(meta),
-            path(concat_seqs),
+            path("reads.fq.gz"),
             path(fastq_stats)
         )
         path kraken_db
@@ -44,22 +52,25 @@ process run_kraken2 {
             path("${meta.alias}.kraken2.assignments.tsv"),
             emit: kraken2_reports
         )
-        tuple (
+        tuple(
             val(meta),
-            path("${meta.alias}.unclassified.txt"),
-            emit: unclassified_ids
+            path("${meta.alias}.unclassified.fq.gz"),
+            emit: kraken2_unclassified, optional:true
         )
     script:
         def sample_id = "${meta.alias}"
         def memory_mapping = params.kraken2_memory_mapping ? '--memory-mapping' : ''
+        def unclassified_tmp = "${meta.alias}.unclassified.fq"
+        def output_unclassified = params.output_unclassified ? '--unclassified-out ' + unclassified_tmp: ''
     """
-    kraken2 --db ${kraken_db} ${concat_seqs} \
+    kraken2 --db ${kraken_db} reads.fq.gz \
         --threads $task.cpus \
         --report "${sample_id}.kraken2.report.txt" \
-        --confidence ${params.kraken2_confidence} ${memory_mapping} > "${sample_id}.kraken2.assignments.tsv"
-    # Recover unclassified IDs
-    csvtk filter2 --no-header-row --tabs -f '\$1=="U"' "${sample_id}.kraken2.assignments.tsv" \
-        | cut -f2 > "${meta.alias}.unclassified.txt"
+        --confidence ${params.kraken2_confidence} ${memory_mapping} \
+        $output_unclassified > "${sample_id}.kraken2.assignments.tsv"
+    if [ -f $unclassified_tmp ]; then
+        bgzip "${meta.alias}.unclassified.fq"
+    fi
     """
 }
 
@@ -214,16 +225,6 @@ workflow kraken_pipeline {
         // Find out size of the db. Cannot be done within the process
         database_main_file_size = database.resolve('hash.k2d').size()
         kraken2_reports = run_kraken2(samples, database, database_main_file_size)
-        // Output unclassified
-        if (params.output_unclassified) {
-            unclassified_to_extract = samples.join(kraken2_reports.unclassified_ids
-                )
-                | map { meta, seqs, stats, unclassified_ids ->
-                    [meta, seqs, unclassified_ids]
-                }
-            extractReads(unclassified_to_extract, "unclassified")
-        }
-
         // Run bracken
         bracken_reports = run_bracken(kraken2_reports.kraken2_reports, database, taxonomy, bracken_length, taxonomic_rank)
         lineages = bracken_reports.bracken_json
