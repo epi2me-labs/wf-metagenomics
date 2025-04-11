@@ -127,23 +127,20 @@ process createAbundanceTables {
 /* Extract reads in FASTQ from a list of IDs.
 Use for example to output the unclassified reads.
  */
-process extractReads {
+process publishReads {
     label "wfmetagenomics"
     publishDir "${params.out_dir}/${output_name}", mode: 'copy', pattern: "*.${output_name}.fq.gz", enabled: params.output_unclassified
     tag "${meta.alias}"
     cpus 1
     memory 4.GB
     input:
-        tuple val(meta), path(concat_seqs), path("ids.txt")
+        tuple val(meta), path("reads.fq.gz"), path("ids.txt")
         val output_name
     output:
         path "${meta.alias}.${output_name}.fq.gz"
-    // No output, can publish results in the process?
-    // At this moment, input sequences are o FASTQ
-    // or BAM with the return_fastq option enable
     script:
         """
-        seqkit grep --pattern-file ids.txt "${concat_seqs}" -o "${meta.alias}.${output_name}.fq.gz"
+        seqkit grep --pattern-file ids.txt reads.fq.gz -o "${meta.alias}.${output_name}.fq.gz"
         """
 }
 

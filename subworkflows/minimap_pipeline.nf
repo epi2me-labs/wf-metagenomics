@@ -7,7 +7,7 @@ include {
     run_common;
     createAbundanceTables;
     publish;
-    extractReads;
+    publishReads;
 } from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
@@ -312,7 +312,7 @@ workflow minimap_pipeline {
                 ).map { meta, seqs, stats, unclassified_ids ->
                         [meta, seqs, unclassified_ids]
                 }
-            extractReads(unclassified_to_extract, "unclassified")
+            publishReads(unclassified_to_extract, "unclassified")
         }
         // Use initial reads stats (after fastcat) QC, but update meta
         for_report = samples
