@@ -17,30 +17,42 @@ process minimap {
     label "wfmetagenomics"
     tag "${meta.alias}"
     cpus params.threads
-    publishDir "${params.out_dir}/bams", mode: 'copy', pattern: "*reference.bam*", enabled: (params.keep_bam || params.igv)
-    publishDir "${params.out_dir}/bams", mode: 'copy', pattern: "*.bamstats_results", enabled: (params.keep_bam || params.igv)
-
+    publishDir (
+        "${params.out_dir}/bams", mode: 'copy',
+        pattern: "${meta.alias}.reference.bam*",
+        enabled: (params.keep_bam || params.igv))
+    publishDir (
+        "${params.out_dir}/bams", mode: 'copy',
+        pattern: "${meta.alias}.bamstats_results",
+        enabled: (params.keep_bam || params.igv))
+    publishDir (
+        "${params.out_dir}/reads_assignments_unfiltered", mode: 'copy',
+        pattern: "${meta.alias}.minimap2.assignments.tsv",
+        enabled: params.include_read_assignments)
     // due to the wf fail at the samtools step
     memory {12.GB * task.attempt}
     maxRetries 1
     errorStrategy = 'retry'
     input:
-        tuple val(meta), path(concat_seqs), path(stats)
+        tuple val(meta),
+            path(concat_seqs),
+            path(stats)
         path reference
         path ref2taxid
         val common_minimap2_opts
     output:
-        tuple(
-            val(meta),
+        tuple val(meta),
             path("${meta.alias}.reference.bam"),
             path("${meta.alias}.reference.bam.bai"),
             path("${meta.alias}.bamstats_results"),
             env(n_unmapped),
-            emit: bam)
-        tuple(
-            val(meta),
-            path("*.modified.minimap2.assignments.tsv"),
-            emit: assignments)
+            emit: bam
+        tuple val(meta),
+            path("${meta.alias}.modified.minimap2.assignments.tsv"),
+            emit: assignments
+        tuple val(meta),
+            path("${meta.alias}.minimap2.assignments.tsv"),
+            emit: raw_assignments, optional:true
     script:
         def common_minimap2_opts = (reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
         common_minimap2_opts = common_minimap2_opts.join(" ")
@@ -74,7 +86,7 @@ process minimap {
         { grep -w -v -f extra_unclassified_readsIDS.txt -F "${meta.alias}.minimap2.assignments.tsv" || true; }  \
             | cat - modified.minimap2.assignments.txt > "${meta.alias}.modified.minimap2.assignments.tsv"
     else
-        mv "${meta.alias}.minimap2.assignments.tsv" "${meta.alias}.modified.minimap2.assignments.tsv"
+        cp "${meta.alias}.minimap2.assignments.tsv" "${meta.alias}.modified.minimap2.assignments.tsv"
     fi
 
     # get unmapped reads to add it to meta (unmapped == unclassified)
@@ -93,22 +105,19 @@ process minimapTaxonomy {
     publishDir "${params.out_dir}/reads_assignments", mode: 'copy', pattern: "*_lineages.minimap2.assignments.tsv", enabled: params.include_read_assignments
     memory 4.GB
     input:
-        tuple(
-            val(meta),
-            path(assignments)
-        )
+        tuple val(meta), path(assignments)
         path taxonomy
         val taxonomic_rank
     output:
-        tuple(
-            val(meta),
+        tuple val(meta),
             path("${meta.alias}.json"),
-            emit: lineage_json)
-        tuple(
-            val(meta),
+            emit: lineage_json
+        tuple val(meta),
             path("${meta.alias}.unclassified.txt"),
             emit: unclassified_ids
-        )
+        tuple val(meta),
+            path("${meta.alias}_lineages.minimap2.assignments.tsv"),
+            emit: reads_assignments, optional:true
     script:
     String taxid_col = 3
     """
@@ -148,14 +157,17 @@ process extractMinimap2Reads {
     cpus 1
     memory "7 GB" //depends on the size of the BAM file.
     input:
-        tuple val(meta), path("alignment.bam"), path("alignment.bai"), path("bamstats"), val(n_unmapped)
+        tuple val(meta),
+            path("alignment.bam"),
+            path("alignment.bai"),
+            path("bamstats"),
+            val(n_unmapped)
         path ref2taxid
         path taxonomy
     output:
-        tuple(
-            val(meta),
+        tuple val(meta),
             path("${meta.alias}.minimap2.extracted.fastq"),
-            emit: extracted)
+            emit: extracted
     script:
         def sample_id = "${meta.alias}"
         def policy = params.minimap2exclude ? '--exclude' : ""
