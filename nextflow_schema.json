@@ -484,10 +484,13 @@
             "properties": {
                 "disable_ping": {
                     "type": "boolean",
-                    "title": "Disable ping",
                     "default": false,
                     "description": "Enable to prevent sending a workflow ping.",
-                    "hidden": false
+                    "overrides": {
+                        "epi2mecloud": {
+                            "hidden": true
+                        }
+                    }
                 },
                 "help": {
                     "type": "boolean",
