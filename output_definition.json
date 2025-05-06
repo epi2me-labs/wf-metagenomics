@@ -32,14 +32,6 @@
         "optional": true,
         "type": "per-sample"
       },
-      "kraken-assignments": {
-        "filepath": "kraken2/{{ alias }}.kraken2.assignments.tsv",
-        "title": "Kraken2 taxonomic asignment per read (Kraken2 pipeline)",
-        "description": "TSV file with the taxonomic assignment per read. More info about [kraken2 assignments report](https://github.com/DerrickWood/kraken2/blob/master/docs/MANUAL.markdown#standard-kraken-output-format).",
-        "mime-type": "text/tab-separated-values",
-        "optional": true,
-        "type": "per-sample"
-      },
       "host-bam": {
         "filepath": "host_bam/{{ alias }}.bam",
         "title": "Host BAM file",
@@ -128,10 +120,26 @@
         "optional": true,
         "type": "aggregated"
       },
-      "read-assignments": {
-        "filepath": "reads_assignments/{{ alias }}.*.assignments.tsv",
-        "title": "Taxonomic assignment per read.",
-        "description": "TSV file with the taxonomic assignment per read.",
+      "kraken-read-assignments": {
+        "filepath": "reads_assignments/{{ alias }}_lineages.kraken2.assignments.tsv",
+        "title": "Taxonomic assignment per read from kraken2.",
+        "description": "TSV file with the taxonomic assignment classified by kraken2 (no identity or coverage filters are applied).",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "minimap-read-assignments": {
+        "filepath": "reads_assignments/{{ alias }}_lineages.minimap2.assignments.tsv",
+        "title": "Taxonomic assignment per read from minimap2 (filtered).",
+        "description": "TSV file with the taxonomic assignment per read after identity and coverage filters.",
+        "mime-type": "text/tab-separated-values",
+        "optional": true,
+        "type": "per-sample"
+      },
+      "minimap-read-assignments-unfiltered": {
+        "filepath": "reads_assignments_unfiltered/{{ alias }}.minimap2.assignments.tsv",
+        "title": "Taxonomic assignment per read from minimap2 (unfiltered).",
+        "description": "TSV file with the taxonomic assignment per read before applying any filter.",
         "mime-type": "text/tab-separated-values",
         "optional": true,
         "type": "per-sample"

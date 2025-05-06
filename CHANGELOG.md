@@ -7,14 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
-* Updated to wf-template v5.6.0, changing:
-    * Reduce verbosity of debug logging from fastcat which can occasionally occlude errors found in FASTQ files during ingress.
-    * Log banner art to say "EPI2ME" instead of "EPI2ME Labs" to match current branding. This has no effect on the workflow outputs.
+- Updated to wf-template v5.6.0, changing:
+    - Reduce verbosity of debug logging from fastcat which can occasionally occlude errors found in FASTQ files during ingress.
+    - Log banner art to say "EPI2ME" instead of "EPI2ME Labs" to match current branding. This has no effect on the workflow outputs.
 ### Fixed
-* Updated to wf-template v5.6.0, fixing:
-    * dacite.exceptions.WrongTypeError during report generation when barcode is null.
-    * Sequence summary read length N50 incorrectly displayed minimum read length, it now correctly shows the N50.
-    * Sequence summary component alignment and coverage plots failed to plot under some conditions.
+- Updated to wf-template v5.6.0, fixing:
+    - dacite.exceptions.WrongTypeError during report generation when barcode is null.
+    - Sequence summary read length N50 incorrectly displayed minimum read length, it now correctly shows the N50.
+    - Sequence summary component alignment and coverage plots failed to plot under some conditions.
+- If `include_read_assignments` flag is used (in the minimap2 subworkflow), two different tables are now published to the output directory:
+    - Unfiltered minimap2 per read assignments: `{alias}.minimap2.assignments.tsv`
+    - Minimap2 per read assignments after identity and coverage filters: `{alias}_lineages.minimap2.assignments.tsv`
 
 
 ## [v2.13.0]

@@ -82,7 +82,9 @@ docker-run:
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --include_read_assignments --abundance_threshold 1 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
           NF_IGNORE_PROCESSES: ""
           AFTER_NEXTFLOW_CMD: >
-            grep "Found empty file for sample 'barcode05'" .nextflow.log
+            grep "Found empty file for sample 'barcode05'" .nextflow.log &&
+            if [ ! -f $$PWD/$$CI_PROJECT_NAME/reads_assignments/barcode01_lineages.kraken2.assignments.tsv ]; then (echo -e "Assignments not found" && exit 1); fi
+
      - if: $MATRIX_NAME == "unclassified-kraken2"
        variables:
           NF_PROCESS_FILES: >
@@ -111,6 +113,11 @@ docker-run:
             modules/local/igv_related.nf
           NF_WORKFLOW_OPTS: "--fastq test_data/case01 --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s --keep_bam --include_read_assignments"
           NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"
+          AFTER_NEXTFLOW_CMD: >
+            if [ ! -f $$PWD/$$CI_PROJECT_NAME/reads_assignments/barcode01_lineages.minimap2.assignments.tsv ]; then (echo -e "Filtered assignments not found" && exit 1); fi &&
+            if [ ! -f $$PWD/$$CI_PROJECT_NAME/reads_assignments_unfiltered/barcode01.minimap2.assignments.tsv ]; then (echo -e "Raw assignments not found" && exit 1); fi
+
+
      # Minimap2 - sample sheet - taxonomic_rank - taxa barplot - abundance_threshold
      - if: $MATRIX_NAME == "minimap2-sample-sheet"
        variables:
