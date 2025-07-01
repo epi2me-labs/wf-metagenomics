@@ -415,12 +415,13 @@ workflow minimap_pipeline {
                 )
                 | flatten
                 | collectFile(name: "file-names.txt", newLine: true, sort: false)
-
+            boolean keep_track_order = false
             igv_conf = configure_igv(
                 igv_files,
                 Channel.of(null), // igv locus
                 [displayMode: "SQUISHED", colorBy: "strand"], // bam extra opts
                 Channel.of(null), // vcf extra opts
+                keep_track_order
                 )
         }
 
