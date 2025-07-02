@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If `include_read_assignments` flag is used (in the minimap2 subworkflow), two different tables are now published to the output directory:
     - Unfiltered minimap2 per read assignments: `{alias}.minimap2.assignments.tsv`
     - Minimap2 per read assignments after identity and coverage filters: `{alias}_lineages.minimap2.assignments.tsv`
+- `Missing output file(s)` encountered in the `prepare_databases:determine_bracken_length` process when using the `bracken_length` option.
 
 
 ## [v2.13.0]

@@ -89,7 +89,7 @@ docker-run:
        variables:
           NF_PROCESS_FILES: >
             subworkflows/kraken_pipeline.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --output_unclassified"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --output_unclassified --bracken_length 1000"
           NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
           AFTER_NEXTFLOW_CMD: >
             if [ ! -d $$PWD/$$CI_PROJECT_NAME/unclassified ]; then (echo -e "Unclassified not found" && exit 1); fi

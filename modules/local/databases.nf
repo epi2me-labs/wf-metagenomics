@@ -98,7 +98,6 @@ process determine_bracken_length {
     label "wfmetagenomics"
     cpus 1
     memory "2 GB"
-    storeDir {params.store_dir ? "${params.store_dir}/${database_name}/${database_dir}" : null }
     input:
         val database_name
         path database_dir
@@ -111,7 +110,7 @@ process determine_bracken_length {
     if [[ -f "${database_dir}"/database${params.bracken_length}mers.kmer_distrib ]]
     then
         BRACKEN_LENGTH="${params.bracken_length}"
-        echo \$BRACKEN_LENGTH > "${database_dir}/${bracken_length_output}"
+        echo \$BRACKEN_LENGTH > "${bracken_length_output}"
     elif ls "${database_dir}"/*.kmer_distrib
     then
         cd "${database_dir}"
