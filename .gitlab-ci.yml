@@ -187,8 +187,8 @@ docker-run:
             subworkflows/minimap_pipeline.nf
             lib/common.nf
             modules/local/igv_related.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/case04-1/samples --exclude_host test_data/case04_exclude_host/case04-1/host.fasta.gz --classifier minimap2 --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
-          NF_IGNORE_PROCESSES: "extractMinimap2Reads,getAlignmentStats,configure_igv,filter_references"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case04_exclude_host/case04-1/samples --exclude_host test_data/case04_exclude_host/case04-1/host.fasta.gz --classifier minimap2 --minimap2_by_reference --database_set ncbi_16s_18s -executor.\\$$local.memory 16GB"
+          NF_IGNORE_PROCESSES: "extractMinimap2Reads,configure_igv,filter_references"
           AFTER_NEXTFLOW_CMD: >
             grep "Found empty file after host depletion for sample: 'barcode02'." .nextflow.log
      - if: $MATRIX_NAME == "minimap2-split-prefix"

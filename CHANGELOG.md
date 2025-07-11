@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Unfiltered minimap2 per read assignments: `{alias}.minimap2.assignments.tsv`
     - Minimap2 per read assignments after identity and coverage filters: `{alias}_lineages.minimap2.assignments.tsv`
 - `Missing output file(s)` encountered in the `prepare_databases:determine_bracken_length` process when using the `bracken_length` option.
+- `Missing output file(s)` encountered in the `minimap_pipeline:getAlignmentStats` process when all reads are unclassified.
 
 
 ## [v2.13.0]
