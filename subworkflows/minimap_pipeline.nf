@@ -202,7 +202,7 @@ process getAlignmentStats {
         path ref2taxid
         path taxonomy
     output:
-        path "${meta.alias}-alignment-stats*", emit: align_stats
+        path "${meta.alias}-alignment-stats*", emit: align_stats, optional:true
     script:
         def sample_name = meta["alias"]
     // TODO: remove samtools coverage and use bamstats results
@@ -316,7 +316,6 @@ workflow minimap_pipeline {
             [meta + [n_unclassified: unmapped as Integer], bam, bai, stats]
         }
 
-
         // Output unclassified
         if (params.output_unclassified) {
             unclassified_to_extract = samples.join(
@@ -347,9 +346,8 @@ workflow minimap_pipeline {
         // take samples with classified sequences
         bam_classified = samples_classification.filter { meta, bam, bai, stats ->
             // a sample is unclassified if all reads are unclassified
-            meta.n_seqs > meta.n_unclassified
+            (!params.exclude_host && (meta.n_seqs > meta.n_unclassified)) || (params.exclude_host && (meta.n_seqs_passed_host_depletion > meta.n_unclassified))
         }
-
         lineages = lineages.mix(mm2_taxonomy.lineage_json)
         // Add some statistics related to the mapping
         if (params.minimap2_by_reference) {

@@ -185,12 +185,12 @@ workflow run_common {
                 host_reference,
                 common_minimap2_opts
             )
-            samples_passed = reads.fastq.map { 
+            samples_host_depleted = reads.fastq.map {
                 meta, fastq, stats, n_seqs_passed_host_depletion->
                 [meta + [n_seqs_passed_host_depletion: n_seqs_passed_host_depletion as Integer], fastq, stats]
             }
             // Discard empty samples after host depletion
-            branched = samples_passed
+            branched = samples_host_depleted
             | branch { meta, seqs, stats ->
                 pass: meta.n_seqs_passed_host_depletion > 0
                 fail: true
@@ -203,18 +203,18 @@ workflow run_common {
                     if (!valid) {
                         log.warn "Found empty file after host depletion for sample: '${meta["alias"]}'."
                     }
-                onComplete: { 
-                     log.warn "Empty files or those files whose reads have been discarded after host depletion " +
-                     "will not appear in the report and will be excluded from subsequent analysis."
-                 }
+                onComplete: {
+                    log.warn "Empty files or those files whose reads have been discarded after host depletion " +
+                    "will not appear in the report and will be excluded from subsequent analysis."
+                }
                 }
             // Save the passing samples
-            samples = branched.pass
+            samples_passed = branched.pass
         } else{
-            samples
+            samples_passed = samples
         }
     emit:
         software_versions = versions
         parameters = parameters
-        samples
+        samples = samples_passed
 }
