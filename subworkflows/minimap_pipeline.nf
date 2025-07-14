@@ -229,7 +229,8 @@ process getAlignmentStats {
         --output "${meta.alias}-alignment-stats.tsv" \
         --output_heatmap "${meta.alias}-alignment-stats-heatmap.tsv" \
         --coverage "${sample_name}.reference.tsv.gz" \
-        --depth "${sample_name}.depth.tsv.gz"
+        --depth "${sample_name}.depth.tsv.gz" \
+        --sample "${sample_name}"
     fi
     """
 }
