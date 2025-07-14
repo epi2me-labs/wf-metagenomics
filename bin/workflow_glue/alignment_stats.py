@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .util import wf_parser  # noqa: ABS101
+from .util import get_named_logger, wf_parser  # noqa: ABS101
 
 
 def alignment_metrics(depth, stats):
@@ -132,10 +132,12 @@ def depth2heatmap(depth, reference, min_cov=1, windows=100):
 
 def main(args):
     """Run the entry point."""
+    logger = get_named_logger("AlignStats")
     cov_tsv = Path(args.coverage)
     depth_tsv = Path(args.depth)
     # the depth file is empty if there aren't classfied reads, e.g. barcode03
     if not cov_tsv.exists() or not depth_tsv.exists():
+        logger.warning(f"Discard {args.sample} as there are no references mapped.")
         pass
     else:
         # read the files and set the index
@@ -164,8 +166,14 @@ def main(args):
         # Prepare also heatmap data
         heatmap_matrix = depth2heatmap(depth, stats)
         # Write both tables to be imported later in report.py
-        align_df.to_csv(args.output, sep='\t', index=False)
-        heatmap_matrix.to_csv(args.output_heatmap, sep='\t')
+        if not align_df.empty:
+            align_df.to_csv(args.output, sep='\t', index=False)
+        else:
+            logger.info(f"Sample {args.sample} alignment summary will not be created.")
+        if not heatmap_matrix.empty:
+            heatmap_matrix.to_csv(args.output_heatmap, sep='\t')
+        else:
+            logger.info(f"Sample {args.sample} alignment heatmap will not be created.")
 
 
 def argparser():
@@ -183,4 +191,6 @@ def argparser():
         "--coverage", help="Output file of samtools coverage.")
     parser.add_argument(
         "--depth", help="Output file of samtools depth")
+    parser.add_argument(
+        "--sample", help="Sample name")
     return parser
