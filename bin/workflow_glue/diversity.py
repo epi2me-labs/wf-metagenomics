@@ -111,6 +111,8 @@ def effective_nspecies(shannon_index):
     :return: effective number of species.
     :rtype: float.
     """
+    if np.isnan(shannon_index):
+        return float("nan")
     return np.exp(shannon_index)
 
 
@@ -128,6 +130,8 @@ def shannon_entropy(counts):
     #       for each i species
     # * we don't have it with kraken, is an approach
     # log base = math.e
+    if counts.sum() == 0:
+        return float("nan")
     p = counts/counts.sum()
     logp = np.where(p > 0, np.log(p), 0)
     shannon_index = abs(np.dot(p, logp))
@@ -143,6 +147,8 @@ def simpson(counts):
     :return: simpson diversity index.
     :rtype: float.
     """
+    if counts.sum() == 0:
+        return float("nan")
     p = (counts/counts.sum())**2
     simpson_index = 1 - p.sum()
     return simpson_index
@@ -175,6 +181,8 @@ def berger_parkers(counts):
     :return: berger parkers index.
     :rtype: float.
     """
+    if counts.sum() == 0:
+        return float("nan")
     return max(counts/counts.sum())
 
 
@@ -187,6 +195,8 @@ def fishers_alpha(counts):
     """
     s = len(counts)
     n = counts.sum()
+    if n == 0:
+        return float("nan")
 
     def eq(alpha):
         return alpha * np.log(1 + n/alpha) - s
@@ -195,7 +205,6 @@ def fishers_alpha(counts):
 
 
 # Diversity metrics
-#
 
 def alpha_diversity(df):
     """Calculate alpha diversity metrics.

@@ -102,7 +102,7 @@ docker-run:
           NF_BEFORE_SCRIPT: "REAL_TIME_PORT=$$(shuf -i 8100-8900 -n 1)"
           NF_PROCESS_FILES: >
             subworkflows/real_time_pipeline.nf
-          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --exclude_host test_data/case04_exclude_host/case04-1/host.fasta.gz --read_limit 3000 --include_read_assignments --batch_size 1000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT} --bracken_threshold 1"
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01 --real_time --exclude_host test_data/case04_exclude_host/case04-1/host.fasta.gz --read_limit 3000 --include_read_assignments --batch_size 1000 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s --port $${REAL_TIME_PORT}"
           NF_IGNORE_PROCESSES: ""
      ## Regular test minimap2 - mapping stats
      - if: $MATRIX_NAME == "minimap2"

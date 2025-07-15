@@ -74,7 +74,10 @@ def update_or_create_count(entry, entries, bracken_counts):
 def yield_entries(entries, total, indent=0):
     """Get entries in printable form."""
     for i, j in entries.items():
-        perc = "{:.2%}".format(j['count'] / total)
+        if total != 0:
+            perc = "{:.2%}".format(j['count'] / total)
+        else:
+            perc = "0.00"
         yield (indent, i, j['count'], perc, j['rank'])
         for k in yield_entries(j['children'], total, indent + 1):
             yield k

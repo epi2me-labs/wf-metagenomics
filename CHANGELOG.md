@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Reduce verbosity of debug logging from fastcat which can occasionally occlude errors found in FASTQ files during ingress.
     - Log banner art to say "EPI2ME" instead of "EPI2ME Labs" to match current branding. This has no effect on the workflow outputs.
     - pre-commit configuration to resolve an internal dependency problem with flake8. This has no effect on the workflow.
+- Values in the diversity table appear as None if there are no reads in the sample.
 ### Fixed
 - Updated to wf-template v5.6.2, fixing:
     - dacite.exceptions.WrongTypeError during report generation when barcode is null.
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Missing output file(s)` encountered in the `prepare_databases:determine_bracken_length` process when using the `bracken_length` option.
 - `Missing output file(s)` encountered in the `minimap_pipeline:getAlignmentStats` process when all reads are unclassified.
 - `pandas.errors.EmptyDataError` encountered in the `getAlignmentStats` process when reference coverage does not reach 1x
+- `ZeroDivisionError: division by zero` encountered in the `progressive_bracken` process when there are no taxa identified at all.
 
 ## [v2.13.0]
 ### Changed
