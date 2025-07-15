@@ -228,6 +228,9 @@ def main(args):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     logger.info(f"rank {ranks_no_sk_k[i]}.")
+                    if counts_per_taxa_per_rank_df.empty:
+                        em("""There are no taxa to display.""")
+                        continue
                     most_abundant = report_utils.most_abundant_table(
                         counts_per_taxa_per_rank_df,
                         n=n_taxa_barplot,
@@ -241,8 +244,8 @@ def main(args):
                     p(f"""
                     Barplot of the {n_taxa_barplot} most abundant taxa at the
                     {ranks_no_sk_k[i]} rank in all the samples.
-                    Any remaining taxa have been collapsed under the \'Other\' category
-                    to facilitate the visualization.
+                    Any remaining taxa have been collapsed under the \'Other\'
+                    category to facilitate the visualization.
                     The y-axis indicates the relative abundance of each taxon
                     in percentages for each sample.
                     """)
@@ -255,22 +258,26 @@ def main(args):
                     )
                     plt._fig.yaxis.axis_label = "Relative abundance"
                     plt._fig.xaxis.major_label_orientation = 45
-                    # distribute names in 5 columns as per default 10 taxa are shown.
+                    # distribute names in 5 columns as per default are 10 taxa.
                     # > 10 is difficult to distinguish colors.
                     plt._fig.legend.ncols = 5
-                    # mute allows to soften the color of the chosen taxa in the legend.
+                    # mute allows to soften the color of the chosen taxa
+                    # in the legend.
                     plt._fig.legend.click_policy = "mute"
                     plt._fig.title.text = f"{ranks_no_sk_k[i].capitalize()} rank"
                     plt._fig.title.align = "center"
                     hover = plt._fig.select(dict(type=HoverTool))
                     hover.tooltips = [("Taxon", "$name"), ("Percent", "@$name %")]
                     EZChart(plt, THEME)
-        # 2.4. ABUNDANCE TABLE
+    # 2.4. ABUNDANCE TABLE
     with report.add_section('Abundances', 'Abundances'):
         tabs = Tabs()
         with tabs.add_dropdown_menu('Abundance tables', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
+                    if counts_per_taxa_per_rank_df.empty:
+                        em("""There are no taxa to display.""")
+                        continue
                     p(f"Abundance table for the {ranks_no_sk_k[i]} rank.")
                     p(
                         "Only taxa whose global abundance are above the ",
@@ -295,6 +302,9 @@ def main(args):
         with tabs.add_dropdown_menu('Rarefied Abundance tables', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
+                    if counts_per_taxa_per_rank_df.empty:
+                        em("""There are no taxa to display.""")
+                        continue
                     p(f"Rarefied abundance table for the \
                       {ranks_no_sk_k[i]} rank.")
                     p("""
