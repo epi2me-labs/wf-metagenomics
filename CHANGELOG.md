@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Log banner art to say "EPI2ME" instead of "EPI2ME Labs" to match current branding. This has no effect on the workflow outputs.
     - pre-commit configuration to resolve an internal dependency problem with flake8. This has no effect on the workflow.
 - Values in the diversity table appear as None if there are no reads in the sample.
+- Values in the abundance table are now integers instead of floats.
 ### Fixed
 - Updated to wf-template v5.6.2, fixing:
     - dacite.exceptions.WrongTypeError during report generation when barcode is null.
