@@ -274,6 +274,12 @@ def main(args):
         tabs = Tabs()
         with tabs.add_dropdown_menu('Abundance tables', change_header=False):
             for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
+                sample_columns = {
+                    x: int for x in counts_per_taxa_per_rank_df.columns if x != "tax"
+                }
+                counts_per_taxa_per_rank_df = counts_per_taxa_per_rank_df.astype(
+                    sample_columns
+                )
                 with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
                     if counts_per_taxa_per_rank_df.empty:
                         em("""There are no taxa to display.""")

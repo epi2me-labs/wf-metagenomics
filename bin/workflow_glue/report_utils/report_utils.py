@@ -345,13 +345,15 @@ def n_reads_pass(metadata):
     # e.g. when the exclude_host is not used
     # remove those columns in the report
     df = df.dropna(axis=1, how='all')
-    df.rename_axis('Sample alias')
+    df = df.rename_axis('Sample alias')
     # Calculate percentages based on the initial number of reads (after fastcat)
     reference_column = 'Reads'
     cols_to_make_pc = df.columns.difference([reference_column])
     # Add pc suffix
     df[cols_to_make_pc + ' (%)'] = df[cols_to_make_pc].apply(
         lambda x: round(x / df[reference_column] * 100, 2))
+    sample_columns = {x: int for x in df.columns if "%" not in x}
+    df = df.astype(sample_columns)
     return df
 
 
