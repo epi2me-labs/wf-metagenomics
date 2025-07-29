@@ -77,7 +77,6 @@ process exclude_host_reads {
         def common_minimap2_opts = (host_reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
         common_minimap2_opts = common_minimap2_opts.join(" ")
         String fastcat_stats_outdir = "stats_unmapped"
-        def per_read_stats = params.real_time ? "-r >(bgzip -c > $fastcat_stats_outdir/per-read-stats.tsv.gz)" : ""
     // Map reads against the host reference and take the unmapped reads for further analysis
     """
     minimap2 -t $task.cpus ${common_minimap2_opts} -m 50 --secondary=no "${host_reference}" $concat_seqs \
@@ -92,7 +91,6 @@ process exclude_host_reads {
         -s "${sample_id}" \
         -f $fastcat_stats_outdir/per-file-stats.tsv \
         --histograms histograms \
-        ${per_read_stats} \
         "${sample_id}.unmapped.fastq.gz" > /dev/null
     # get number of reads after host removal
     n_seqs_passed_host_depletion=\$(awk 'NR==1{for (i=1; i<=NF; i++) {ix[\$i] = i}} NR>1 {c+=\$ix["n_seqs"]} END{print c}' \
@@ -112,7 +110,6 @@ process createAbundanceTables {
         // lineages is a folder in the kraken2, but is a list of files in the minimap2 approach
         path "lineages/*"
         val taxonomic_rank
-        val pipeline
     output:
         path("abundance_table_*.tsv"), emit: abundance_tsv
 
@@ -120,7 +117,6 @@ process createAbundanceTables {
     workflow-glue abundance_tables \
         --lineages lineages \
         --taxonomic_rank "${taxonomic_rank}" \
-        --pipeline "${pipeline}"
     """
 }
 
@@ -163,6 +159,51 @@ process publish {
         path fname
     """
     echo "Writing output files"
+    """
+}
+
+
+process makeReport {
+    label "wf_common"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "${report_name}"
+    cpus 1
+    memory 4.GB
+    input:
+        val wf_version
+        val metadata
+        path(stats, stageAs:"stats/stats_*")
+        path "abundance_table.tsv"
+        path "alignment_stats/*"
+        path "lineages/*"
+        path "versions/*"
+        path "params.json"
+        val taxonomic_rank
+        path "amr/*"
+    output:
+        path "${report_name}", emit: report_html
+    script:
+        String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
+        String metadata = new JsonBuilder(metadata).toPrettyString()
+        report_name = "${workflow_name}-report.html"
+        String align_stats = params.minimap2_by_reference ? "--align_stats alignment_stats" : ""
+        String amr = params.amr as Boolean ? "--amr amr" : ""
+    """
+    echo '${metadata}' > metadata.json
+    workflow-glue report \
+        "${report_name}" \
+        --workflow_name ${workflow_name} \
+        --versions versions \
+        --params params.json \
+        --workflow_version $wf_version \
+        --metadata metadata.json \
+        --read_stats $stats \
+        --lineages lineages \
+        --abundance_table "abundance_table.tsv" \
+        --taxonomic_rank "${taxonomic_rank}" \
+        --abundance_threshold "${params.abundance_threshold}" \
+        --n_taxa_barplot "${params.n_taxa_barplot}" \
+        ${align_stats} \
+        ${amr}
     """
 }
 

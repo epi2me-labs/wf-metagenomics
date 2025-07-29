@@ -5,6 +5,7 @@ include {
     run_common;
     createAbundanceTables;
     publish;
+    makeReport;
 } from "../modules/local/common"
 
 
@@ -159,50 +160,6 @@ process output_kraken2_read_assignments {
 
 }
 
-process makeReport {
-    label "wf_common"
-    publishDir "${params.out_dir}", mode: 'copy', pattern: "${report_name}"
-    cpus 1
-    // Report generation will generally use less memory than 4GB, but higher complexity data will use more.
-    memory {4.GB * task.attempt}
-    maxRetries 3
-    errorStrategy = 'retry'
-    input:
-        val wf_version
-        val metadata
-        path(stats, stageAs:"stats/stats_*")
-        path abundance_table
-        path "lineages/*"
-        path "versions/*"
-        path "params.json"
-        val taxonomic_rank
-        path "amr/*"
-    output:
-        path "${report_name}", emit: report_html
-    script:
-        String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
-        String metadata = new JsonBuilder(metadata).toPrettyString()
-        report_name = "${workflow_name}-report.html"
-        String amr = params.amr as Boolean ? "--amr amr" : ""
-    """
-    echo '${metadata}' > metadata.json
-    workflow-glue report \
-        "${report_name}" \
-        --workflow_name ${workflow_name} \
-        --versions versions \
-        --params params.json \
-        --wf_version $wf_version \
-        --metadata metadata.json \
-        --read_stats $stats \
-        --lineages lineages \
-        --abundance_table "${abundance_table}" \
-        --taxonomic_rank "${taxonomic_rank}" \
-        --pipeline "kraken2" \
-        --abundance_threshold "${params.abundance_threshold}"\
-        --n_taxa_barplot "${params.n_taxa_barplot}"\
-        ${amr}
-    """
-}
 
 workflow kraken_pipeline {
     take:
@@ -255,7 +212,7 @@ workflow kraken_pipeline {
         // Abundance table
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json, n_unclassified -> lineages_json }.collect(),
-            taxonomic_rank, 'kraken2')
+            taxonomic_rank)
 
 
         // Process AMR
@@ -272,11 +229,13 @@ workflow kraken_pipeline {
         }
 
         // Reporting
+        alignment_stats = Channel.fromPath(OPTIONAL_FILE)
         report = makeReport(
             workflow.manifest.version,
             metadata,
             stats,
             abundance_tables.abundance_tsv,
+            alignment_stats.ifEmpty(OPTIONAL_FILE),
             lineages.flatMap { meta, lineages_json, n_unclassified -> lineages_json }.collect(),
             software_versions,
             parameters,

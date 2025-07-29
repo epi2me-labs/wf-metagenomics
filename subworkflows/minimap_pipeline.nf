@@ -8,6 +8,7 @@ include {
     createAbundanceTables;
     publish;
     publishReads;
+    makeReport;
 } from "../modules/local/common"
 
 OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
@@ -236,52 +237,6 @@ process getAlignmentStats {
 }
 
 
-process makeReport {
-    label "wf_common"
-    publishDir "${params.out_dir}", mode: 'copy', pattern: "${report_name}"
-    cpus 1
-    memory "4 GB"
-    input:
-        val wf_version
-        val metadata
-        path(stats, stageAs:"stats/stats_*")
-        path abundance_table
-        path "alignment_tables/*"
-        path "lineages/*"
-        path "versions/*"
-        path "params.json"
-        val taxonomic_rank
-        path "amr/*"
-    output:
-        path "${report_name}", emit: report_html
-    script:
-        String workflow_name = workflow.manifest.name.replace("epi2me-labs/","")
-        String metadata = new JsonBuilder(metadata).toPrettyString()
-        report_name = "${workflow_name}-report.html"
-        String align_stats = params.minimap2_by_reference ? "--align_stats alignment_tables" : ""
-        String amr = params.amr as Boolean ? "--amr amr" : ""
-    """
-    echo '${metadata}' > metadata.json
-    workflow-glue report \
-        "${report_name}" \
-        --workflow_name ${workflow_name} \
-        --versions versions \
-        --params params.json \
-        --wf_version $wf_version \
-        --metadata metadata.json \
-        --read_stats $stats \
-        --lineages lineages \
-        --abundance_table "${abundance_table}" \
-        --taxonomic_rank "${taxonomic_rank}" \
-        --pipeline "minimap2" \
-        --abundance_threshold "${params.abundance_threshold}"\
-        --n_taxa_barplot "${params.n_taxa_barplot}"\
-        ${align_stats} \
-        ${amr}
-    """
-}
-
-
 // workflow module
 workflow minimap_pipeline {
     take:
@@ -294,7 +249,6 @@ workflow minimap_pipeline {
         keep_bam
         output_igv
     main:
-        lineages = Channel.empty()
         // Run common
         common = run_common(
             samples,
@@ -349,7 +303,8 @@ workflow minimap_pipeline {
             // a sample is unclassified if all reads are unclassified
             (!params.exclude_host && (meta.n_seqs > meta.n_unclassified)) || (params.exclude_host && (meta.n_seqs_passed_host_depletion > meta.n_unclassified))
         }
-        lineages = lineages.mix(mm2_taxonomy.lineage_json)
+
+        lineages = mm2_taxonomy.lineage_json
         // Add some statistics related to the mapping
         if (params.minimap2_by_reference) {
             alignment_reports = getAlignmentStats(bam_classified, ref2taxid, taxonomy) | collect
@@ -358,7 +313,7 @@ workflow minimap_pipeline {
         }
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
-            taxonomic_rank, params.classifier)
+            taxonomic_rank)
 
         // Process AMR
         if (params.amr) {

@@ -95,7 +95,7 @@ def main(args):
     logger = get_named_logger("Report")
     report = LabsReport(
         f"{args.workflow_name} Sequencing Report", args.workflow_name,
-        args.params, args.versions, args.wf_version)
+        args.params, args.versions, args.workflow_version)
     global SELECTED_RANKS
     SELECTED_RANKS = []
     for i in report_utils.RANKS:
@@ -111,64 +111,35 @@ def main(args):
     #
     # 1. READ SUMMARY
     #
-    if args.pipeline != 'real_time':
-        # Samples
-        with open(args.metadata) as metadata:
-            sample_details = [{
-                'sample': d['alias'],
-                'type': d['type'],
-                'barcode': d['barcode']
-            } for d in json.load(metadata)]
-        if args.read_stats:
-            with report.add_section("Read summary", "Read summary"):
-                names = tuple(d['sample'] for d in sample_details)
-                stats = tuple(args.read_stats)
-                if len(stats) == 1:
-                    stats = stats[0]
-                    names = names[0]
-                SeqSummary(stats, sample_names=names)
-
-    # kraken stats for the real time are not in tsv,
-    # they came from json files with binned counts
-    # to be plotted directly as an histogram
-    else:
+    # Samples
+    with open(args.metadata) as metadata:
+        sample_details = [{
+            'sample': d['alias'],
+            'type': d['type'],
+            'barcode': d['barcode']
+        } for d in json.load(metadata)]
+    if args.read_stats:
         with report.add_section("Read summary", "Read summary"):
-            with open(args.read_stats[0]) as f:
-                datas = json.load(f)
-                tabs = Tabs()
-                total_reads = {}
-                for sample_id, data in sorted(datas.items()):
-                    with tabs.add_tab(sample_id):
-                        with Grid(columns=2):
-                            EZChart(report_utils.read_quality_plot(data), THEME)
-                            EZChart(report_utils.read_length_plot(data), THEME)
-                            total_reads[sample_id] = data['total_reads']
-                with tabs.add_tab('total'):
-                    with Grid(columns=1):  # total read counts per sample
-                        df_stats = pd.DataFrame.from_dict(total_reads.items())
-                        df_stats.columns = ['Sample_name', 'Number of reads']
-                        plt = ezc.barplot(
-                            data=df_stats, x='Sample_name', y='Number of reads')
-                        plt._fig.title.text = "Number of reads per sample."
-                        plt._fig.xaxis.major_label_orientation = 45
-                        hover = plt._fig.select(dict(type=HoverTool))
-                        hover.tooltips = [("Number of reads", "@top")]
-                        EZChart(plt, THEME)
-    if args.pipeline != 'real_time':
-        with report.add_section("Number of reads", "Reads"):
-            p("""
-                Number of reads after applying read length and quality filters.
-                Read counts will also reflect host depletion and unclassified
-                reads (kraken2 approach) and unmapped reads (minimap2 approach).
-                Percentages are calculated from reads after the filtering.
+            names = tuple(d['sample'] for d in sample_details)
+            stats = tuple(args.read_stats)
+            if len(stats) == 1:
+                stats = stats[0]
+                names = names[0]
+            SeqSummary(stats, sample_names=names)
+    with report.add_section("Number of reads", "Reads"):
+        p("""
+            Number of reads after applying read length and quality filters.
+            Read counts will also reflect host depletion and unclassified
+            reads (kraken2 approach) and unmapped reads (minimap2 approach).
+            Percentages are calculated from reads after the filtering.
+        """)
+        p("""
+            Note that in the minimap2 approach, there are two filters
+            based on the mapping identity and coverage that can increase
+            the number of unclassified sequences. This table shows the
+            unmapped reads before both filters are applied.
             """)
-            p("""
-                Note that in the minimap2 approach, there are two filters
-                based on the mapping identity and coverage that can increase
-                the number of unclassified sequences. This table shows the
-                unmapped reads before both filters are applied.
-              """)
-            DataTable.from_pandas(report_utils.n_reads_pass(args.metadata))
+        DataTable.from_pandas(report_utils.n_reads_pass(args.metadata))
 
     #
     # 2. TAXONOMY RESULTS
@@ -372,7 +343,7 @@ def main(args):
         with tabs.add_tab('Species richness curves'):
             p("""Sample-based rarefaction curves to display observed taxa richness.
                 Sample size shows the number of reads sampled from the total amount
-              of reads analyzed during the real time analysis.
+              of reads analyzed.
               The Y-axis indicates the number of unique taxa at the last analyzed
               taxonomic rank in those subsampled reads.
             """)
@@ -568,9 +539,6 @@ def argparser():
         help="A JSON file containing the workflow parameter key/values",
         type=report_utils.is_not_empty_or_exit)
     parser.add_argument(
-        "--pipeline", default='kraken2', choices=["kraken2", "minimap2", "real_time"],
-        help="kraken2, minimap2 or real_time")
-    parser.add_argument(
         "--amr", default=None,
         help="Path to combined AMR results",
         type=report_utils.is_not_empty_or_exit)
@@ -581,7 +549,7 @@ def argparser():
         "--n_taxa_barplot", default=9, type=int,
         help="Number of taxa to be displayed in the barplot.")
     parser.add_argument(
-        "--wf_version", default='unknown',
+        "--workflow_version", default='unknown',
         help="version of the executed workflow")
     return parser
 
