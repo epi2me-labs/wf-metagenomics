@@ -2,7 +2,6 @@
 """Create tables for the report."""
 
 import json
-import os
 from pathlib import Path
 import re
 
@@ -22,18 +21,14 @@ ranks_abbrev = {
 
 
 # READ INPUT DATA
-def parse_lineages(lineages, pipeline):
+def parse_lineages(lineages):
     """Join lineage counts into a df for a particular taxonomic rank.
 
     :param lineages (str): String indicating the path of the dir with the json.
         For kraken2 is a folder/folder/*.json and for minimap2 is folder/*.json
-    :param classifier (str): String indicating the approach.
     :return (dict): Taxa counts in json structure.
     """
-    if pipeline == 'real_time':
-        path_to_json = os.path.join(lineages, os.listdir(lineages)[0])
-    else:
-        path_to_json = lineages
+    path_to_json = lineages
     json_files = list(Path(path_to_json).glob('*.json'))
     all_json = {}
     for i in json_files:
@@ -247,7 +242,7 @@ def join_abundance_tables(taxa_trees, rank):
 def main(args):
     """Run the entry point."""
     # Join taxonomy data
-    all_json = parse_lineages(args.lineages, args.pipeline)
+    all_json = parse_lineages(args.lineages)
     rank = ranks_abbrev[args.taxonomic_rank]
     # Extract all possible lineages
     allranks_tree = tax_tree(all_json)
@@ -265,6 +260,4 @@ def argparser():
     )
     parser.add_argument(
         "--taxonomic_rank", help="Taxonomic rank.")
-    parser.add_argument(
-        "--pipeline", help="Choose one from: kraken2, minimap2 or real_time.")
     return parser

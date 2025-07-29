@@ -147,26 +147,12 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | exclude_host | string | A FASTA or MMI file of the host reference. Reads that align with this reference will be excluded from the analysis. |  |  |
 
 
-### Real Time Analysis Options
-
-| Nextflow parameter name  | Type | Description | Help | Default |
-|--------------------------|------|-------------|------|---------|
-| real_time | boolean | Enable to continuously watch the input directory for new input files. Reads will be analysed as they appear | This option enables the use of Nextflow’s directory watching feature to constantly monitor input directories for new files. As soon as files are written by an external process Nextflow will begin analysing these files. The workflow will accumulate data over time to produce an updating report. | False |
-| batch_size | integer | Maximum number of sequence records to process in a batch. | Large files will be split such that batch_size records are processed together. Set to 0 to avoid rebatching input files. A value of 32000 is recommended to rebatch large files. | 0 |
-| read_limit | integer | Stop processing data when a particular number of reads have been analysed. By default the workflow will run indefinitely. | Sets the upper bound on the number of reads that will be analysed before the workflow is automatically stopped and no more data is analysed. |  |
-| port | integer | Network port for communication between Kraken2 server and clients (available in real time  pipeline). | The workflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network port on which the server and clients will communicate. | 8080 |
-| host | string | Network hostname (or IP address) for communication between Kraken2 server and clients. (See also 'external_kraken2' parameter). (Available in real time  pipeline). | The workflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. The option specifies the local network hostname (or IP address) of the Kraken server. | localhost |
-| external_kraken2 | boolean | Whether a pre-existing Kraken2 server should be used, rather than creating one as part of the workflow. (Available in real time  pipeline). | By default the workflow assumes that it is running on a single host computer, and further that it should start its own Kraken2 server. It may be desirable to start a Kraken2 server outside of the workflow, in which case this option should be enabled. This option may be used in conjunction with the `host` option to specify that the Kraken2 server is running on a remote computer.  | False |
-| server_threads | integer | Number of CPU threads used by the Kraken2 server for classifying reads. (Available in the real_time pipeline). | For the real-time Kraken2 workflow, this is the number of CPU threads used by the Kraken2 server for classifying reads. | 2 |
-| kraken_clients | integer | Number of clients that can connect at once to the Kraken-server for classifying reads. (Available in the real_time pipeline). | For the real-time Kraken2 workflow, this is the number of clients sending reads to the server. It should not be set to more than 4 fewer than the executor CPU limit. | 2 |
-
-
 ### Sample Options
 
 | Nextflow parameter name  | Type | Description | Help | Default |
 |--------------------------|------|-------------|------|---------|
-| sample_sheet | string | A CSV file used to map barcodes to sample aliases. The sample sheet can be provided when the input data is a directory containing sub-directories with FASTQ files. Disabled in the real time pipeline. | The sample sheet is a CSV file with, minimally, columns named `barcode`,`alias`. Extra columns are allowed. A `type` column is required for certain workflows and should have the following values; `test_sample`, `positive_control`, `negative_control`, `no_template_control`. |  |
-| sample | string | A single sample name for non-multiplexed data. Permissible if passing a single .fastq(.gz) file or directory of .fastq(.gz) files. Disabled in the real time pipeline. |  |  |
+| sample_sheet | string | A CSV file used to map barcodes to sample aliases. The sample sheet can be provided when the input data is a directory containing sub-directories with FASTQ files. | The sample sheet is a CSV file with, minimally, columns named `barcode`,`alias`. Extra columns are allowed. A `type` column is required for certain workflows and should have the following values; `test_sample`, `positive_control`, `negative_control`, `no_template_control`. |  |
+| sample | string | A single sample name for non-multiplexed data. Permissible if passing a single .fastq(.gz) file or directory of .fastq(.gz) files. |  |  |
 
 
 ### Reference Options
@@ -227,7 +213,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 |--------------------------|------|-------------|------|---------|
 | out_dir | string | Directory for output of all user-facing files. |  | output |
 | igv | boolean | Enable IGV visualisation in the EPI2ME Desktop Application by creating the required files. This will cause the workflow to emit the BAM files as well. If using a custom reference, this must be a FASTA file and not a minimap2 MMI format index. |  | False |
-| include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. The TSV's will only be output on completion of the workflow and therefore not at all if using the real time option whilst running indefinitely. |  | False |
+| include_read_assignments | boolean | A per sample TSV file that indicates the taxonomy assigned to each sequence. |  | False |
 | output_unclassified | boolean | Output a FASTQ of the unclassified reads. |  | False |
 
 
@@ -238,7 +224,7 @@ input_reads.fastq   ─── input_directory  ─── input_directory
 | min_len | integer | Specify read length lower limit. | Any reads shorter than this limit will not be included in the analysis. | 0 |
 | min_read_qual | number | Specify read quality lower limit. | Any reads with a quality lower than this limit will not be included in the analysis. |  |
 | max_len | integer | Specify read length upper limit | Any reads longer than this limit will not be included in the analysis. |  |
-| threads | integer | Maximum number of CPU threads to use in each parallel workflow task. | Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. See server threads parameter for Kraken specific threads in the real_time pipeline. | 4 |
+| threads | integer | Maximum number of CPU threads to use in each parallel workflow task. | Several tasks in this workflow benefit from using multiple CPU threads. This option sets the number of CPU threads for all such processes. | 4 |
 
 
 
@@ -303,7 +289,7 @@ There are two different approaches to taxonomic classification:
 
 #### 3.2 Using Minimap2
 
-[Minimap2](https://github.com/lh3/minimap2) provides better resolution, but, depending on the reference database used, can take significantly more time. Also, running the workflow with minimap2 does not support real-time analysis.
+[Minimap2](https://github.com/lh3/minimap2) provides better resolution, but, depending on the reference database used, can take significantly more time.
 
 ```
 nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --classifier minimap2
@@ -385,32 +371,6 @@ The report also includes the rarefaction curve per sample which displays the mea
 > Note: Within each rank, each named taxon is a unique unit. The counts are the number of reads assigned to that taxon. All `Unknown` sequences are considered as a unique taxon
 
 
-### 6. Running wf-metagenomics in real time
-
-> This feature is only available when using Kraken2 as the classifier. It is somewhat experimental and may not work as expected in all environments.
-
-The Kraken2 mode of the workflow can be used in real-time, allowing the workflow to run parallel with an ongoing sequencing run as read data is being produced by the Oxford Nanopore Technologies sequencing instrument. In this case, [Kraken2](https://github.com/DerrickWood/kraken2) is used with the [Kraken2-server](https://github.com/epi2me-labs/kraken2-server) and the user can visualise the classification of reads and species abundances in a real-time updating report.
-In real-time mode, the workflow processes new input files as they become available in batches of the specified size. Thus, this option cannot be used with a single fastq as input.
-
-When using the workflow in real-time, the workflow will run indefinitely until a user interrupts the program (e.g with `ctrl+c` when on the command line). The workflow can be configured to complete automatically after a set number of reads have been analysed using the `read_limit` variable. Once this threshold has been reached, the program will emit a `STOP.fastq.gz` file into the fastq directory, which will instruct the workflow to complete. The "STOP.fastq.gz" file is then deleted.
-
-```
-nextflow run epi2me-labs/wf-metagenomics --fastq test_data/case01 --real_time --batch_size 1000 --read_limit 4000
-```
-
-If running the Kraken2 pipeline **real_time** in a cluster, there are two options to enable the workflow to be able to communicate with the Kraken-server: 
-
-1. Run a Kraken-server separately outside of the workflow.
-2. Submit the workflow job to run on a single node (i.e. running as if on a single local machine).
-
-The real-time subworkflow uses a server process to handle Kraken2 classification requests. This allows the workflow to persist the sequence database in memory throughout the duration of processing. There are some parameters that may be worth considering to improve the performance of the workflow:
-+ port: The option specifies the local network port on which the server and clients will communicate.
-+ host: Network hostname (or IP address) for communication between Kraken2 server and clients. (See also external_kraken2 parameter).
-+ external_kraken2: Whether a pre-existing Kraken2 server should be used, rather than creating one as part of the workflow. By default the workflow assumes that it is running on a single host computer, and further that it should start its own Kraken2 server. It may be desirable to start a Kraken2 server outside of the workflow (for example to host a large database), in which case this option should be enabled. This option may be used in conjuction with the host option to specify that the Kraken2 server is running on a remote computer.
-+ server_threads: Number of CPU threads used by the Kraken2 server for classifying reads.
-+ kraken_clients: Number of clients that can connect at once to the Kraken-server for classifying reads. It should not be set to more than 4 fewer than the executor CPU limit.
-
-
 
 
 ## Troubleshooting
@@ -464,7 +424,6 @@ If your question is not answered here, please report any issues or suggestions o
 
 + *What does the `test_data` folder contain?* - This folder contains several small datasets, real and simulated, for testing the workflow with different parameters and use cases.
 
-+ *Is it possible to run the real time approach in the cloud?* - No, the real time pipeline is not yet available to be run in the cloud.
 
 
 

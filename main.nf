@@ -7,10 +7,8 @@ include { fastq_ingress; xam_ingress } from './lib/ingress'
 include { minimap_pipeline } from './subworkflows/minimap_pipeline'
 // standard kraken2
 include { kraken_pipeline } from './subworkflows/kraken_pipeline'
-include { real_time_pipeline } from './subworkflows/real_time_pipeline'
 
 include { prepare_databases } from "./modules/local/databases.nf"
-nextflow.preview.recursion=true
 
 // entrypoint workflow
 WorkflowMain.initialise(workflow, params, log)
@@ -57,14 +55,8 @@ workflow {
         }
     }
 
-    if ((params.classifier == 'kraken2' || params.real_time ) && params.reference) {
+    if (params.classifier == 'kraken2' && params.reference) {
         throw new Exception("To use kraken2 with your custom database, you need to use `--database` (instead of `--reference`) and include the `bracken_dist` within it.")
-    }
-    if (params.classifier != 'kraken2' && params.real_time) {
-        throw new Exception("Real time subworkflow must use kraken2 classifier.")
-    }
-    if (params.real_time) {
-        log.info("WARNING: The real-time processing functionality of this workflow is experimental and may not be suitable for all use cases.")
     }
 
     // If user provides each database, set to 'custom' the params.database_set
@@ -109,35 +101,33 @@ workflow {
     }
 
     // Input data
-    // real time wf still requires per-read-stats as it computes its own aggregated statistics
-    // TODO: investigate chunk option for real time and use of histograms
     if (params.fastq) {
-            samples = fastq_ingress([
-                "input":params.fastq,
-                "sample": params.real_time ? null : params.sample,
-                "sample_sheet": params.real_time ? null : params.sample_sheet,
-                "analyse_unclassified":params.analyse_unclassified,
-                "stats": true,
-                "fastcat_extra_args": fastcat_extra_args.join(" "),
-                "watch_path": params.real_time,
-                "per_read_stats": params.real_time ? true : false
-            ])
+        samples = fastq_ingress([
+            "input":params.fastq,
+            "sample": params.sample,
+            "sample_sheet": params.sample_sheet,
+            "analyse_unclassified":params.analyse_unclassified,
+            "stats": true,
+            "fastcat_extra_args": fastcat_extra_args.join(" "),
+            "watch_path": false,
+            "per_read_stats": false
+        ])
     } else {
-            // if we didn't get a `--fastq`, there must have been a `--bam` (as is codified
-            // by the schema)
-            samples = xam_ingress([
-                "input":params.bam,
-                "sample":params.sample,
-                "sample_sheet":params.sample_sheet,
-                "analyse_unclassified":params.analyse_unclassified,
-                "return_fastq": true,
-                "keep_unaligned": true,
-                "stats": true,
-                "watch_path": params.real_time,
-                "per_read_stats": params.real_time ? true : false
-            ])
+        // if we didn't get a `--fastq`, there must have been a `--bam` (as is codified
+        // by the schema)
+        samples = xam_ingress([
+            "input":params.bam,
+            "sample":params.sample,
+            "sample_sheet":params.sample_sheet,
+            "analyse_unclassified":params.analyse_unclassified,
+            "return_fastq": true,
+            "keep_unaligned": true,
+            "stats": true,
+            "watch_path": false,
+            "per_read_stats": false
+        ])
     }
-    
+
 
     // Discard empty samples
     log.info(
@@ -193,41 +183,14 @@ workflow {
                 source_data_taxonomy,
                 source_data_database
         )
-        // check combination of params are set
-        if (params.real_time){
-            if (params.sample_sheet != null) {
-                log.info("The `sample_sheet` parameter is not used in the real time mode.")
-            }
-            if (params.sample != null) {
-                log.info("The `sample` parameter is not used in the real time mode.")
-            }
-            if (!params.read_limit){
-                log.info("Workflow will run indefinitely as no read_limit is set.")
-            }
-            log.info("Workflow will stop processing files after ${params.read_limit} reads.")
-        }
-
-        // Distinguish between real time or not
-       if (params.real_time) {
-            results = real_time_pipeline(
-                samples,
-                databases_kraken2.taxonomy,
-                databases_kraken2.database,
-                databases_kraken2.bracken_length,
-                databases_kraken2.taxonomic_rank,
-                common_minimap2_opts
-            )
-        } else {
-            results = kraken_pipeline(
-                samples,
-                databases_kraken2.taxonomy,
-                databases_kraken2.database,
-                databases_kraken2.bracken_length,
-                databases_kraken2.taxonomic_rank,
-                common_minimap2_opts
-            )
-        }
-
+        results = kraken_pipeline(
+            samples,
+            databases_kraken2.taxonomy,
+            databases_kraken2.database,
+            databases_kraken2.bracken_length,
+            databases_kraken2.taxonomic_rank,
+            common_minimap2_opts
+        )
     }
 }
 
