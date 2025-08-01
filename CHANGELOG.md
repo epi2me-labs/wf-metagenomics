@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ZeroDivisionError: division by zero` encountered in the `progressive_bracken` process when there are no taxa identified at all.
 ### Removed
 - Real time functionality. This implies the deprecation of the following parameters: `server_threads`, `kraken_clients`, `port`, `host`, `external_kraken2`, `batch_size`, `real_time`, `read_limit`
+- Update image to remove kraken2-server dependency.
 
 ## [v2.13.0]
 ### Changed
