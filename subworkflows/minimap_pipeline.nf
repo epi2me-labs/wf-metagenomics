@@ -1,17 +1,11 @@
-import groovy.json.JsonBuilder
 
 include { configure_igv } from '../lib/common'
-include { run_amr } from '../modules/local/amr'
 include { filter_references } from '../modules/local/igv_related'
 include {
-    run_common;
     createAbundanceTables;
     publish;
     publishReads;
-    makeReport;
 } from "../modules/local/common"
-
-OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
 
 process minimap {
@@ -33,7 +27,7 @@ process minimap {
     // due to the wf fail at the samtools step
     memory {12.GB * task.attempt}
     maxRetries 1
-    errorStrategy = 'retry'
+    errorStrategy 'retry'
     input:
         tuple val(meta),
             path(concat_seqs),
@@ -246,16 +240,8 @@ workflow minimap_pipeline {
         taxonomy
         taxonomic_rank
         common_minimap2_opts
-        keep_bam
         output_igv
     main:
-        // Run common
-        common = run_common(
-            samples,
-            common_minimap2_opts)
-        software_versions = common.software_versions
-        parameters = common.parameters
-        samples = common.samples
 
         // Run Minimap2
         mm2 = minimap(
@@ -280,24 +266,7 @@ workflow minimap_pipeline {
                 }
             publishReads(unclassified_to_extract, "unclassified")
         }
-        // Use initial reads stats (after fastcat) QC, but update meta
-        for_report = samples
-        | map{
-            meta, path, stats -> [meta.alias, stats]
-        }
-        | combine (
-            samples_classification
-            | map {
-                    meta, bam, bai, stats -> [meta.alias, meta]
-                },
-            by: 0
-        ) | multiMap{ alias, stats, meta ->
-            meta: meta
-            stats: stats
-        }
-        metadata = for_report.meta.collect()
-        // create a file list of the stats, and signal if its empty or not
-        stats = for_report.stats.collect()
+
         // take samples with classified sequences
         bam_classified = samples_classification.filter { meta, bam, bai, stats ->
             // a sample is unclassified if all reads are unclassified
@@ -314,33 +283,6 @@ workflow minimap_pipeline {
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
             taxonomic_rank)
-
-        // Process AMR
-        if (params.amr) {
-            run_amr = run_amr(
-                samples,
-                "${params.amr_db}",
-                "${params.amr_minid}",
-                "${params.amr_mincov}"
-            )
-            amr_reports = run_amr.reports
-        } else {
-            amr_reports = Channel.empty()
-        }
-
-        // Reporting
-        report = makeReport(
-            workflow.manifest.version,
-            metadata,
-            stats,
-            abundance_tables.abundance_tsv,
-            alignment_reports.ifEmpty(OPTIONAL_FILE),
-            lineages.flatMap { meta, lineages_json -> lineages_json }.collect(),
-            software_versions,
-            parameters,
-            taxonomic_rank,
-            amr_reports.ifEmpty(OPTIONAL_FILE)
-        )
 
         if (output_igv) {
             // filter references
@@ -379,7 +321,6 @@ workflow minimap_pipeline {
                 )
         }
 
-
         // Extract (or exclude) reads belonging (or not) to the chosen taxids.
         if (params.minimap2filter) {
             mm2_filt = extractMinimap2Reads(
@@ -390,7 +331,10 @@ workflow minimap_pipeline {
         }
 
     emit:
-        report.report_html  // just emit something
+        abundance_table = abundance_tables.abundance_tsv
+        lineages = lineages.flatMap { meta, lineages_json -> lineages_json }.collect()
+        alignment_reports = alignment_reports
+        metadata_after_taxonomy = samples_classification.map {meta, _bam, _bai, _stats -> [meta.alias, meta]}
 }
 
 

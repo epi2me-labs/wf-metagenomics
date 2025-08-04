@@ -1,15 +1,8 @@
-import groovy.json.JsonBuilder
-import nextflow.util.BlankSeparatedList
-include { run_amr } from '../modules/local/amr'
 include {
-    run_common;
     createAbundanceTables;
     publish;
-    makeReport;
 } from "../modules/local/common"
 
-
-OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
 
 // Filter reads, calculate some stats, and run kraken2 classification
 process run_kraken2 {
@@ -83,7 +76,7 @@ process run_bracken {
     cpus Math.max(params.threads - 2, 2)
     memory {8.GB * task.attempt - 1.GB}
     maxRetries 1
-    errorStrategy = 'retry'
+    errorStrategy 'retry'
     input:
         tuple val(meta), path("kraken2.report"), path("kraken2.assignments.tsv")
         path(database)
@@ -168,16 +161,8 @@ workflow kraken_pipeline {
         database
         bracken_length
         taxonomic_rank
-        common_minimap2_opts
 
     main:
-        OPTIONAL_FILE = file("$projectDir/data/OPTIONAL_FILE")
-        // Run common
-        common = run_common(samples, common_minimap2_opts)
-        software_versions = common.software_versions
-        parameters = common.parameters
-        samples = common.samples
-
         // Run Kraken2
         // Find out size of the db. Cannot be done within the process
         database_main_file_size = database.resolve('hash.k2d').size()
@@ -190,59 +175,10 @@ workflow kraken_pipeline {
             [meta + [n_unclassified: n_unclassified as Integer], lineages_json]
         }
 
-        // // Use initial reads stats (after fastcat) QC, but update meta
-        for_report = samples
-        | map{
-            meta, path, stats -> [meta.alias, stats]
-        }
-        | combine (
-            samples_classification
-            | map {
-                    meta, lineages_json -> [meta.alias, meta]
-                },
-            by: 0
-        ) | multiMap{ alias, stats, meta ->
-            meta: meta
-            stats: stats
-        }
-        metadata = for_report.meta.collect()
-        // create a file list of the stats, and signal if its empty or not
-        stats = for_report.stats.collect()
-
         // Abundance table
         abundance_tables = createAbundanceTables(
             lineages.flatMap { meta, lineages_json, n_unclassified -> lineages_json }.collect(),
             taxonomic_rank)
-
-
-        // Process AMR
-        if (params.amr) {
-            run_amr = run_amr(
-                samples,
-                "${params.amr_db}",
-                "${params.amr_minid}",
-                "${params.amr_mincov}"
-            )
-            amr_reports = run_amr.reports
-        } else {
-            amr_reports = Channel.empty()
-        }
-
-        // Reporting
-        alignment_stats = Channel.fromPath(OPTIONAL_FILE)
-        report = makeReport(
-            workflow.manifest.version,
-            metadata,
-            stats,
-            abundance_tables.abundance_tsv,
-            alignment_stats.ifEmpty(OPTIONAL_FILE),
-            lineages.flatMap { meta, lineages_json, n_unclassified -> lineages_json }.collect(),
-            software_versions,
-            parameters,
-            taxonomic_rank,
-            amr_reports.ifEmpty(OPTIONAL_FILE)
-        )
-
 
         // output kraken read assignments + taxonomy info
         if (params.include_read_assignments) {
@@ -254,6 +190,8 @@ workflow kraken_pipeline {
 
 
     emit:
-        report.report_html  // just emit something
+        abundance_table = abundance_tables.abundance_tsv
+        lineages = lineages.flatMap { meta, lineages_json, n_unclassified -> lineages_json }.collect()
+        metadata_after_taxonomy = samples_classification.map {meta, _lineages -> [meta.alias, meta]}
 }
 

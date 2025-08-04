@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Values in the diversity table appear as None if there are no reads in the sample.
 - Values in the abundance table are now integers instead of floats.
 - Remove real time option from common python scripts and move makeReport to the common module. This change does not impact workflow results.
+- Move `exclude_host` and related processes to `common_pipeline.nf`. Move `getVersions`, `getParams`, `run_amr` and `makeReport` to `main.nf`. This will not have any impact on the results.
 ### Fixed
 - Updated to wf-template v5.6.2, fixing:
     - dacite.exceptions.WrongTypeError during report generation when barcode is null.
