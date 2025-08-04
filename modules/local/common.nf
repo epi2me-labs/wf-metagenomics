@@ -18,22 +18,45 @@ process abricateVersion {
 
 process getVersions {
     label "wfmetagenomics"
-    publishDir "${params.out_dir}", mode: 'copy', pattern: "versions.txt"
     cpus 1
-    memory "2 GB"
+    memory "2GB"
     output:
         path "versions.txt"
     script:
     """
-    python -c "import pysam; print(f'pysam,{pysam.__version__}')" >> versions.txt
-    python -c "import pandas; print(f'pandas,{pandas.__version__}')" >> versions.txt
     fastcat --version | sed 's/^/fastcat,/' >> versions.txt
+    taxonkit version | sed 's/ /,/' >> versions.txt
+    csvtk version | sed 's/ /,/' >> versions.txt
     minimap2 --version | sed 's/^/minimap2,/' >> versions.txt
     samtools --version | head -n 1 | sed 's/ /,/' >> versions.txt
-    taxonkit version | sed 's/ /,/' >> versions.txt
     kraken2 --version | head -n 1 | sed 's/ version /,/' >> versions.txt
+    bracken -v | sed 's/ /,/' >> versions.txt
+    seqkit version | sed 's/ /,/' >> versions.txt
+    python -c "import pandas; print(f'pandas,{pandas.__version__}')" >> versions.txt
+    python -c "import pysam; print(f'pysam,{pysam.__version__}')" >> versions.txt
     """
 }
+
+
+process getVersionsCommon {
+    label "wf_common"
+    publishDir "${params.out_dir}", mode: 'copy', pattern: "versions_all.txt"
+    cpus 1
+    memory "2GB"
+    input:
+        path "versions.txt"
+    output:
+        path "versions_all.txt"
+    script:
+    """
+    python -c "import pysam; print(f'pysam-common,{pysam.__version__}')" >> versions_common.txt
+    python -c "import ezcharts; print(f'ezcharts-common,{ezcharts.__version__}')" >> versions_common.txt
+    fastcat --version | sed 's/^/fastcat-common,/' >> versions_common.txt
+    samtools --version | head -1 | sed 's/ /-common,/g' >> versions_common.txt
+    cat "versions.txt" versions_common.txt > "versions_all.txt"
+    """
+}
+
 
 // Process to collapse lineages info into abundance dataframes.
 process createAbundanceTables {

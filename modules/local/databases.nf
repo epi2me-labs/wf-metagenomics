@@ -71,8 +71,8 @@ process unpack_download_kraken2_database {
         path "${database_dir}_db", emit: database_dir
     script:
         String db_basename = database_local.name != "OPTIONAL_FILE" ? database_local.toString(): file(database_url).Name
-    """   
-    # Check if the folder is an url to fetch or a local path 
+    """
+    # Check if the folder is an url to fetch or a local path
     if ${url_database_boolean}
     then
         wget '${database_url}'
@@ -252,7 +252,7 @@ workflow prepare_databases {
                     taxonomy_local_path = file(params.taxonomy, type: "file", checkIfExists:true)
                     taxonomy_remote_path = '' // pass empty value in case it is a local compress file.
                     taxonomy_is_remote = false
-                }             
+                }
                 taxonomy_dir = download_unpack_taxonomy('custom', taxonomy_local_path, taxonomy_remote_path, tax.simpleName, taxonomy_is_remote)
             }
         } else{
