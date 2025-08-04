@@ -16,6 +16,7 @@ include { prepare_databases } from "./modules/local/databases.nf"
 include {
     makeReport;
     getVersions;
+    getVersionsCommon;
     abricateVersion;
 } from "./modules/local/common"
 
@@ -156,7 +157,7 @@ workflow {
     ]
 
     // Run common
-    common_versions = getVersions()
+    common_versions = getVersionsCommon(getVersions())
     parameters = getParams()
 
     if (params.exclude_host) {
