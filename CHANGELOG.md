@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Values in the abundance table are now integers instead of floats.
 - Remove real time option from common python scripts and move makeReport to the common module. This change does not impact workflow results.
 - Move `exclude_host` and related processes to `common_pipeline.nf`. Move `getVersions`, `getParams`, `run_amr` and `makeReport` to `main.nf`. This will not have any impact on the results.
+- Samples with fewer than 50% of the median read count across all samples are excluded from the rarefaction table. This is to avoid the rest of the samples being rarefied to a very low number of reads, which would lead to a loss of information.
 ### Fixed
 - Updated to wf-template v5.6.2, fixing:
     - dacite.exceptions.WrongTypeError during report generation when barcode is null.

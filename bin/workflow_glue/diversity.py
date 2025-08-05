@@ -10,14 +10,16 @@ import scipy as scp
 #
 
 
-def random_choice(arr, sample_size):
+def random_choice(arr, sample_size, seed=4):
     """Random sample n elements from the total of inviduals.
 
     :param arr: vector with number of counts per taxa. Type: numpy array.
     :param sample_size: number of elements (n) to be randomly sampled. Type: int.
+    :param seed (int): seed value.
     :return: vector with rarefied counts.
     :rtype: numpy array.
     """
+    np.random.seed(seed)
     arr = np.int64(arr)
     # To avoid working with strings, index the positions
     arr_idx = np.arange(len(arr))
@@ -35,13 +37,15 @@ def random_choice(arr, sample_size):
     return rarefied_vector
 
 
-def global_rarefaction(df, min_counts=0.95):
+def global_rarefaction(df, min_counts=0.95, pc_reads=0.5, seed=4):
     """Rarefy all samples to the same size.
 
     :param df: pandas dataframe with counts per taxon and sample.
-    :param min_counts: percentage of sequences to take for
-        the minimum number of counts in all the samples.
-    :type min_counts: float. Value from 0 to 1.
+    :param min_counts (float): percentage of sequences to take for
+        the minimum number of counts in the samples.
+    :param pc_reads (float): percentage of sequences relative to the
+        median number of reads of all the samples.
+    :param seed (int): seed value.
     :return: dataframe with rarefied counts.
         All samples have the same number of counts.
     :rtype: pandas dataFrame.
@@ -51,9 +55,15 @@ def global_rarefaction(df, min_counts=0.95):
     to the 95% of it.
     This is the number of sequences to take for all the samples
     """
-    size = int(min_counts*min(df.sum()))
-    rarefied_df = df.apply(lambda x: random_choice(
-        np.array(x), size), axis=0)
+    # Get median number of reads of all the samples
+    median_nreads = df.sum().median()
+    # Filter those samples with less than x% reads than average
+    threshold = int(pc_reads * median_nreads)
+    samples = df.columns[df.sum() >= threshold]
+    df_to_rarefy = df[samples]
+    rarefaction_size = int(min_counts * min(df_to_rarefy.sum()))
+    rarefied_df = df_to_rarefy.apply(lambda x: random_choice(
+        x, rarefaction_size, seed=seed), axis=0)
     return rarefied_df
 
 
