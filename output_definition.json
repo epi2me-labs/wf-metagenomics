@@ -130,16 +130,8 @@
       },
       "minimap-read-assignments": {
         "filepath": "reads_assignments/{{ alias }}_lineages.minimap2.assignments.tsv",
-        "title": "Taxonomic assignment per read from minimap2 (filtered).",
+        "title": "Taxonomic assignment per read from minimap2.",
         "description": "TSV file with the taxonomic assignment per read after identity and coverage filters.",
-        "mime-type": "text/tab-separated-values",
-        "optional": true,
-        "type": "per-sample"
-      },
-      "minimap-read-assignments-unfiltered": {
-        "filepath": "reads_assignments_unfiltered/{{ alias }}.minimap2.assignments.tsv",
-        "title": "Taxonomic assignment per read from minimap2 (unfiltered).",
-        "description": "TSV file with the taxonomic assignment per read before applying any filter.",
         "mime-type": "text/tab-separated-values",
         "optional": true,
         "type": "per-sample"

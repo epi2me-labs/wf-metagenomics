@@ -18,8 +18,7 @@ Output files may be aggregated including information for all samples or provided
 | GZI index of the reduced reference FASTA file | igv_reference/reduced_reference.fasta.gz.gzi | Index of the reference FASTA file containing only those sequences that have reads mapped against them. | aggregated |
 | JSON configuration file for IGV browser | igv.json | JSON configuration file to be loaded in IGV for visualising alignments against the reduced reference. | aggregated |
 | Taxonomic assignment per read from kraken2. | reads_assignments/{{ alias }}_lineages.kraken2.assignments.tsv | TSV file with the taxonomic assignment classified by kraken2 (no identity or coverage filters are applied). | per-sample |
-| Taxonomic assignment per read from minimap2 (filtered). | reads_assignments/{{ alias }}_lineages.minimap2.assignments.tsv | TSV file with the taxonomic assignment per read after identity and coverage filters. | per-sample |
-| Taxonomic assignment per read from minimap2 (unfiltered). | reads_assignments_unfiltered/{{ alias }}.minimap2.assignments.tsv | TSV file with the taxonomic assignment per read before applying any filter. | per-sample |
+| Taxonomic assignment per read from minimap2. | reads_assignments/{{ alias }}_lineages.minimap2.assignments.tsv | TSV file with the taxonomic assignment per read after identity and coverage filters. | per-sample |
 | FASTQ of the selected taxids. | extracted/{{ alias }}.minimap2.extracted.fastq | FASTQ containing/excluding the reads of the selected taxids. | per-sample |
 | FASTQ of the unclassified reads. | unclassified/{{ alias }}.unclassified.fq.gz | FASTQ containing the reads that have not been classified against the database. | per-sample |
 | TSV with some alignment statistics | alignment_tables/{{ alias }}.alignment-stats.tsv | Coverage and taxonomy of each reference. | per-sample |

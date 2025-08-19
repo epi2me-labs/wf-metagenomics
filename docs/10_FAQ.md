@@ -35,3 +35,5 @@ If your question is not answered here, please report any issues or suggestions o
     |```ecoh```| [E. coli AMR DB from SRST2](https://github.com/katholt/srst2/tree/master/data)|
 
 + *What does the `test_data` folder contain?* - This folder contains several small datasets, real and simulated, for testing the workflow with different parameters and use cases.
+
++ *When and how are coverage and identity filters applied when using the minimap2 approach?* - With minimap2-based classification, coverage and identity filtering is applied by using the `min_ref_coverage` and `min_percent_identity` options respectively. All reads that mapped to a reference, but failed to pass these filters, are relabelled as unclassified. If the `include_read_assignments` option is used, tables in the output will show read classifications after this filtering step. However, the output BAM file always contains the raw minimap2 alignment results. To read more about both filters, see [minimap2 Options](#minimap2-options).
