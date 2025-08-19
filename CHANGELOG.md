@@ -21,9 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - dacite.exceptions.WrongTypeError during report generation when barcode is null.
     - Sequence summary read length N50 incorrectly displayed minimum read length, it now correctly shows the N50.
     - Sequence summary component alignment and coverage plots failed to plot under some conditions.
-- Missing output files when using `include_read_assignments` with the minimap2 subworkflow, the following two missing tables are now correctly published to the output directory:
-    - Unfiltered minimap2 per read assignments: `{alias}.minimap2.assignments.tsv`
-    - Minimap2 per read assignments after identity and coverage filters: `{alias}_lineages.minimap2.assignments.tsv`
+- Missing output file containing per-read assignments after identity and coverage filters when using `include_read_assignments` with the minimap2 subworkflow; this table is now correctly published to `{alias}_lineages.minimap2.assignments.tsv`.
 - `Missing output file(s)` encountered in the `prepare_databases:determine_bracken_length` process when using the `bracken_length` option.
 - `Missing output file(s)` encountered in the `minimap_pipeline:getAlignmentStats` process when all reads are unclassified.
 - `pandas.errors.EmptyDataError` encountered in the `getAlignmentStats` process when reference coverage does not reach 1x

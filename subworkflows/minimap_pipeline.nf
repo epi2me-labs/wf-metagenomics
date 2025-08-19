@@ -20,10 +20,6 @@ process minimap {
         "${params.out_dir}/bams", mode: 'copy',
         pattern: "${meta.alias}.bamstats_results",
         enabled: (params.keep_bam || params.igv))
-    publishDir (
-        "${params.out_dir}/reads_assignments_unfiltered", mode: 'copy',
-        pattern: "${meta.alias}.minimap2.assignments.tsv",
-        enabled: params.include_read_assignments)
     // due to the wf fail at the samtools step
     memory {12.GB * task.attempt}
     maxRetries 1
@@ -45,9 +41,6 @@ process minimap {
         tuple val(meta),
             path("${meta.alias}.modified.minimap2.assignments.tsv"),
             emit: assignments
-        tuple val(meta),
-            path("${meta.alias}.minimap2.assignments.tsv"),
-            emit: raw_assignments, optional:true
     script:
         def common_minimap2_opts = (reference.size() > 4e9 ) ? common_minimap2_opts + ['--split-prefix tmp'] : common_minimap2_opts
         common_minimap2_opts = common_minimap2_opts.join(" ")
