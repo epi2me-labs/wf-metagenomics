@@ -68,6 +68,7 @@ docker-run:
                 # test combinations of databases
                 "exception-kraken2-reference", "exception-minimap2-database",
                 "exception-minimap2-igv-mmi-reference",
+                "kraken2-one-empty-sample",
             ]
     rules:
      - if: ($CI_COMMIT_BRANCH == null || $CI_COMMIT_BRANCH == "dev-template")
@@ -83,6 +84,12 @@ docker-run:
           AFTER_NEXTFLOW_CMD: >
             grep "Found empty file for sample 'barcode05'" .nextflow.log &&
             if [ ! -f $$PWD/$$CI_PROJECT_NAME/reads_assignments/barcode01_lineages.kraken2.assignments.tsv ]; then (echo -e "Assignments not found" && exit 1); fi
+     - if: $MATRIX_NAME == "kraken2-one-empty-sample"
+       variables:
+          NF_PROCESS_FILES: >
+            subworkflows/kraken_pipeline.nf
+          NF_WORKFLOW_OPTS: "--fastq test_data/case01/barcode04 -executor.\\$$local.memory 16GB --database_set ncbi_16s_18s"
+          NF_IGNORE_PROCESSES: "output_kraken2_read_assignments"
 
      - if: $MATRIX_NAME == "unclassified-kraken2"
        variables:

@@ -34,7 +34,10 @@ def parse_lineages(lineages):
     for i in json_files:
         with open(i) as json_file:
             all_json.update(json.load(json_file))
-    return all_json
+    if any(list(all_json.values())):
+        return all_json
+    else:
+        return None  # no reads at all (e.g. bracken threshold)
 
 
 # PREPARE INPUT DATA
@@ -244,11 +247,16 @@ def main(args):
     # Join taxonomy data
     all_json = parse_lineages(args.lineages)
     rank = ranks_abbrev[args.taxonomic_rank]
-    # Extract all possible lineages
-    allranks_tree = tax_tree(all_json)
-    # join last abundance table
-    counts_per_taxa = join_abundance_tables(allranks_tree, rank).set_index('tax')
-    counts_per_taxa.to_csv(f'abundance_table_{rank}.tsv', sep='\t')
+    if all_json:
+        # Extract all possible lineages
+        allranks_tree = tax_tree(all_json)
+        # join last abundance table
+        counts_per_taxa = join_abundance_tables(allranks_tree, rank).set_index('tax')
+        counts_per_taxa.to_csv(f'abundance_table_{rank}.tsv', sep='\t')
+    else:
+        # Return empty file
+        with open(f'abundance_table_{rank}.tsv', 'w') as empty_output:
+            empty_output.write("tax\tsample\tcount\ttotal\n")
 
 
 def argparser():

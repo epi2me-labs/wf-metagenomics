@@ -154,27 +154,35 @@ def main(args):
     samples = [i for i in abundance_table.columns if i not in ['tax', 'total']]
     # 2.1. SANKEY
     with report.add_section('Lineages', 'Lineages'):
-        ezc.metagenomics_sankey(all_json)
+        if all_json:
+            ezc.metagenomics_sankey(all_json)
+        else:
+            em("""There are no taxa to display.""")
     # 2.2. SUNBURST
     with report.add_section('Sunburst', 'Sunburst'):
-        tabs = Tabs()
-        with tabs.add_dropdown_menu('Sample', change_header=True):
-            for barcode in sorted(all_json.keys()):
-                logger.info(f"Sample {barcode}.")
-                with tabs.add_dropdown_tab(barcode):
-                    p("""
-                    This visualization can be useful to interactively explore the
-                    taxonomic composition of the sample. It shows hierarchical data:
-                    each layer represents a taxonomic rank. The color indicates the
-                    abundance of that taxon in comparison with the total number of
-                    reads. Zooming into an specific taxon is possible by clicking on it.
-                    """)
-                    lineages = report_utils.prepare_data_to_sunburst(all_json[barcode])
-                    plt = ezc.sunburst(
-                        lineages, label_rotate="tangential",
-                        label_minAngle=25)
-                    EZChart(plt, THEME)
-                    lineages.clear()
+        if all_json:
+            tabs = Tabs()
+            with tabs.add_dropdown_menu('Sample', change_header=True):
+                for barcode in sorted(all_json.keys()):
+                    logger.info(f"Sample {barcode}.")
+                    with tabs.add_dropdown_tab(barcode):
+                        p("""
+                        This visualization can be useful to interactively explore the
+                        taxonomic composition of the sample. It shows hierarchical data:
+                        each layer represents a taxonomic rank. The color indicates the
+                        abundance of that taxon in comparison with the total number of
+                        reads. Zooming into an specific taxon is possible by clicking
+                        on it.""")
+                        lineages = report_utils.prepare_data_to_sunburst(
+                            all_json[barcode]
+                        )
+                        plt = ezc.sunburst(
+                            lineages, label_rotate="tangential", label_minAngle=25
+                        )
+                        EZChart(plt, THEME)
+                        lineages.clear()
+        else:
+            em("""There are no taxa to display.""")
     # Save all ranks info
     ranks_counts_filtered = []
     for rank in ranks_no_sk_k:  # avoid superkingdom (SK), kingdom(K)
@@ -191,218 +199,238 @@ def main(args):
                 counts_per_taxa_df, 'total', abundance_threshold)
             ranks_counts_filtered.append(counts_per_taxa_df_filtered)
             ranks_counts = counts_per_taxa_df  # save last table
+        else:
+            ranks_counts = pd.DataFrame()
     # Write report
     with report.add_section('Taxonomy', 'Taxonomy'):
-        tabs = Tabs()
-        # 2.3. BARPLOT
-        with tabs.add_dropdown_menu('Rank', change_header=True):
-            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
-                with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
-                    logger.info(f"rank {ranks_no_sk_k[i]}.")
-                    if counts_per_taxa_per_rank_df.empty:
-                        em("""There are no taxa to display.""")
-                        continue
-                    most_abundant = report_utils.most_abundant_table(
-                        counts_per_taxa_per_rank_df,
-                        n=n_taxa_barplot,
-                        percent=True)
-                    d2plot = report_utils.split_taxonomy_string(most_abundant)
-                    # Long wide format
-                    d2plot_melt = d2plot.melt(
-                        id_vars=[ranks_no_sk_k[i]], value_vars=samples,
-                        var_name='samples', value_name='counts')
-                    # Plot
-                    p(f"""
-                    Barplot of the {n_taxa_barplot} most abundant taxa at the
-                    {ranks_no_sk_k[i]} rank in all the samples.
-                    Any remaining taxa have been collapsed under the \'Other\'
-                    category to facilitate the visualization.
-                    The y-axis indicates the relative abundance of each taxon
-                    in percentages for each sample.
-                    """)
-                    plt = ezc.barplot(
-                        d2plot_melt,
-                        x="samples",
-                        y="counts",
-                        hue=ranks_no_sk_k[i],
-                        dodge=False,
-                    )
-                    plt._fig.yaxis.axis_label = "Relative abundance"
-                    plt._fig.xaxis.major_label_orientation = 45
-                    # distribute names in 5 columns as per default are 10 taxa.
-                    # > 10 is difficult to distinguish colors.
-                    plt._fig.legend.ncols = 5
-                    # mute allows to soften the color of the chosen taxa
-                    # in the legend.
-                    plt._fig.legend.click_policy = "mute"
-                    plt._fig.title.text = f"{ranks_no_sk_k[i].capitalize()} rank"
-                    plt._fig.title.align = "center"
-                    hover = plt._fig.select(dict(type=HoverTool))
-                    hover.tooltips = [("Taxon", "$name"), ("Percent", "@$name %")]
-                    EZChart(plt, THEME)
+        if ranks_counts_filtered:
+            tabs = Tabs()
+            # 2.3. BARPLOT
+            with tabs.add_dropdown_menu('Rank', change_header=True):
+                for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
+                    with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
+                        logger.info(f"rank {ranks_no_sk_k[i]}.")
+                        if counts_per_taxa_per_rank_df.empty:
+                            em("""There are no taxa to display.""")
+                            continue
+                        most_abundant = report_utils.most_abundant_table(
+                            counts_per_taxa_per_rank_df,
+                            n=n_taxa_barplot,
+                            percent=True)
+                        d2plot = report_utils.split_taxonomy_string(most_abundant)
+                        # Long wide format
+                        d2plot_melt = d2plot.melt(
+                            id_vars=[ranks_no_sk_k[i]], value_vars=samples,
+                            var_name='samples', value_name='counts')
+                        # Plot
+                        p(f"""
+                        Barplot of the {n_taxa_barplot} most abundant taxa at the
+                        {ranks_no_sk_k[i]} rank in all the samples.
+                        Any remaining taxa have been collapsed under the \'Other\'
+                        category to facilitate the visualization.
+                        The y-axis indicates the relative abundance of each taxon
+                        in percentages for each sample.
+                        """)
+                        plt = ezc.barplot(
+                            d2plot_melt,
+                            x="samples",
+                            y="counts",
+                            hue=ranks_no_sk_k[i],
+                            dodge=False,
+                        )
+                        plt._fig.yaxis.axis_label = "Relative abundance"
+                        plt._fig.xaxis.major_label_orientation = 45
+                        # distribute names in 5 columns as per default are 10 taxa.
+                        # > 10 is difficult to distinguish colors.
+                        plt._fig.legend.ncols = 5
+                        # mute allows to soften the color of the chosen taxa
+                        # in the legend.
+                        plt._fig.legend.click_policy = "mute"
+                        plt._fig.title.text = f"{ranks_no_sk_k[i].capitalize()} rank"
+                        plt._fig.title.align = "center"
+                        hover = plt._fig.select(dict(type=HoverTool))
+                        hover.tooltips = [("Taxon", "$name"), ("Percent", "@$name %")]
+                        EZChart(plt, THEME)
+        else:
+            em("""There are no taxa to display.""")
     # 2.4. ABUNDANCE TABLE
     with report.add_section('Abundances', 'Abundances'):
-        tabs = Tabs()
-        with tabs.add_dropdown_menu('Abundance tables', change_header=False):
-            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
-                sample_columns = {
-                    x: int for x in counts_per_taxa_per_rank_df.columns if x != "tax"
-                }
-                counts_per_taxa_per_rank_df = counts_per_taxa_per_rank_df.astype(
-                    sample_columns
-                )
-                with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
-                    if counts_per_taxa_per_rank_df.empty:
-                        em("""There are no taxa to display.""")
-                        continue
-                    p(f"Abundance table for the {ranks_no_sk_k[i]} rank.")
-                    p(
-                        "Only taxa whose global abundance are above the ",
-                        html_tags.code("abundance_threshold"),
-                        " parameter will appear in the table."
+        if ranks_counts_filtered:
+            tabs = Tabs()
+            with tabs.add_dropdown_menu('Abundance tables', change_header=False):
+                for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
+                    sample_columns = {
+                        x: int
+                        for x in counts_per_taxa_per_rank_df.columns
+                        if x != "tax"
+                    }
+                    counts_per_taxa_per_rank_df = counts_per_taxa_per_rank_df.astype(
+                        sample_columns
                     )
-                    export_table = report_utils.split_taxonomy_string(
-                        counts_per_taxa_per_rank_df, set_index=True)
-                    # Move tax column to end to not spoil visualization
-                    temp_cols = export_table.columns.tolist()
-                    new_cols = temp_cols[1:] + temp_cols[0:1]
-                    export_table = export_table[new_cols]
-                    # Table to report with the export option
-                    DataTable.from_pandas(
-                        export_table,
-                        export=True,
-                        file_name=(
-                            f'{args.workflow_name}-counts-{ranks_no_sk_k[i]}'
+                    with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
+                        if counts_per_taxa_per_rank_df.empty:
+                            em("""There are no taxa to display.""")
+                            continue
+                        p(f"Abundance table for the {ranks_no_sk_k[i]} rank.")
+                        p(
+                            "Only taxa whose global abundance are above the ",
+                            html_tags.code("abundance_threshold"),
+                            " parameter will appear in the table."
                         )
-                    )
-        # 2.5. RAREFIED ABUNDANCE TABLE
-        with tabs.add_dropdown_menu('Rarefied Abundance tables', change_header=False):
-            for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
-                with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
-                    if counts_per_taxa_per_rank_df.empty:
-                        em("""There are no taxa to display.""")
-                        continue
-                    p(f"Rarefied abundance table for the \
-                      {ranks_no_sk_k[i]} rank.")
-                    p("""
-                        All samples have been randomly subsetted to have the same number
-                        of reads.
-                    """)
-                    # Table to report with the export option
-                    rarefied_df = diversity.global_rarefaction(
-                        counts_per_taxa_per_rank_df.set_index('tax')).sort_index(
-                        axis=1).reset_index()
-                    export_table = report_utils.split_taxonomy_string(
-                        rarefied_df, set_index=True)
-                    # Move tax column to end to not spoil visualization
-                    temp_cols = export_table.columns.tolist()
-                    new_cols = temp_cols[1:] + temp_cols[0:1]
-                    export_table = export_table[new_cols]
-                    DataTable.from_pandas(
-                        export_table,
-                        export=True,
-                        file_name=(
-                            f'{args.workflow_name}-rarefied-{ranks_no_sk_k[i]}'
+                        export_table = report_utils.split_taxonomy_string(
+                            counts_per_taxa_per_rank_df, set_index=True)
+                        # Move tax column to end to not spoil visualization
+                        temp_cols = export_table.columns.tolist()
+                        new_cols = temp_cols[1:] + temp_cols[0:1]
+                        export_table = export_table[new_cols]
+                        # Table to report with the export option
+                        DataTable.from_pandas(
+                            export_table,
+                            export=True,
+                            file_name=(
+                                f'{args.workflow_name}-counts-{ranks_no_sk_k[i]}'
+                            )
                         )
-                    )
-
+            # 2.5. RAREFIED ABUNDANCE TABLE
+            with tabs.add_dropdown_menu(
+                "Rarefied Abundance tables", change_header=False
+            ):
+                for i, counts_per_taxa_per_rank_df in enumerate(ranks_counts_filtered):
+                    with tabs.add_dropdown_tab(ranks_no_sk_k[i]):
+                        p(f"Rarefied abundance table for the \
+                        {ranks_no_sk_k[i]} rank.")
+                        p(
+                            """
+                            All samples have been randomly subsetted to have the same
+                            number of reads.
+                        """
+                        )
+                        # Table to report with the export option
+                        rarefied_df = diversity.global_rarefaction(
+                            counts_per_taxa_per_rank_df.set_index('tax')).sort_index(
+                            axis=1).reset_index()
+                        export_table = report_utils.split_taxonomy_string(
+                            rarefied_df, set_index=True)
+                        # Move tax column to end to not spoil visualization
+                        temp_cols = export_table.columns.tolist()
+                        new_cols = temp_cols[1:] + temp_cols[0:1]
+                        export_table = export_table[new_cols]
+                        DataTable.from_pandas(
+                            export_table,
+                            export=True,
+                            file_name=(
+                                f'{args.workflow_name}-rarefied-{ranks_no_sk_k[i]}'
+                            )
+                        )
+        else:
+            em("""There are no taxa to display.""")
     #
     # 3. DIVERSITY
     #
 
     # Return counts for the last analyzed rank to calculate diversity
-    last_analyzed_rank = ranks_counts[samples + ['total']]
-    # Rarefy step by step
-    rarefied_counts = last_analyzed_rank.apply(
-        lambda x: diversity.rarefaction_curve(x), axis=0)
-    richness_curve = {
-        rarefied_counts.index[i]: rarefied_counts[i]
-        for i in range(len(rarefied_counts.index))}
+    if not ranks_counts.empty:
+        last_analyzed_rank = ranks_counts[samples + ['total']]
+        # Rarefy step by step
+        rarefied_counts = last_analyzed_rank.apply(
+            lambda x: diversity.rarefaction_curve(x), axis=0)
+        richness_curve = {
+            rarefied_counts.index[i]: rarefied_counts[i]
+            for i in range(len(rarefied_counts.index))}
 
     with report.add_section("Alpha Diversity", "Diversity"):
-        tabs = Tabs()
-        #
-        # 3.1. ALPHA DIVERSITY METRICS for the last analyzed level
-        #
-        with tabs.add_tab('Diversity indices'):
-            p("""
-            Sample diversity indices. Indices are calculated from the original
-            abundance table.
-            """)
-            diversity_df = report_utils.calculate_diversity_metrics(
-                last_analyzed_rank)
-            diversity_df.rename(columns={'Sample': 'Indices'}, inplace=True)
-            DataTable.from_pandas(
-                diversity_df.set_index('Indices'), export=True,
-                file_name=(f'{args.workflow_name}-diversity'))
-            em("Note that the taxon 'Unknown' is considered as a unique taxon.\n")
+        if not ranks_counts.empty:
+            tabs = Tabs()
+            #
+            # 3.1. ALPHA DIVERSITY METRICS for the last analyzed level
+            #
+            with tabs.add_tab('Diversity indices'):
+                p("""
+                Sample diversity indices. Indices are calculated from the original
+                abundance table.
+                """)
+                diversity_df = report_utils.calculate_diversity_metrics(
+                    last_analyzed_rank)
+                diversity_df.rename(columns={'Sample': 'Indices'}, inplace=True)
+                DataTable.from_pandas(
+                    diversity_df.set_index('Indices'), export=True,
+                    file_name=(f'{args.workflow_name}-diversity'))
+                em("Note that the taxon 'Unknown' is considered as a unique taxon.\n")
 
-        #
-        # 3.2. SPECIES RICHNESS CURVES
-        #
-        with tabs.add_tab('Species richness curves'):
-            p("""Sample-based rarefaction curves to display observed taxa richness.
-                Sample size shows the number of reads sampled from the total amount
-              of reads analyzed.
-              The Y-axis indicates the number of unique taxa at the last analyzed
-              taxonomic rank in those subsampled reads.
-            """)
-            with Grid(columns=1):
-                df_richness = pd.DataFrame.from_dict(
-                    richness_curve, orient='index')
-                df_richness['Sample'] = list(df_richness.index)
-                df_richness_melt = df_richness.melt(
-                    id_vars='Sample', value_vars=list(df_richness.columns),
-                    var_name='Sample size', value_name='Richness')
-                df_richness_melt_sort = df_richness_melt.sort_values(by=['Sample size'])
-                plot = ezc.lineplot(
-                    data=df_richness_melt_sort,
-                    x='Sample size', y='Richness', hue='Sample')
-                EZChart(plot, 'epi2melabs')
-            em("Note that Unknown taxon is considered as a unique taxon.")
-
-        #
-        # 3.3. SPECIES ABUNDANCE DISTRIBUTION: SAD
-        #
-        with tabs.add_dropdown_menu('Taxa abundance distribution', change_header=False):
-            for barcode in samples:
-                with tabs.add_dropdown_tab(barcode):
-                    # Remove Unknown
-                    ranks_counts = ranks_counts[
-                        ~(ranks_counts['tax'].str.contains('Unknown'))]
-                    df_sample_counts = (
-                        ranks_counts[barcode]
-                        .sort_values(ascending=False)
-                        .rename("freq")
-                        .to_frame()
+            #
+            # 3.2. SPECIES RICHNESS CURVES
+            #
+            with tabs.add_tab('Species richness curves'):
+                p("""Sample-based rarefaction curves to display observed taxa richness.
+                    Sample size shows the number of reads sampled from the total amount
+                of reads analyzed.
+                The Y-axis indicates the number of unique taxa at the last analyzed
+                taxonomic rank in those subsampled reads.
+                """)
+                with Grid(columns=1):
+                    df_richness = pd.DataFrame.from_dict(
+                        richness_curve, orient='index')
+                    df_richness['Sample'] = list(df_richness.index)
+                    df_richness_melt = df_richness.melt(
+                        id_vars='Sample', value_vars=list(df_richness.columns),
+                        var_name='Sample size', value_name='Richness')
+                    df_richness_melt_sort = df_richness_melt.sort_values(
+                        by=["Sample size"]
                     )
-                    df_sample_counts.columns = ["freq"]
-                    if df_sample_counts["freq"].sum() > 0:
-                        df_sample_counts.index = list(
-                            range(1, df_sample_counts.shape[0] + 1)
-                        )
-                        plt = ezc.barplot(
-                            df_sample_counts.reset_index().rename(
-                                columns={"index": "rank"}
-                            ),
-                            x="rank",
-                            y="freq",
-                            dodge=False,
-                            color="#0079a4",
-                        )
-                        plt._fig.title.text = barcode
-                        plt._fig.title.align = "center"
-                        plt._fig.xaxis.axis_label = "Rank"
-                        plt._fig.xaxis.major_label_text_color = None
-                        plt._fig.xaxis.major_tick_line_color = None
-                        EZChart(plt, 'epi2melabs')
-                        em("""This plot includes all the counts (except Unknown),
-                        before applying any filter threshold based on abundances.
-                        """)
-                    # case of barcode03 with all unclassified.
-                    else:
-                        em("""There are no taxa to display.""")
+                    plot = ezc.lineplot(
+                        data=df_richness_melt_sort,
+                        x="Sample size",
+                        y="Richness",
+                        hue="Sample",
+                    )
+                    EZChart(plot, 'epi2melabs')
+                em("Note that Unknown taxon is considered as a unique taxon.")
 
+            #
+            # 3.3. SPECIES ABUNDANCE DISTRIBUTION: SAD
+            #
+            with tabs.add_dropdown_menu(
+                "Taxa abundance distribution", change_header=False
+            ):
+                for barcode in samples:
+                    with tabs.add_dropdown_tab(barcode):
+                        # Remove Unknown
+                        ranks_counts = ranks_counts[
+                            ~(ranks_counts['tax'].str.contains('Unknown'))]
+                        df_sample_counts = (
+                            ranks_counts[barcode]
+                            .sort_values(ascending=False)
+                            .rename("freq")
+                            .to_frame()
+                        )
+                        df_sample_counts.columns = ["freq"]
+                        if df_sample_counts["freq"].sum() > 0:
+                            df_sample_counts.index = list(
+                                range(1, df_sample_counts.shape[0] + 1)
+                            )
+                            plt = ezc.barplot(
+                                df_sample_counts.reset_index().rename(
+                                    columns={"index": "rank"}
+                                ),
+                                x="rank",
+                                y="freq",
+                                dodge=False,
+                                color="#0079a4",
+                            )
+                            plt._fig.title.text = barcode
+                            plt._fig.title.align = "center"
+                            plt._fig.xaxis.axis_label = "Rank"
+                            plt._fig.xaxis.major_label_text_color = None
+                            plt._fig.xaxis.major_tick_line_color = None
+                            EZChart(plt, 'epi2melabs')
+                            em("""This plot includes all the counts (except Unknown),
+                            before applying any filter threshold based on abundances.
+                            """)
+                        # case of barcode03 with all unclassified.
+                        else:
+                            em("""There are no taxa to display.""")
+        else:
+            em("""There are no taxa to display.""")
     #
     # 4. AMR
     #

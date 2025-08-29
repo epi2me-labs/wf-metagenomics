@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pandas.errors.EmptyDataError` encountered in the `getAlignmentStats` process when reference coverage does not reach 1x
 - `ZeroDivisionError: division by zero` encountered in the `progressive_bracken` process when there are no taxa identified at all.
 - Versions of some tools were not properly displayed in the report.
+- `raise ValueError("All objects passed were None")` caused by all samples containing zero classified reads after applying braken threshold.
 ### Removed
 - Real time functionality. This implies the deprecation of the following parameters: `server_threads`, `kraken_clients`, `port`, `host`, `external_kraken2`, `batch_size`, `real_time`, `read_limit`
 - Update image to remove kraken2-server dependency.
