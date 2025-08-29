@@ -41,7 +41,10 @@ def parse_lineages(lineages):
         with open(os.path.join(lineages, i)) as json_file:
             # process sankey and table counts
             all_json.update(json.load(json_file))
-    return all_json
+    if any(all_json.values()):
+        return all_json
+    else:
+        return None  # no reads at all (e.g. bracken threshold)
 
 
 def prepare_data_to_sunburst(lineages_sample, new_lineages=[], position='outside'):
